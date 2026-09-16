@@ -1,0 +1,94 @@
+<?php
+
+/** @var \Laminas\View\Renderer\PhpRenderer $this */
+/** @var list<\Frontend\Model\Contact\ContactModel> $items */
+$items = (array) ($this->items ?? []);
+/** @var array<array-key, mixed> $filters */
+$filters = (array) ($this->filters ?? []);
+/** @var array<int, string> $statusLabels */
+$statusLabels = (array) ($this->statusLabels ?? []);
+/** @var array<int, string> $serviceNames */
+$serviceNames = (array) ($this->serviceNames ?? []);
+/** @var string|null $flag */
+$flag    = isset($this->flag) && is_string($this->flag) ? $this->flag : null;
+$csrf    = (string) ($this->csrfHash ?? '');
+$e       = fn (mixed $v): string => $this->escapeHtml((string) $v);
+$url     = fn (array $params = []): string => $this->url('admin/contacts', $params);
+$fVal    = static fn (string $key): string => (string) ($filters[$key] ?? '');
+
+$flags = [
+    'updated'  => ['alert-success', 'Đã cập nhật lượt liên hệ.'],
+    'deleted'  => ['alert-success', 'Đã xoá lượt liên hệ.'],
+    'csrf'     => ['alert-danger', 'Token bảo mật không hợp lệ.'],
+    'notfound' => ['alert-danger', 'Không tìm thấy lượt liên hệ.'],
+];
+
+/** status code → lớp badge (0 mới · 1 đang xử lý · 2 đã xong · 3 spam). */
+$statusClass = static fn (int $code): string => match ($code) {
+    \Frontend\Model\Contact\ContactConst::STATUS_PROCESSING => 'progress',
+    \Frontend\Model\Contact\ContactConst::STATUS_DONE       => 'replied',
+    \Frontend\Model\Contact\ContactConst::STATUS_SPAM       => 'spam',
+    default => 'new',
+};
+
+$html = '<div class="page-header"><div><h1>Hộp thư liên hệ</h1>'
+    . '<p class="subtitle">Tin nhắn khách gửi từ form liên hệ website.</p></div></div>';
+
+if ($flag !== null && isset($flags[$flag])) {
+    [$cls, $msg] = $flags[$flag];
+    $html .= '<div class="alert ' . $cls . '">' . $msg . '</div>';
+}
+
+$html .= '<div class="card"><form class="toolbar-form" method="get" action="' . $e($url()) . '">';
+$statusSel = '<div class="filter-select"><select class="form-select" name="status"><option value="">Mọi trạng thái</option>';
+foreach ($statusLabels as $code => $label) {
+    $statusSel .= '<option value="' . $code . '"' . ($fVal('status') === (string) $code ? ' selected' : '') . '>' . $e($label) . '</option>';
+}
+
+$serviceSel = '<div class="filter-select"><select class="form-select" name="serviceId"><option value="">Mọi dịch vụ</option>';
+foreach ($serviceNames as $sid => $sname) {
+    $serviceSel .= '<option value="' . (int) $sid . '"' . ($fVal('serviceId') === (string) $sid ? ' selected' : '') . '>' . $e($sname) . '</option>';
+}
+
+$html .= $statusSel . '</select></div>';
+$html .= $serviceSel . '</select></div>';
+$html .= '<input class="form-input" type="date" name="dateFrom" value="' . $e($fVal('dateFrom')) . '" style="width:auto">'
+    . '<input class="form-input" type="date" name="dateTo" value="' . $e($fVal('dateTo')) . '" style="width:auto">'
+    . '<button class="btn btn-ghost sm" type="submit">Lọc</button></form>';
+// Giữ bộ lọc hiện tại khi xuất CSV — GET /admin/contacts/export?...
+$exportQs = http_build_query(array_filter($filters, static fn (mixed $v): bool => $v !== '' && $v !== null));
+$html .= '<div style="display:flex;justify-content:flex-end;margin:8px 0 12px">'
+    . '<a class="btn btn-ghost sm" href="' . $e($url(['action' => 'export']) . ($exportQs !== '' ? '?' . $exportQs : '')) . '">Xuất CSV</a></div>';
+
+$rowsHtml = '';
+foreach ($items as $contact) {
+    /** @var \Frontend\Model\Contact\ContactModel $contact */
+    $id      = $contact->id;
+    $status  = $statusLabels[$contact->status] ?? (string) $contact->status;
+    $service = $contact->serviceId === null ? '—' : ($serviceNames[$contact->serviceId] ?? '#' . $contact->serviceId);
+
+    $rowsHtml .= '<tr><td class="muted">' . $e($contact->createdAt) . '</td>'
+        . '<td><strong>' . $e($contact->fullName) . '</strong></td>'
+        . '<td><span class="email-text">' . $e($contact->email) . '</span></td>'
+        . '<td class="muted">' . $e($service) . '</td>'
+        . '<td><span class="msg-text">' . $e($contact->subject ?? '—') . '</span></td>'
+        . '<td><span class="status ' . $statusClass((int) $contact->status) . '">' . $e($status) . '</span></td>'
+        . '<td><div class="actions">'
+        . '<a class="btn sm btn-ghost info" href="' . $url(['action' => 'view', 'id' => $id]) . '">Xem</a>'
+        . '<form method="post" action="' . $url(['action' => 'delete', 'id' => $id]) . '"'
+        . ' onsubmit="return confirm(\'Xoá vĩnh viễn lượt liên hệ này? Không thể khôi phục.\');">'
+        . '<input type="hidden" name="csrf" value="' . $e($csrf) . '">'
+        . '<button class="btn sm btn-ghost danger" type="submit">Xoá</button></form>'
+        . '</div></td></tr>';
+}
+
+if ($items === []) {
+    $rowsHtml = '<tr><td colspan="7" class="muted">Chưa có lượt liên hệ nào khớp bộ lọc.</td></tr>';
+}
+
+$html .= '<div class="table-wrap"><table class="data-table"><thead><tr>'
+    . '<th>Gửi lúc (UTC)</th><th>Họ tên</th><th>Email</th><th>Dịch vụ</th><th>Tiêu đề</th>'
+    . '<th>Trạng thái</th><th class="action-col">Thao tác</th>'
+    . '</tr></thead><tbody>' . $rowsHtml . '</tbody></table></div></div>';
+
+echo $html;

@@ -1,0 +1,111 @@
+<?php
+
+/** @var \Laminas\View\Renderer\PhpRenderer $this */
+/** @var list<\Admin\Model\Media\MediaModel> $items */
+$items = (array) ($this->items ?? []);
+/** @var string|null $flag */
+$flag    = isset($this->flag) && is_string($this->flag) ? $this->flag : null;
+/** @var list<string> $uploadErrors */
+$uploadErrors = (array) ($this->uploadErrors ?? []);
+$uploaded = (int) ($this->uploadedCount ?? 0);
+$csrf     = (string) ($this->csrfHash ?? '');
+$uploadCsrf = (string) ($this->uploadCsrfHash ?? '');
+$e        = fn (mixed $v): string => $this->escapeHtml((string) $v);
+$url      = fn (array $params = []): string => $this->url('admin/media', $params);
+
+$flags = [
+    'uploaded' => ['alert-success', 'Đã tải media lên thư viện.'],
+    'updated'  => ['alert-success', 'Đã cập nhật alt text.'],
+    'deleted'  => ['alert-success', 'Đã xoá media (kèm file và biến thể).'],
+    'blocked'  => ['alert-danger', 'Media đang được nội dung khác sử dụng — không thể xoá. Xem chi tiết ở “Đang dùng”.'],
+    'csrf'     => ['alert-danger', 'Token bảo mật không hợp lệ.'],
+    'notfound' => ['alert-danger', 'Không tìm thấy media.'],
+];
+
+$humanSize = static function (int $bytes): string {
+    if ($bytes >= 1048576) {
+        return sprintf('%.1f MB', $bytes / 1048576);
+    }
+
+    return $bytes >= 1024 ? sprintf('%.0f KB', $bytes / 1024) : $bytes . ' B';
+};
+
+$html = '<div class="page-header"><div><h1>Thư viện media</h1>'
+    . '<p class="subtitle">' . count($items) . ' ảnh trong trang này — id media dùng để gán vào bài viết, banner, danh mục…</p></div></div>';
+
+if ($flag !== null && isset($flags[$flag])) {
+    [$cls, $msg] = $flags[$flag];
+    $html .= '<div class="alert ' . $cls . '">' . $msg . '</div>';
+}
+
+foreach ($uploadErrors as $message) {
+    $html .= '<div class="alert alert-danger">' . $e($message) . '</div>';
+}
+
+if ($uploaded > 0) {
+    $html .= '<div class="alert alert-success">Đã lưu ' . $uploaded . ' file mới.</div>';
+}
+
+// ---- Upload ----
+$html .= '<div class="card" id="upload"><form method="post" enctype="multipart/form-data"'
+    . ' action="' . $url(['action' => 'upload']) . '">'
+    . '<input type="hidden" name="csrf" value="' . $e($uploadCsrf) . '">'
+    . '<label class="upload-area">'
+    . '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="1.5">'
+    . '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/>'
+    . '<line x1="12" y1="3" x2="12" y2="15"/></svg>'
+    . '<p><strong>Bấm để chọn ảnh</strong> — JPG / PNG / WebP / GIF, nhiều file cùng lúc</p>'
+    . '<p class="upload-hint">Dung lượng tối đa theo cấu hình; biến thể thumb/webp tự sinh khi tải lên.</p>'
+    . '<p class="upload-filename" style="margin-top:8px;font-weight:600;color:var(--primary)"></p>'
+    . '<input type="file" id="media-files" name="files[]" multiple'
+    . ' accept="image/jpeg,image/png,image/webp,image/gif">'
+    . '</label>'
+    . '<div class="form-actions"><button class="btn btn-primary" type="submit">Tải lên</button></div>'
+    . '</form></div>';
+
+// ---- Lưới media ----
+$html .= '<div class="card"><div class="media-grid">';
+
+$itemsHtml = '';
+foreach ($items as $media) {
+    /** @var \Admin\Model\Media\MediaModel $media */
+    $id       = $media->id;
+    $variants = $media->variantsArray();
+    $thumb    = $this->mediaUrl($variants['thumb'] ?? $media->path);
+    $dims     = $media->width !== null && $media->height !== null
+        ? $media->width . '×' . $media->height
+        : '—';
+
+    $itemsHtml .= '<div class="media-item" data-kind="image">'
+        . '<a href="' . $e($url(['action' => 'edit', 'id' => $id])) . '">'
+        . '<div class="media-preview"><img src="' . $e($thumb) . '"'
+        . ' alt="' . $e($media->altText ?? '') . '" loading="lazy"></div>'
+        . '<div class="media-name">#' . $id . ' ' . $e($media->originalName) . '</div>'
+        . '<div class="media-size">' . $e($dims) . ' · ' . $e($humanSize($media->sizeBytes))
+        . ($variants === [] ? '' : ' · ' . count($variants) . ' biến thể') . '</div></a>'
+        . '<div class="media-actions">'
+        . '<a class="btn sm btn-ghost icon" title="Sửa alt text" aria-label="Sửa"'
+        . ' href="' . $e($url(['action' => 'edit', 'id' => $id])) . '">'
+        . '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">'
+        . '<path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></a>'
+        . '<a class="btn sm btn-ghost icon info" title="Nơi đang sử dụng" aria-label="Đang dùng"'
+        . ' href="' . $e($url(['action' => 'usages', 'id' => $id])) . '">'
+        . '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">'
+        . '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg></a>'
+        . '<form method="post" action="' . $e($url(['action' => 'delete', 'id' => $id])) . '"'
+        . ' onsubmit="return confirm(\'Xoá vĩnh viễn media này kèm file trên đĩa? Nội dung đang dùng ảnh sẽ bị chặn.\');">'
+        . '<input type="hidden" name="csrf" value="' . $e($csrf) . '">'
+        . '<button class="btn sm btn-ghost danger icon" type="submit" title="Xoá" aria-label="Xoá">'
+        . '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">'
+        . '<polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6'
+        . 'm3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button></form>'
+        . '</div></div>';
+}
+
+if ($items === []) {
+    $itemsHtml = '<p class="muted">Chưa có media nào — tải ảnh lên bằng khung phía trên.</p>';
+}
+
+$html .= $itemsHtml . '</div></div>';
+
+echo $html;

@@ -1,0 +1,86 @@
+<?php
+
+/** @var \Laminas\View\Renderer\PhpRenderer $this */
+/** @var \Frontend\Model\Contact\ContactModel $contact */
+$contact = $this->contact;
+/** @var array<int, string> $statusLabels */
+$statusLabels = (array) ($this->statusLabels ?? []);
+/** @var array<array-key, mixed> $values */
+$values = (array) ($this->values ?? []);
+/** @var array<string, string> $errors */
+$errors = (array) ($this->errors ?? []);
+/** @var string|null $flag */
+$flag = isset($this->flag) && is_string($this->flag) ? $this->flag : null;
+$updateCsrf = (string) ($this->updateCsrfHash ?? '');
+$deleteCsrf = (string) ($this->deleteCsrfHash ?? '');
+$e       = fn (mixed $v): string => $this->escapeHtml((string) $v);
+$url     = fn (array $params = []): string => $this->url('admin/contacts', $params);
+$val     = static fn (string $key, mixed $default = ''): string => (string) ($values[$key] ?? $default);
+
+$flags = [
+    'updated'  => ['alert-success', 'Đã cập nhật lượt liên hệ.'],
+    'csrf'     => ['alert-danger', 'Token bảo mật không hợp lệ.'],
+];
+
+$id = $contact->id;
+
+$html = '<div class="page-header"><div><h1>Liên hệ #' . $id . '</h1>'
+    . '<p class="subtitle">' . $e($contact->subject ?? '(không tiêu đề)') . '</p></div>'
+    . '<a class="btn btn-ghost" href="' . $e($url()) . '">← Về hộp thư</a></div>';
+
+if ($flag !== null && isset($flags[$flag])) {
+    [$cls, $msg] = $flags[$flag];
+    $html .= '<div class="alert ' . $cls . '">' . $msg . '</div>';
+}
+
+$row = static function (string $label, string $value): string {
+    return '<tr><th>' . $label . '</th><td>' . $value . '</td></tr>';
+};
+
+$nl2br = static fn (?string $v): string => nl2br($e($v ?? '—'));
+
+$html .= '<div class="two-col wide-left"><div class="card"><h3 style="font-size:.95rem;font-weight:700;margin-bottom:12px">Nội dung thư</h3>'
+    . '<table class="kv-table">'
+    . $row('Gửi lúc (UTC)', '<span class="mono">' . $e($contact->createdAt) . '</span>')
+    . $row('Họ tên', '<strong>' . $e($contact->fullName) . '</strong>')
+    . $row('Email', '<a class="email-text" href="mailto:' . $e($contact->email) . '">' . $e($contact->email) . '</a>')
+    . $row('Điện thoại', $e($contact->phone ?? '—'))
+    . $row('Dịch vụ', $e($this->serviceName ?? '—'))
+    . $row('Tiêu đề', $e($contact->subject ?? '—'))
+    . $row('Nội dung', $nl2br($contact->message))
+    . $row('Đồng ý xử lý DLCN (UTC)', '<span class="mono">' . $e($contact->consentAt) . '</span>')
+    . $row('Nguồn', $contact->sourceUrl === null ? '—' : '<span class="muted mono">' . $e($contact->sourceUrl) . '</span>')
+    . '</table></div>';
+
+$html .= '<div><div class="card"><h3 style="font-size:.95rem;font-weight:700;margin-bottom:12px">Xử lý</h3>';
+$html .= '<form method="post" action="' . $e($url(['action' => 'update', 'id' => $id])) . '">';
+$html .= '<input type="hidden" name="csrf" value="' . $e($updateCsrf) . '">';
+
+$statusHtml = '<select class="form-select" name="status">';
+foreach ($statusLabels as $code => $label) {
+    $selected = (int) $val('status', (string) $contact->status) === (int) $code ? ' selected' : '';
+    $statusHtml .= '<option value="' . (int) $code . '"' . $selected . '>' . $e($label) . '</option>';
+}
+
+$statusHtml .= '</select>';
+$statusErr = isset($errors['status']) ? '<div class="field-error">' . $e($errors['status']) . '</div>' : '';
+$html .= '<div class="form-group"><label>Trạng thái</label>' . $statusHtml . $statusErr . '</div>';
+
+$noteHtml = '<textarea class="form-textarea" name="adminNote" rows="6" maxlength="5000"'
+    . ' placeholder="Ghi chú nội bộ — không hiển thị ra website">' . $e($val('adminNote', $contact->adminNote ?? '')) . '</textarea>';
+$noteErr = isset($errors['adminNote']) ? '<div class="field-error">' . $e($errors['adminNote']) . '</div>' : '';
+$html .= '<div class="form-group"><label>Ghi chú admin</label>' . $noteHtml . $noteErr . '</div>';
+
+$html .= '<div class="form-actions" style="margin-top:0"><button class="btn btn-primary" type="submit">Lưu</button></div>';
+$html .= '<div class="field-hint">Trạng thái “Đã xong” tự đóng dấu <span class="mono">handledAt</span> (UTC).</div>';
+$html .= '</form>';
+
+$html .= '<form class="form-actions" style="margin-top:16px;border-top:1px solid var(--border);padding-top:16px"'
+    . ' method="post" action="' . $e($url(['action' => 'delete', 'id' => $id])) . '"'
+    . ' onsubmit="return confirm(\'Xoá vĩnh viễn lượt liên hệ này?\');">'
+    . '<input type="hidden" name="csrf" value="' . $e($deleteCsrf) . '">'
+    . '<button class="btn btn-ghost danger" type="submit">Xoá lượt liên hệ</button></form>';
+
+$html .= '</div></div></div>';
+
+echo $html;

@@ -1,0 +1,327 @@
+<?php
+
+/** @var \Laminas\View\Renderer\PhpRenderer $this */
+/** @var array{rows: list<\Admin\Model\Post\PostModel>, total: int, page: int, perPage: int, counts: array<string, int>, tab: string, filters: array<string, mixed>} $result */
+$result = (array) ($this->result ?? ['rows' => [], 'total' => 0, 'page' => 1, 'perPage' => 20, 'counts' => [], 'tab' => 'all', 'filters' => []]);
+/** @var string $tab */
+$tab = (string) ($this->tab ?? 'all');
+/** @var array<string, string> $tabLabels */
+$tabLabels = (array) ($this->tabLabels ?? []);
+/** @var string|null $flag */
+$flag   = isset($this->flag) && is_string($this->flag) ? $this->flag : null;
+/** @var array{applied: int, skipped: int} $bulkCounts */
+$bulkCounts = array_merge(
+    ['applied' => 0, 'skipped' => 0],
+    array_map('intval', (array) ($this->bulkCounts ?? []))
+);
+$csrf   = (string) ($this->csrfHash ?? '');
+/** @var string $bulkCsrf Hash CSRF riêng của PostBulkFilter (FR-22). */
+$bulkCsrf = (string) ($this->bulkCsrfHash ?? '');
+/** @var list<array{id: int, label: string}> $categoryOptions */
+$categoryOptions = (array) ($this->categoryOptions ?? []);
+/** @var list<array{id: int, name: string}> $tagOptions */
+$tagOptions = (array) ($this->tagOptions ?? []);
+/** @var array{categoryId: int, tagId: int, q: string, featured: string, dateFrom: string, dateTo: string} $filters */
+$filters = array_merge(['categoryId' => 0, 'tagId' => 0, 'q' => '', 'featured' => '', 'dateFrom' => '', 'dateTo' => ''], (array) ($this->filters ?? []));
+
+$e   = fn (mixed $v): string => $this->escapeHtml((string) $v);
+$url = fn (array $params = [], array $opts = []): string => $this->url('admin/posts', $params, $opts);
+
+/** UTC 'Y-m-d H:i:s' → 'd/m/Y H:i' giờ VN (đọc thuận mắt admin — docs §5.2). */
+$fmtVn = static function (mixed $utc): string {
+    if (! is_string($utc) || $utc === '') {
+        return '—';
+    }
+
+    $dt = new \DateTimeImmutable(str_replace(' ', 'T', $utc) . 'Z');
+
+    return $dt->setTimezone(new \DateTimeZone('Asia/Ho_Chi_Minh'))->format('d/m/Y H:i');
+};
+$nowUtc  = gmdate('Y-m-d H:i:s');
+$perPage = max(1, (int) $result['perPage']);
+$total   = (int) $result['total'];
+$page    = max(1, (int) $result['page']);
+$pages   = (int) max(1, (int) ceil($total / $perPage));
+
+$alerts = [
+    'created'          => ['alert-success', 'Đã tạo bài viết.'],
+    'updated'          => ['alert-success', 'Đã cập nhật bài viết.'],
+    'deleted'          => ['alert-success', 'Đã xoá cứng bài viết + bản ghi con.'],
+    'published'        => ['alert-success', 'Đã xuất bản.'],
+    'archived'         => ['alert-success', 'Đã lưu trữ (gỡ khỏi website, giữ dữ liệu).'],
+    'drafted'          => ['alert-success', 'Đã trả về nháp / huỷ hẹn giờ.'],
+    'banner-required'  => ['alert-warning', 'Cần ảnh banner trước khi xuất bản (docs §3.3.4(3)).'],
+    'time-invalid'     => ['alert-warning', 'Mốc giờ hẹn không hợp lệ (định dạng YYYY-MM-DD HH:MM giờ VN).'],
+    'published-locked' => ['alert-warning', 'Bài đã hiển thị công khai — dùng Lưu trữ, không trả về nháp.'],
+    'csrf'             => ['alert-danger', 'Token bảo mật không hợp lệ.'],
+    'notfound'         => ['alert-danger', 'Không tìm thấy bài viết.'],
+    // FR-22: `bulk-done` dựng thông báo động bên dưới (theo số áp dụng/bỏ qua).
+    'bulk-invalid'     => [
+        'alert-warning',
+        'Thao tác hàng loạt không hợp lệ — kiểm tra bài đã chọn, danh mục đích, xác nhận xoá.',
+    ],
+];
+
+if ($flag === 'bulk-done') {
+    $bulkMsg = 'Đã áp dụng cho ' . $bulkCounts['applied'] . ' bài viết';
+    if ($bulkCounts['skipped'] > 0) {
+        $bulkMsg .= ' — bỏ qua ' . $bulkCounts['skipped'] . ' bài (thiếu banner / không còn tồn tại)';
+    }
+    $alerts['bulk-done'] = ['alert-success', $bulkMsg . '.'];
+}
+
+$html = '<div class="page-header"><div><h1>Bài viết</h1>'
+    . '<p class="subtitle">Quản lý toàn bộ bài viết trên website.</p></div>'
+    . '<a class="btn btn-primary" href="' . $url(['action' => 'create']) . '">'
+    . '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">'
+    . '<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Viết bài</a></div>';
+
+if ($flag !== null && isset($alerts[$flag])) {
+    [$cls, $msg] = $alerts[$flag];
+    $html .= '<div class="alert ' . $cls . '">' . $msg . '</div>';
+}
+
+$html .= '<div class="card">';
+
+// ---- Tabs trạng thái (link thật theo query tab=…) ----
+$html .= '<div class="media-tabs">';
+foreach ($tabLabels as $key => $label) {
+    $count  = (int) ($result['counts'][$key] ?? 0);
+    $active = $key === $tab ? ' active' : '';
+    $html  .= '<a class="media-tab' . $active . '" href="' . $e($url([], ['query' => ['tab' => $key]])) . '">'
+        . $e($label) . '<span class="count-badge">' . $count . '</span></a>';
+}
+
+$html .= '</div>';
+
+// ---- Bộ lọc gọn (14/09/2026): 1 nút "Bộ lọc" mở panel chứa các điều kiện. ----
+// Giữ nguyên luồng GET cũ (q/categoryId/tagId/dateFrom/dateTo/featured/tab) —
+// chỉ đổi cách trình bày: hàng điều kiện inline -> panel đóng/mở (JS `.js-filter-toggle`)
+// + chip điều kiện đang áp dụng (click vào chip = bỏ riêng điều kiện đó).
+$fmtDay = static function (mixed $d): string {
+    if (! is_string($d) || $d === '') {
+        return '';
+    }
+    $dt = \DateTimeImmutable::createFromFormat('Y-m-d', $d);
+
+    return $dt === false ? $d : $dt->format('d/m/Y');
+};
+$featuredOn = $filters['featured'] !== '' && $filters['featured'] !== '0';
+
+/** Điều kiện đang áp dụng — key là tên query param cần bỏ khi click chip. */
+$applied = array_filter([
+    'q'          => trim((string) $filters['q']),
+    'categoryId' => (int) $filters['categoryId'] > 0 ? (string) $filters['categoryId'] : '',
+    'tagId'      => (int) $filters['tagId'] > 0 ? (string) $filters['tagId'] : '',
+    'dateFrom'   => (string) $filters['dateFrom'],
+    'dateTo'     => (string) $filters['dateTo'],
+    'featured'   => $featuredOn ? '1' : '',
+], static fn (string $v): bool => $v !== '');
+
+$chipLabels = [
+    'q' => 'Tìm: "' . trim((string) $filters['q']) . '"',
+    'categoryId' => 'Chuyên mục: ' . (static function () use ($categoryOptions, $filters): string {
+        foreach ($categoryOptions as $opt) {
+            if ((int) $opt['id'] === (int) $filters['categoryId']) {
+                return $opt['label'];
+            }
+        }
+
+        return '#' . $filters['categoryId'];
+    })(),
+    'tagId' => 'Tag: ' . (static function () use ($tagOptions, $filters): string {
+        foreach ($tagOptions as $opt) {
+            if ((int) $opt['id'] === (int) $filters['tagId']) {
+                return $opt['name'];
+            }
+        }
+
+        return '#' . $filters['tagId'];
+    })(),
+    'dateFrom' => 'Xuất bản từ: ' . $fmtDay($filters['dateFrom']),
+    'dateTo'   => 'Xuất bản đến: ' . $fmtDay($filters['dateTo']),
+    'featured' => 'Chỉ bài nổi bật',
+];
+
+$clearAllUrl = $url([], ['query' => ['tab' => $tab]]);
+
+$html .= '<div class="filter-bar">'
+    . '<button type="button" class="btn btn-ghost sm js-filter-toggle" aria-expanded="false">'
+    . '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">'
+    . '<polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg> Bộ lọc'
+    . ($applied !== [] ? '<span class="filter-badge">' . count($applied) . '</span>' : '')
+    . '</button>';
+foreach ($applied as $key => $_) {
+    $html .= '<a class="filter-chip" title="Bỏ bộ lọc này" href="'
+        . $e($url([], ['query' => ['tab' => $tab] + array_diff_key($applied, [$key => ''])])) . '">'
+        . $e($chipLabels[$key]) . '<b>×</b></a>';
+}
+if ($applied !== []) {
+    $html .= '<a class="filter-clear" href="' . $e($clearAllUrl) . '">Xoá tất cả</a>';
+}
+$html .= '</div>';
+
+$html .= '<div class="filter-panel js-filter-panel"><form method="get" action="' . $e($url()) . '">'
+    . '<div class="filter-grid">'
+    . '<div class="filter-field wide"><span class="filter-flabel">Tìm kiếm</span>'
+    . '<div class="search-box">'
+    . '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">'
+    . '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>'
+    . '<input type="search" name="q" placeholder="Tìm tiêu đề, slug..." value="' . $e($filters['q']) . '"></div></div>'
+    . '<div class="filter-field"><span class="filter-flabel">Chuyên mục</span>'
+    . '<select class="form-select" name="categoryId"><option value="">Mọi chuyên mục</option>';
+foreach ($categoryOptions as $opt) {
+    $sel = (int) $filters['categoryId'] === $opt['id'] ? ' selected' : '';
+    $html .= '<option value="' . $opt['id'] . '"' . $sel . '>' . $e($opt['label']) . '</option>';
+}
+$html .= '</select></div>'
+    . '<div class="filter-field"><span class="filter-flabel">Tag</span>'
+    . '<select class="form-select" name="tagId"><option value="">Mọi tag</option>';
+foreach ($tagOptions as $opt) {
+    $sel = (int) $filters['tagId'] === $opt['id'] ? ' selected' : '';
+    $html .= '<option value="' . $opt['id'] . '"' . $sel . '>' . $e($opt['name']) . '</option>';
+}
+$html .= '</select></div>'
+    . '<div class="filter-field"><span class="filter-flabel">Xuất bản từ (giờ VN)</span>'
+    . '<input class="form-control" type="date" name="dateFrom" value="' . $e($filters['dateFrom']) . '"></div>'
+    . '<div class="filter-field"><span class="filter-flabel">đến ngày</span>'
+    . '<input class="form-control" type="date" name="dateTo" value="' . $e($filters['dateTo']) . '"></div>'
+    . '<div class="filter-field"><span class="filter-flabel">Khác</span>'
+    . '<label class="check"><input type="checkbox" name="featured" value="1"'
+    . ($featuredOn ? ' checked' : '') . '> Chỉ bài nổi bật</label></div>'
+    . '</div>'
+    . '<div class="filter-panel-actions">'
+    . '<button class="btn btn-primary sm" type="submit">Áp dụng</button>'
+    . ($applied !== [] ? '<a class="btn btn-ghost sm danger" href="' . $e($clearAllUrl) . '">Xoá tất cả</a>' : '')
+    . '<input type="hidden" name="tab" value="' . $e($tab) . '">'
+    . '</div></form></div>';
+
+// ---- Bảng dữ liệu ----
+// FR-22: ô checkbox đầu dòng gắn vào form bulk bên dưới bằng thuộc tính
+// `form="bulk-form"` (HTML5) — tránh nested form với các form action đơn lẻ.
+$html .= '<div class="table-wrap"><table class="data-table"><thead><tr>'
+    . '<th class="bulk-col"><input type="checkbox" class="js-bulk-all" form="bulk-form"'
+    . ' title="Chọn tất cả"></th>'
+    . '<th>Tiêu đề</th><th>Chuyên mục</th><th>Trạng thái</th><th>Xuất bản (giờ VN)</th>'
+    . '<th class="action-col">Thao tác</th></tr></thead><tbody>';
+
+$actForm = static function (string $action, int $id, string $label, string $cls) use ($url, $csrf, $e): string {
+    $confirm = $action === 'delete'
+        ? ' onclick="return confirm(\'Xoá vĩnh viễn bài này? Mất toàn bộ revision và lượt xem.\');"'
+        : '';
+
+    return '<form method="post" action="' . $e($url(['action' => $action, 'id' => $id])) . '">'
+        . '<input type="hidden" name="csrf" value="' . $e($csrf) . '">'
+        . '<button class="btn sm ' . $cls . '" type="submit"' . $confirm . '>'
+        . $e($label) . '</button></form>';
+};
+
+$rowsHtml = '';
+foreach ($result['rows'] as $row) {
+    /** @var \Admin\Model\Post\PostModel $row */
+    $id        = $row->id;
+    $status    = $row->status;
+    $published = $row->publishedAt !== null && $row->publishedAt !== '';
+    $scheduled = $status === \Application\Constant\ContentConst::STATUS_PUBLISHED
+        && $published && (string) $row->publishedAt > $nowUtc;
+    $live      = $status === \Application\Constant\ContentConst::STATUS_PUBLISHED && ! $scheduled;
+
+    if ($status === \Application\Constant\ContentConst::STATUS_PUBLISHED) {
+        $badge = $scheduled
+            ? '<span class="status scheduled">Hẹn giờ</span>'
+            : '<span class="status published">Đã xuất bản</span>';
+    } elseif ($status === \Application\Constant\ContentConst::STATUS_ARCHIVED) {
+        $badge = '<span class="status archived">Lưu trữ</span>';
+    } else {
+        $badge = '<span class="status draft">Nháp</span>';
+    }
+    if ($row->isFeatured === 1) {
+        $badge .= ' <span class="tag-badge purple">★ Nổi bật</span>';
+    }
+
+    $actions = '<a class="btn sm btn-ghost" href="' . $e($url(['action' => 'edit', 'id' => $id])) . '">Sửa</a>';
+    if ($status === \Application\Constant\ContentConst::STATUS_DRAFT || $status === \Application\Constant\ContentConst::STATUS_ARCHIVED) {
+        $actions .= $actForm('publish', $id, 'Xuất bản', 'btn-primary');
+    }
+    if ($status === \Application\Constant\ContentConst::STATUS_PUBLISHED) {
+        $actions .= $actForm('archive', $id, 'Lưu trữ', 'btn-ghost');
+    }
+    if ($scheduled) {
+        $actions .= $actForm('draft', $id, 'Huỷ hẹn giờ', 'btn-warn');
+    }
+    if (! $live) {
+        $actions .= $actForm('delete', $id, 'Xoá', 'btn-ghost danger');
+    }
+
+    $rowsHtml .= '<tr>'
+        . '<td class="bulk-col"><input type="checkbox" class="js-bulk-check" name="ids[]"'
+        . ' value="' . (int) $id . '" form="bulk-form"></td>'
+        . '<td><div class="post-cell"><span><a href="' . $e($url(['action' => 'edit', 'id' => $id])) . '"'
+        . ' style="color:inherit;text-decoration:none">' . $e($row->title) . '</a></span></div></td>'
+        . '<td class="muted">' . $e($row->categoryName ?? '—') . '</td>'
+        . '<td>' . $badge . '</td>'
+        . '<td class="muted">' . $e($fmtVn($row->publishedAt)) . '</td>'
+        . '<td><div class="actions">' . $actions . '</div></td></tr>';
+}
+
+if ($result['rows'] === []) {
+    $rowsHtml = '<tr><td colspan="6" class="muted">Chưa có bài viết nào khớp bộ lọc.</td></tr>';
+}
+
+$html .= $rowsHtml . '</tbody></table></div>';
+
+// ---- FR-22: thanh thao tác hàng loạt (submit qua JS admin.js) ----
+$bulkOptions = '';
+foreach ($categoryOptions as $opt) {
+    $bulkOptions .= '<option value="' . $opt['id'] . '">' . $e($opt['label']) . '</option>';
+}
+
+$html .= '<form id="bulk-form" class="bulk-bar" method="post"'
+    . ' action="' . $e($url(['action' => 'bulk'])) . '">'
+    . '<input type="hidden" name="csrf" value="' . $e($bulkCsrf) . '">'
+    . '<input type="hidden" name="action" id="bulk-action" value="">'
+    . '<input type="hidden" id="bulk-confirm-count">'
+    . '<span class="bulk-label">Với mục đã chọn:</span>'
+    . '<select class="form-select" id="bulk-category" name="categoryId" disabled>'
+    . '<option value="">— Danh mục đích —</option>' . $bulkOptions . '</select>'
+    . '<button class="btn sm btn-primary" type="submit" data-bulk="publish">Xuất bản</button>'
+    . '<button class="btn sm btn-ghost" type="submit" data-bulk="archive">Lưu trữ</button>'
+    . '<button class="btn sm btn-ghost" type="submit" data-bulk="category">Chuyển danh mục</button>'
+    . '<button class="btn sm btn-ghost danger" type="submit" data-bulk="delete">Xoá vĩnh viễn</button>'
+    . '</form>';
+
+// ---- Footer + phân trang ----
+$qBase = array_filter([
+    'tab'        => $tab,
+    'categoryId' => $filters['categoryId'] > 0 ? (string) $filters['categoryId'] : '',
+    'tagId'      => $filters['tagId'] > 0 ? (string) $filters['tagId'] : '',
+    'q'          => $filters['q'],
+    'featured'   => $filters['featured'],
+    'dateFrom'   => (string) ($filters['dateFrom'] ?? ''),
+    'dateTo'     => (string) ($filters['dateTo'] ?? ''),
+], static fn (string $v): bool => $v !== '' && $v !== '0');
+
+$html .= '<div class="table-footer"><span class="count-text">Hiển thị trang '
+    . $page . '/' . $pages . ' · tổng ' . $total . ' bài</span>';
+if ($pages > 1) {
+    $html .= '<div class="pagination">';
+    if ($page > 1) {
+        $html .= '<a class="page-btn" href="' . $e($url([], ['query' => $qBase + ['page' => (string) ($page - 1)]])) . '">‹</a>';
+    } else {
+        $html .= '<span class="page-btn disabled">‹</span>';
+    }
+
+    $html .= '<span class="page-btn active">' . $page . '</span>';
+
+    if ($page < $pages) {
+        $html .= '<a class="page-btn" href="' . $e($url([], ['query' => $qBase + ['page' => (string) ($page + 1)]])) . '">›</a>';
+    } else {
+        $html .= '<span class="page-btn disabled">›</span>';
+    }
+
+    $html .= '</div>';
+}
+
+$html .= '</div></div>';
+
+echo $html;

@@ -1,0 +1,103 @@
+<?php /** @var \Laminas\View\Renderer\PhpRenderer $this */
+
+/** @var array<string, string> $errors */
+$errors   = isset($this->errors) && is_array($this->errors) ? $this->errors : [];
+$token    = (string) ($this->token ?? '');
+$csrfHash = (string) ($this->csrfHash ?? '');
+
+$e = static fn (mixed $v): string => htmlspecialchars((string) $v, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+$urlReset = (string) $this->url('admin/reset-password', [], ['query' => $token !== '' ? ['token' => $token] : []]);
+
+$fieldError = static function (string $field) use ($errors, $e): string {
+    $msg = $errors[$field] ?? null;
+
+    return is_string($msg) && $msg !== '' ? '<p class="form-error">' . $e($msg) . '</p>' : '';
+};
+
+$tokenErr = $errors['token'] ?? null;
+$alertHtml = is_string($tokenErr) && $tokenErr !== ''
+    ? '<div class="alert visible"><span>' . $e($tokenErr) . '</span></div>'
+    : '';
+$csrfErr = $errors['csrf'] ?? null;
+$csrfAlert = is_string($csrfErr) && $csrfErr !== ''
+    ? '<div class="alert visible"><span>' . $e($csrfErr) . '</span></div>'
+    : '';
+?>
+<!doctype html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Đặt lại mật khẩu — Vạn Lang Admin</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root { --primary: #2563eb; --primary-dark: #1d4ed8; --sidebar-bg: #0f1c3a; --text: #0f172a; --text-secondary: #64748b; --border: #e2e8f0; --surface: #fff; --danger: #dc2626; --danger-bg: #fee2e2; }
+        body { font-family: 'Inter', -apple-system, sans-serif; min-height: 100vh; display: flex; background: var(--sidebar-bg); overflow: hidden; }
+        .left-panel { flex: 1; position: relative; display: flex; flex-direction: column; justify-content: space-between; padding: 48px; overflow: hidden; }
+        .left-panel::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse 80% 60% at 20% 80%, rgba(37,99,235,.35) 0%, transparent 60%), radial-gradient(ellipse 60% 50% at 80% 20%, rgba(99,102,241,.25) 0%, transparent 60%), linear-gradient(145deg, #0f1c3a 0%, #142040 50%, #0e1832 100%); z-index: 0; }
+        .left-content { position: relative; z-index: 1; }
+        .brand { display: flex; align-items: center; gap: 12px; }
+        .brand-icon { width: 40px; height: 40px; background: var(--primary); border-radius: 10px; display: flex; align-items: center; justify-content: center; }
+        .brand-name { font-size: 16px; font-weight: 700; color: #fff; }
+        .hero { margin-top: auto; padding-top: 80px; }
+        .hero-headline { font-size: clamp(28px, 3vw, 42px); font-weight: 700; color: #fff; line-height: 1.2; max-width: 440px; }
+        .hero-headline .accent { color: #60a5fa; }
+        .hero-sub { margin-top: 16px; color: #94a3b8; font-size: 15px; line-height: 1.6; max-width: 380px; }
+        .left-footer { position: relative; z-index: 1; font-size: 12px; color: #334155; }
+        .right-panel { width: 480px; background: #f8fafc; display: flex; align-items: center; justify-content: center; padding: 48px 52px; position: relative; }
+        .login-box { width: 100%; max-width: 360px; }
+        .login-title { font-size: 24px; font-weight: 700; color: var(--text); }
+        .login-desc { margin-top: 8px; font-size: 14px; color: var(--text-secondary); line-height: 1.5; }
+        .form-group { margin-bottom: 18px; }
+        .form-label { display: block; font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 7px; }
+        .form-input { width: 100%; border: 1.5px solid var(--border); border-radius: 8px; padding: 10px 12px; font-size: 14px; color: var(--text); background: var(--surface); font-family: inherit; outline: none; }
+        .form-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37,99,235,.1); }
+        .form-input.error { border-color: var(--danger); }
+        .form-error { margin-top: 6px; font-size: 12.5px; color: var(--danger); }
+        .btn-login { width: 100%; margin-top: 6px; padding: 11px; background: var(--primary); color: #fff; border: none; border-radius: 8px; font-size: 14.5px; font-weight: 600; cursor: pointer; font-family: inherit; }
+        .btn-login:hover { background: var(--primary-dark); }
+        .alert { display: none; padding: 12px 14px; border-radius: 8px; margin-bottom: 20px; font-size: 13.5px; }
+        .alert.visible { display: block; background: var(--danger-bg); border: 1px solid #fecaca; color: var(--danger); }
+        .back-home { display: inline-flex; align-items: center; gap: 6px; margin-top: 22px; font-size: 13px; color: var(--text-secondary); text-decoration: none; }
+        .back-home:hover { color: var(--primary); }
+        @media (max-width: 900px) { body { flex-direction: column; overflow: auto; } .left-panel { padding: 32px 28px 40px; flex: none; } .hero { padding-top: 32px; } .right-panel { width: 100%; padding: 40px 28px 60px; } }
+    </style>
+</head>
+<body>
+<div class="left-panel">
+    <div class="left-content brand">
+        <div class="brand-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="8" height="8" rx="1.5" fill="#fff"/><rect x="13" y="3" width="8" height="8" rx="1.5" fill="#fff" opacity=".6"/><rect x="3" y="13" width="8" height="8" rx="1.5" fill="#fff" opacity=".6"/><rect x="13" y="13" width="8" height="8" rx="1.5" fill="#fff" opacity=".3"/></svg></div>
+        <span class="brand-name">Vạn Lang News</span>
+    </div>
+    <div class="left-content hero">
+        <h1 class="hero-headline">Đặt lại<br><span class="accent">mật khẩu</span></h1>
+        <p class="hero-sub">Nhập mật khẩu mới — liên kết chỉ dùng một lần và hết hạn sau 60 phút.</p>
+    </div>
+    <div class="left-content left-footer">© 2026 Vạn Lang News CMS.</div>
+</div>
+<div class="right-panel">
+    <div class="login-box">
+        <div style="margin-bottom:36px">
+            <h2 class="login-title">Đặt lại mật khẩu</h2>
+            <p class="login-desc">Chọn mật khẩu mới cho tài khoản của bạn.</p>
+        </div>
+        <?= $alertHtml ?>
+        <?= $csrfAlert ?>
+        <?php $formBody = '<form method="post" action="' . $e($urlReset) . '">'
+            . '<input type="hidden" name="csrf" value="' . $e($csrfHash) . '">'
+            . '<input type="hidden" name="token" value="' . $e($token) . '">'
+            . '<div class="form-group"><label class="form-label" for="password">Mật khẩu mới</label>'
+            . '<input type="password" id="password" name="password" class="form-input' . (isset($errors['password']) ? ' error' : '') . '" required autocomplete="new-password">'
+            . $fieldError('password') . '</div>'
+            . '<div class="form-group"><label class="form-label" for="confirmPassword">Nhập lại mật khẩu</label>'
+            . '<input type="password" id="confirmPassword" name="confirmPassword" class="form-input' . (isset($errors['confirmPassword']) ? ' error' : '') . '" required autocomplete="new-password">'
+            . $fieldError('confirmPassword') . '</div>'
+            . '<button type="submit" class="btn-login">Đổi mật khẩu</button></form>'
+            . '<a href="' . $e((string) $this->url('admin/login')) . '" class="back-home">← Quay lại đăng nhập</a>'; ?>
+        <?= $formBody ?>
+    </div>
+</div>
+</body>
+</html>

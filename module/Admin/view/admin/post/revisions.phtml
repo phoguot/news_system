@@ -1,0 +1,75 @@
+<?php
+/** @var \Laminas\View\Renderer\PhpRenderer $this */
+/** @var \Admin\Model\Post\PostModel $post */
+$post = $this->post;
+/** @var list<\Admin\Model\PostRevision\PostRevisionModel> $revisions */
+$revisions = (array) ($this->revisions ?? []);
+$flag      = is_string($this->flag ?? null) ? (string) $this->flag : null;
+$csrf      = (string) ($this->csrfHash ?? '');
+$e         = fn (mixed $v): string => $this->escapeHtml((string) $v);
+$restoreUrl = $this->url('admin/posts', ['action' => 'restore', 'id' => $post->id]);
+$backUrl    = $this->url('admin/posts', ['action' => 'edit', 'id' => $post->id]);
+
+$flagHtml = '';
+if ($flag === 'restored') {
+    $flagHtml = '<div class="alert alert-success">Đã khôi phục phiên bản.</div>';
+} elseif ($flag === 'notfound') {
+    $flagHtml = '<div class="alert alert-error">Phiên bản không tồn tại.</div>';
+} elseif ($flag === 'csrf') {
+    $flagHtml = '<div class="alert alert-error">Phiên hết hạn — thử lại.</div>';
+}
+
+$html = '<div class="page-header"><div><h1>Lịch sử — ' . $e($post->title) . '</h1>'
+    . '<p class="subtitle"><a href="' . $e($backUrl) . '">← Quay lại soạn bài</a></p></div></div>';
+$html .= $flagHtml;
+
+if ($revisions === []) {
+    $html .= '<div class="card"><p class="subtitle">Chưa có bản lưu nào.</p></div>';
+    echo $html;
+    return;
+}
+
+$html .= '<div class="card"><p class="subtitle" style="margin-bottom:12px">'
+    . 'Thủ công & trước-xuất-bản giữ 20 bản mới nhất (cắt ngay sau khi lưu). Tự lưu chỉ giữ 1 bản mới nhất.'
+    . '</p>';
+$html .= '<table class="table"><thead><tr><th>Thời gian</th><th>Loại</th><th>Tiêu đề</th><th></th></tr></thead><tbody>';
+
+foreach ($revisions as $rev) {
+    $label = match ((int) $rev->type) {
+        \Admin\Model\PostRevision\PostRevisionMapper::TYPE_AUTOSAVE => 'Tự lưu',
+        \Admin\Model\PostRevision\PostRevisionMapper::TYPE_BEFORE_PUBLISH => 'Trước xuất bản',
+        default => 'Thủ công',
+    };
+    $html .= '<tr>'
+        . '<td style="white-space:nowrap">' . $e($rev->createdAt) . '</td>'
+        . '<td><span class="status draft" style="font-size:.75rem">' . $e($label) . '</span></td>'
+        . '<td style="max-width:360px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' . $e($rev->title) . '</td>'
+        . '<td style="white-space:nowrap;display:flex;gap:6px">'
+        . '<button type="button" class="btn btn-ghost js-rev-compare" style="font-size:.8rem;padding:4px 8px"'
+        . ' data-title="' . $e($rev->title) . '"'
+        . ' data-excerpt="' . $e($rev->excerpt ?? '') . '"'
+        . ' data-content="' . $e($rev->content) . '"'
+        . ' data-created="' . $e($rev->createdAt) . '">So sánh</button>'
+        . '<form method="post" action="' . $e($restoreUrl) . '" style="display:inline"'
+        . ' onsubmit="return confirm(\'Khôi phục phiên bản này? Bản hiện tại sẽ được lưu thành revision mới.\')">'
+        . '<input type="hidden" name="csrf" value="' . $e($csrf) . '">'
+        . '<input type="hidden" name="revisionId" value="' . $e((string) $rev->id) . '">'
+        . '<button class="btn btn-warn" style="font-size:.8rem;padding:4px 8px" type="submit">Khôi phục</button>'
+        . '</form></td></tr>';
+}
+
+$html .= '</tbody></table></div>';
+
+// Modal so sánh (dùng chung với form.phtml)
+$html .= '<div id="rev-compare-modal" class="rte-modal" style="display:none">'
+    . '<div class="rte-modal-card" style="max-width:860px;width:92%">'
+    . '<div class="rte-modal-head"><span>So sánh phiên bản</span>'
+    . '<button type="button" class="rte-modal-close" aria-label="Đóng">×</button></div>'
+    . '<div class="rte-modal-grid" style="grid-template-columns:1fr 1fr;gap:12px;padding:12px">'
+    . '<div><h4 style="font-size:.9rem;font-weight:700;margin-bottom:6px">Phiên bản đã lưu</h4>'
+    . '<div class="rev-compare-a" style="white-space:pre-wrap;word-break:break-word;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:10px;max-height:52vh;overflow:auto"></div></div>'
+    . '<div><h4 style="font-size:.9rem;font-weight:700;margin-bottom:6px">Hiện tại (bài đang mở)</h4>'
+    . '<div class="rev-compare-b" style="white-space:pre-wrap;word-break:break-word;background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:10px;max-height:52vh;overflow:auto"></div></div>'
+    . '</div></div></div>';
+
+echo $html;

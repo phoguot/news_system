@@ -1,0 +1,152 @@
+<?php
+
+declare(strict_types=1);
+
+/**
+ * Trang chi tiết bài viết /tin-tuc/{slug} (FR-03, docs §2.1/§3.3.2/§5.4):
+ * payload mảng thuần do Frontend\Service\PostDetailService dựng.
+ * Chuẩn .phtml (AGENTS §2 / 07 §8): thân template KHÔNG có control structure
+ * PHP — mọi mảnh HTML động dựng bằng chuỗi trong block đầu file.
+ * `content` echo THÔ: HTML đã tiệt trùng HtmlPurifier lúc lưu (docs §7.3) —
+ * escape lại sẽ phá vỡ markup bài viết.
+ *
+ * @var \Laminas\View\Renderer\PhpRenderer $this
+ * @var string $title
+ * @var string $slug
+ * @var string $href
+ * @var string $content
+ * @var string $excerpt
+ * @var string $date
+ * @var int $minutes
+ * @var string $authorName
+ * @var ?array{name: string, slug: string} $category
+ * @var ?array{path: string, alt: string} $banner
+ * @var list<array{name: string, href: string}> $tags
+ * @var list<array<string, mixed>> $related
+ * @var string $metaTitle
+ * @var string $metaDescription
+ */
+
+$view = $this;
+$e    = static fn (mixed $v): string => $view->escapeHtml((string) $v);
+
+$tags       = is_array($this->tags ?? null) ? $this->tags : [];
+$related    = is_array($this->related ?? null) ? $this->related : [];
+$title      = (string) ($this->title ?? '');
+$slug       = (string) ($this->slug ?? '');
+$href       = (string) ($this->href ?? '/tin-tuc/' . $slug);
+$content    = (string) ($this->content ?? '');
+$excerpt    = (string) ($this->excerpt ?? '');
+$date       = (string) ($this->date ?? '');
+$minutes    = (int) ($this->minutes ?? 0);
+$authorName = (string) ($this->authorName ?? '');
+$category   = is_array($this->category ?? null) ? $this->category : null;
+$banner     = is_array($this->banner ?? null) ? $this->banner : null;
+$metaTitle  = (string) ($this->metaTitle ?? $title);
+$metaDesc   = (string) ($this->metaDescription ?? $excerpt);
+$noindex    = (bool) ($this->noindex ?? false);
+
+$this->headTitle($metaTitle);
+$this->headMeta()->appendName('description', $metaDesc)
+    ->appendProperty('og:title', $metaTitle)
+    ->appendProperty('og:description', $metaDesc)
+    ->appendProperty('og:type', 'article')
+    ->appendProperty('og:url', $view->serverUrl($href));
+
+// FR-04 / NFR-SEO-5: link ?previewToken= không bao giờ được index.
+if ($noindex) {
+    $this->headMeta()->appendName('robots', 'noindex');
+}
+
+/* ---- breadcrumb: Trang chủ / Tin tức / Danh mục / (title kẹp rút gọn) ---- */
+$crumbs   = '<a href="/">Trang chủ</a> &rsaquo; <a href="/tin-tuc">Tin tức</a>';
+if (is_array($category)) {
+    $crumbs .= ' &rsaquo; <a href="' . $e('/danh-muc/' . (string) $category['slug'])
+        . '">' . $e($category['name']) . '</a>';
+}
+
+$crumbTitle = mb_strlen($title) > 48 ? mb_substr($title, 0, 47) . '…' : $title;
+$crumbs    .= ' &rsaquo; <span>' . $e($crumbTitle) . '</span>';
+
+/* ---- meta line: tác giả · ngày · phút đọc ---- */
+$metaBits = [];
+if ($authorName !== '') {
+    $metaBits[] = 'DC. ' . $authorName;
+}
+
+if ($date !== '') {
+    $metaBits[] = $date;
+}
+
+if ($minutes > 0) {
+    $metaBits[] = $minutes . ' phút đọc';
+}
+
+$metaHtml = $metaBits === []
+    ? ''
+    : '<p class="article-meta">' . $e(implode('  ·  ', $metaBits)) . '</p>';
+
+/* ---- banner ---- */
+$bannerHtml = '';
+if (is_array($banner) && (string) ($banner['path'] ?? '') !== '') {
+    $bannerHtml = '<figure class="article-banner"><img src="'
+        . $e($view->mediaUrl((string) $banner['path']))
+        . '" alt="' . $e((string) ($banner['alt'] ?? '')) . '"><figcaption>'
+        . $e((string) ($banner['alt'] ?? '')) . '</figcaption></figure>';
+}
+
+/* ---- tag chips ---- */
+$tagsHtml = '';
+foreach ($tags as $tag) {
+    $tagsHtml .= '<a class="tag-chip" href="' . $e($tag['href'] ?? '#') . '">'
+        . '# ' . $e($tag['name'] ?? '') . '</a>';
+}
+
+if ($tagsHtml !== '') {
+    $tagsHtml = '<p class="article-tags">' . $tagsHtml . '</p>';
+}
+
+/* ---- share row (FB / X / mail — URL tuyệt đối theo request hiện tại) ---- */
+$absUrl   = (string) $view->serverUrl($href);
+$shareTxt = rawurlencode($title);
+$shareUrl = rawurlencode($absUrl);
+$share    = '<div class="share-row"><span>Chia sẻ:</span>'
+    . '<a class="share-btn" target="_blank" rel="noopener" href="https://www.facebook.com/sharer/sharer.php?u=' . $shareUrl . '">Facebook</a>'
+    . '<a class="share-btn" target="_blank" rel="noopener" href="https://twitter.com/intent/tweet?url=' . $shareUrl . '&amp;text=' . $shareTxt . '">X</a>'
+    . '<a class="share-btn" href="mailto:?subject=' . $shareTxt . '&amp;body=' . $shareUrl . '">Email</a>'
+    . '</div>';
+
+/* ---- bài liên quan (card phẳng do PostListService::buildCards dựng) ---- */
+$relCards = '';
+foreach ($related as $card) {
+    $image = is_array($card['image'] ?? null) ? $card['image'] : null;
+    $thumb = $image === null || (string) ($image['path'] ?? '') === ''
+        ? ''
+        : '<img src="' . $e($view->mediaUrl((string) $image['path']))
+            . '" alt="' . $e((string) ($image['alt'] ?? '')) . '" loading="lazy">';
+    $relCards .= '<article class="post-card">'
+        . '<a class="post-thumb" href="' . $e($card['href'] ?? '#') . '">' . $thumb . '</a>'
+        . '<div class="post-body"><h3><a href="' . $e($card['href'] ?? '#') . '">'
+        . $e($card['title'] ?? '') . '</a></h3>'
+        . '<span class="mini-badge">' . $e($card['date'] ?? '') . '</span>'
+        . '</div></article>';
+}
+
+$relatedHtml = $relCards === ''
+    ? ''
+    : '<section class="related"><h2 class="sec-label">Bài viết liên quan</h2>'
+        . '<div class="post-grid">' . $relCards . '</div></section>';
+
+/* ---- assemble ---- */
+$html = '<article class="section"><div class="container article">'
+    . '<nav class="breadcrumb">' . $crumbs . '</nav>'
+    . '<header class="article-head"><h1>' . $e($title) . '</h1>'
+    . ($excerpt !== '' ? '<p class="article-lede">' . $e($excerpt) . '</p>' : '')
+    . $metaHtml . '</header>'
+    . $bannerHtml
+    . '<div class="article-body">' . $content . '</div>'
+    . $tagsHtml . $share
+    . '</div></article>'
+    . ($relatedHtml === '' ? '' : '<section class="section section-alt"><div class="container">' . $relatedHtml . '</div></section>');
+
+echo $html;

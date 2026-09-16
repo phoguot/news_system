@@ -1,0 +1,77 @@
+<?php
+
+/** @var \Laminas\View\Renderer\PhpRenderer $this */
+/** @var list<\Admin\Model\Banner\BannerModel> $items */
+$items = (array) ($this->items ?? []);
+/** @var array<string, string> $positionLabels */
+$positionLabels = (array) ($this->positionLabels ?? []);
+/** @var string|null $flag */
+$flag    = isset($this->flag) && is_string($this->flag) ? $this->flag : null;
+$csrf    = (string) ($this->csrfHash ?? '');
+$reorderCsrf = (string) ($this->reorderCsrfHash ?? '');
+$e       = fn (mixed $v): string => $this->escapeHtml((string) $v);
+$url     = fn (array $params = []): string => $this->url('admin/banners', $params);
+
+$flags = [
+    'created'  => ['alert-success', 'Đã tạo banner.'],
+    'updated'  => ['alert-success', 'Đã cập nhật banner.'],
+    'deleted'  => ['alert-success', 'Đã xoá banner.'],
+    'csrf'     => ['alert-danger', 'Token bảo mật không hợp lệ.'],
+    'notfound' => ['alert-danger', 'Không tìm thấy banner.'],
+    'reordered' => ['alert-success', 'Đã cập nhật thứ tự banner.'],
+];
+
+$html = '<div class="page-header"><div><h1>Banner</h1>'
+    . '<p class="subtitle">Ảnh quảng cáo theo vị trí trang, có lịch hiển thị.</p></div>'
+    . '<a class="btn btn-primary" href="' . $url(['action' => 'create']) . '">'
+    . '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">'
+    . '<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Thêm banner</a></div>';
+
+if ($flag !== null && isset($flags[$flag])) {
+    [$cls, $msg] = $flags[$flag];
+    $html .= '<div class="alert ' . $cls . '">' . $msg . '</div>';
+}
+
+$rowsHtml = '';
+foreach ($items as $banner) {
+    /** @var \Admin\Model\Banner\BannerModel $banner */
+    $id       = $banner->id;
+    $posLabel = $positionLabels[$banner->position] ?? $banner->position;
+    $badge    = $banner->isActive === \Admin\Model\Banner\BannerConst::ACTIVE
+        ? '<span class="status published">Có</span>'
+        : '<span class="status off">Tắt</span>';
+    $schedule = $banner->startAt === null && $banner->endAt === null
+        ? '—'
+        : $e($banner->startAt ?? '…') . ' → ' . $e($banner->endAt ?? '…');
+    $media    = '#' . $banner->imageMediaId
+        . ($banner->mobileImageMediaId !== null ? ' · mobile #' . $banner->mobileImageMediaId : '');
+
+    $rowsHtml .= '<tr data-id="' . (int) $id . '">'
+        . '<td class="drag-col"><span class="drag-handle" title="Kéo để đổi thứ tự">⠿</span></td>'
+        . '<td><span class="tag-chip">' . $e($posLabel) . '</span></td>'
+        . '<td><strong>' . $e($banner->title ?? '—') . '</strong></td>'
+        . '<td class="muted mono">' . $media . '</td>'
+        . '<td class="muted">' . $schedule . '</td>'
+        . '<td class="muted sort-cell">' . $e($banner->sortOrder) . '</td>'
+        . '<td>' . $badge . '</td>'
+        . '<td><div class="actions">'
+        . '<a class="btn sm btn-ghost" href="' . $url(['action' => 'edit', 'id' => $id]) . '">Sửa</a>'
+        . '<form method="post" action="' . $url(['action' => 'delete', 'id' => $id]) . '"'
+        . ' onsubmit="return confirm(\'Xoá vĩnh viễn banner này? Không thể khôi phục.\');">'
+        . '<input type="hidden" name="csrf" value="' . $e($csrf) . '">'
+        . '<button class="btn sm btn-ghost danger" type="submit">Xoá</button></form>'
+        . '</div></td></tr>';
+}
+
+if ($items === []) {
+    $rowsHtml = '<tr><td colspan="8" class="muted">Chưa có banner nào.</td></tr>';
+}
+
+$html .= '<div class="card"><div class="table-wrap"><table class="data-table"><thead><tr>'
+    . '<th class="drag-col"></th><th>Vị trí</th><th>Tiêu đề</th><th>Media</th><th>Lịch hiển thị (UTC)</th>'
+    . '<th>Thứ tự</th><th>Hiển thị</th><th class="action-col">Thao tác</th>'
+    . '</tr></thead><tbody class="js-sortable"'
+    . ' data-reorder-url="' . $e($url(['action' => 'reorder'])) . '" data-csrf="' . $e($reorderCsrf) . '">'
+    . $rowsHtml . '</tbody></table></div></div>';
+
+echo $html;

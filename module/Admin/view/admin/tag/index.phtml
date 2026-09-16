@@ -1,0 +1,83 @@
+<?php
+
+/** @var \Laminas\View\Renderer\PhpRenderer $this */
+/** @var list<\Admin\Model\Tag\TagModel> $items */
+$items = (array) ($this->items ?? []);
+/** @var list<array{id: int, name: string}> $tagOptions */
+$tagOptions = (array) ($this->tagOptions ?? []);
+/** @var string|null $flag */
+$flag = isset($this->flag) && is_string($this->flag) ? $this->flag : null;
+$csrf = (string) ($this->csrfHash ?? '');
+$e    = fn (mixed $v): string => $this->escapeHtml((string) $v);
+$url  = fn (array $params = []): string => $this->url('admin/tags', $params);
+
+$flags = [
+    'created'  => ['alert-success', 'Đã tạo tag.'],
+    'updated'  => ['alert-success', 'Đã cập nhật tag.'],
+    'deleted'  => ['alert-success', 'Đã xoá tag (bài viết chỉ mất tag, không mất bài).'],
+    'merged'   => ['alert-success', 'Đã gộp tag — tag nguồn đã bị xoá.'],
+    'invalid'  => ['alert-warning', 'Không gộp được: kiểm tra tag nguồn/đích khác nhau và còn tồn tại.'],
+    'notfound' => ['alert-danger', 'Không tìm thấy tag.'],
+    'csrf'     => ['alert-danger', 'Token bảo mật không hợp lệ.'],
+];
+
+$html = '<div class="page-header"><div><h1>Tag</h1>'
+    . '<p class="subtitle">Nhãn tự do cho bài viết — gộp tag trùng để dọn hệ thống.</p></div>'
+    . '<a class="btn btn-primary" href="' . $url(['action' => 'create']) . '">'
+    . '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">'
+    . '<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Thêm tag</a></div>';
+
+if ($flag !== null && isset($flags[$flag])) {
+    [$cls, $msg] = $flags[$flag];
+    $html .= '<div class="alert ' . $cls . '">' . $msg . '</div>';
+}
+
+$tagSelect = static function (string $name) use ($tagOptions, $e): string {
+    $out = '<select class="form-select" name="' . $name . '" required>';
+    foreach ($tagOptions as $opt) {
+        $out .= '<option value="' . $e($opt['id']) . '">' . $e($opt['name']) . '</option>';
+    }
+
+    return $out . '</select>';
+};
+
+$html .= '<div class="two-col wide-left"><div><div class="card">';
+
+$rowsHtml = '';
+foreach ($items as $row) {
+    /** @var \Admin\Model\Tag\TagModel $row */
+    $id = $row->id;
+    $rowsHtml .= '<tr><td><span class="tag-chip">' . $e($row->name) . '</span></td>'
+        . '<td><span class="slug-text">' . $e($row->slug) . '</span></td>'
+        . '<td class="muted">' . $e($row->postCount ?? 0) . '</td>'
+        . '<td><div class="actions">'
+        . '<a class="btn sm btn-ghost" href="' . $url(['action' => 'edit', 'id' => $id]) . '">Sửa</a>'
+        . '<form method="post" action="' . $url(['action' => 'delete', 'id' => $id]) . '"'
+        . ' onsubmit="return confirm(\'Xoá tag này? Bài viết sẽ mất tag.\');">'
+        . '<input type="hidden" name="csrf" value="' . $e($csrf) . '">'
+        . '<button class="btn sm btn-ghost danger" type="submit">Xoá</button></form>'
+        . '</div></td></tr>';
+}
+
+if ($items === []) {
+    $rowsHtml = '<tr><td colspan="4" class="muted">Chưa có tag nào.</td></tr>';
+}
+
+$html .= '<div class="table-wrap"><table class="data-table"><thead><tr>'
+    . '<th>Tên</th><th>Slug</th><th>Số bài</th><th class="action-col">Thao tác</th></tr></thead>'
+    . '<tbody>' . $rowsHtml . '</tbody></table></div></div></div>';
+
+$html .= '<div><div class="card"><h3 style="font-size:.95rem;font-weight:700;margin-bottom:6px">Gộp tag</h3>'
+    . '<p class="muted" style="font-size:.85rem;margin-bottom:12px">Chuyển toàn bộ bài của tag nguồn sang tag đích'
+    . ' rồi xoá tag nguồn. URL <span class="mono">/tag/{slug-cu}</span> sẽ thành 404 (hệ không có redirect).</p>'
+    . '<form method="post" action="' . $url(['action' => 'merge']) . '">'
+    . '<input type="hidden" name="csrf" value="' . $e($csrf) . '">'
+    . '<div class="form-group"><label>Tag nguồn (sẽ bị xoá)</label>' . $tagSelect('sourceId') . '</div>'
+    . '<div class="form-group"><label>Tag đích (giữ lại)</label>' . $tagSelect('targetId') . '</div>'
+    . '<button class="btn btn-warn" type="submit"'
+    . ' onclick="return confirm(\'Gộp và xoá tag nguồn?\');">Gộp tag</button></form>'
+    . '</div></div></div>';
+
+$html .= '</div>';
+
+echo $html;

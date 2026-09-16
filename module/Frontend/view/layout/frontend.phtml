@@ -1,0 +1,45 @@
+<?php /** @var \Laminas\View\Renderer\PhpRenderer $this */ ?>
+<?= $this->doctype() ?>
+<html lang="vi">
+<head>
+    <meta charset="utf-8">
+    <?= $this->headTitle('Vạn Lang')->setSeparator(' - ')->setAutoEscape(false) ?>
+    <?= $this->headMeta()->appendName('viewport', 'width=device-width,initial-scale=1')->appendHttpEquiv('X-UA-Compatible', 'IE=edge') ?>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <?= $this->headLink()->prependStylesheet($this->basePath('assets/css/style.css')) ?>
+    <?= $this->headScript() ?>
+</head>
+<body>
+<header class="header">
+  <div class="container header-inner">
+    <a class="logo" href="<?= $this->url('home') ?>"><span class="logo-mark">❧</span><span><small>Trung tâm Chăm sóc Sức khỏe</small><b>VẠN LANG</b></span></a>
+    <nav class="nav">
+      <a href="<?= $this->url('home') ?>">Trang chủ</a>
+      <a href="<?= $this->url('about') ?>">Giới thiệu</a>
+      <a href="<?= $this->url('services') ?>">Dịch vụ</a>
+      <a href="<?= $this->url('pricing') ?>">Bảng giá</a>
+      <a href="<?= $this->url('news') ?>">Tin tức</a>
+      <a href="<?= $this->url('team') ?>">Đội ngũ</a>
+      <a href="<?= $this->url('contact') ?>">Liên hệ</a>
+    </nav>
+    <div class="header-actions">
+      <a class="hotline" href="tel:19001234">☎ 1900 1234</a>
+      <a class="btn btn-teal" href="<?= $this->url('contact') ?>">Đăng ký dịch vụ</a>
+    </div>
+  </div>
+</header>
+<main><?= $this->content ?></main>
+<footer class="footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div><div class="footer-logo"><span class="logo-mark">❧</span><span><b>VẠN LANG</b></span></div><p>Trung tâm Chăm sóc Sức khỏe Vạn Lang — tận tâm, chuyên nghiệp, đồng hành cùng gia đình.</p></div>
+      <div><h4>Liên kết</h4><p><a href="<?= $this->url('about') ?>">Giới thiệu</a><br><a href="<?= $this->url('services') ?>">Dịch vụ</a><br><a href="<?= $this->url('pricing') ?>">Bảng giá</a><br><a href="<?= $this->url('team') ?>">Đội ngũ</a><br><a href="<?= $this->url('contact') ?>">Liên hệ</a></p></div>
+      <div><h4>Liên hệ</h4><p>📍 123 Hoàng Văn Ca, Long Biên, Hà Nội<br>☎ <a href="tel:19001234" style="color:inherit">1900 1234</a><br><a href="<?= $this->url('pricing') ?>" style="color:inherit">Bảng giá →</a></p></div>
+      <div><h4>Theo dõi</h4><div class="socials"><a href="#">f</a><a href="#">▶</a></div></div>
+    </div>
+    <div class="footer-bottom"><span>© <?= date('Y') ?> Vạn Lang.</span></div>
+  </div>
+</footer>
+<?= $this->inlineScript() ?>
+</body>
+</html>

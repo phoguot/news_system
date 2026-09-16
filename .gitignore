@@ -1,0 +1,16 @@
+/.phpcs-cache
+/.phpunit.cache
+/.psalm-cache
+/var-psalm.txt
+/.zcode/
+/.vscode/
+vendor/
+config/development.config.php
+data/cache/*
+!data/cache/.gitkeep
+# Trang FR-39: Filesystem adapter KHÔNG tự tạo cache_dir — thư mục page/ phải
+# có trong repo (chỉ .gitkeep, mọi file cache bên trong vẫn ignore).
+!data/cache/page/
+data/cache/page/*
+!data/cache/page/.gitkeep
+phpunit.xml

@@ -1,0 +1,83 @@
+<?php
+
+declare(strict_types=1);
+
+/**
+ * Trang liên hệ /lien-he — chỉ hiển thị SĐT/Zalo + địa chỉ + bản đồ (không form gửi mail).
+ * Dữ liệu từ SettingService::all() + mapEmbedUrl() (ưu tiên địa chỉ để map đổi theo settings).
+ * Chuẩn .phtml chuỗi-based (AGENTS §2 / 07 §8): không control structure trong body.
+ *
+ * @var \Laminas\View\Renderer\PhpRenderer $this
+ * @var array<string, string|null> $settings
+ * @var string|null $mapUrl
+ * @var bool $sent
+ * @var string|null $error
+ */
+
+$settings = is_array($this->settings ?? null) ? $this->settings : [];
+$mapUrl   = is_string($this->mapUrl ?? null) && $this->mapUrl !== '' ? $this->mapUrl : null;
+$sent     = (bool) ($this->sent ?? false);
+$error    = is_string($this->error ?? null) ? $this->error : null;
+
+$this->headTitle('Liên hệ · Vạn Lang');
+
+$view = $this;
+$e    = static fn (mixed $v): string => $view->escapeHtml((string) $v);
+$ea   = static fn (mixed $v): string => $view->escapeHtmlAttr((string) $v);
+
+$companyName  = (string) ($settings['company_name'] ?? 'Trung tâm Chăm sóc Sức khỏe Vạn Lang');
+$address      = (string) ($settings['address'] ?? '123 Hoàng Văn Ca, Long Biên, Hà Nội');
+$hotline      = (string) ($settings['hotline'] ?? '1900 1234');
+$email        = (string) ($settings['email'] ?? '');
+$workingHours = (string) ($settings['working_hours'] ?? '');
+$zaloUrl      = (string) ($settings['zalo_url'] ?? '');
+$facebookUrl  = (string) ($settings['facebook_url'] ?? '');
+
+$hotlineHref = 'tel:' . preg_replace('/\s+/', '', $hotline);
+$zaloHref    = $zaloUrl !== '' ? $zaloUrl : ('https://zalo.me/' . preg_replace('/\D+/', '', $hotline));
+
+$sentAlert  = $sent ? '<div class="alert alert-success">Cảm ơn bạn đã liên hệ. Chúng tôi sẽ phản hồi sớm nhất.</div>' : '';
+$errorAlert = $error !== null && $error !== '' ? '<div class="alert alert-danger">' . $e($error) . '</div>' : '';
+
+$breadcrumb = '<div class="breadcrumb"><a href="/">⌂ Home</a> › <span aria-current="page">Liên hệ</span></div>';
+$banner = '<section class="page-banner"><div class="container" style="position:relative;z-index:1"><h1>LIÊN HỆ</h1>' . $breadcrumb
+    . '<p class="contact-intro" style="margin-top:10px;max-width:520px;color:var(--muted);font-size:13.5px">Chúng tôi luôn lắng nghe và sẵn sàng hỗ trợ bạn. Kết nối với Vạn Lang ngay hôm nay để nhận tư vấn tốt nhất.</p>'
+    . '</div><div class="banner-img"><img src="https://images.unsplash.com/photo-1576765607924-3f7b8410a787?w=900&q=80" alt=""></div></section>';
+
+$infoRows = '<div class="info-list">'
+    . '<h4 style="font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--teal);margin-top:6px">Thông tin liên lạc</h4>'
+    . '<div class="info-item"><i>📍</i><div><b>Địa chỉ</b><br><span>' . $e($address) . '</span></div></div>'
+    . '<div class="info-item"><i>☎</i><div><b>Hotline</b><br><a href="' . $ea($hotlineHref) . '" style="color:var(--teal);font-weight:700">' . $e($hotline) . '</a></div></div>'
+    . ($email !== '' ? '<div class="info-item"><i>✉</i><div><b>Email</b><br><a href="mailto:' . $ea($email) . '" style="color:var(--teal)">' . $e($email) . '</a></div></div>' : '')
+    . ($workingHours !== '' ? '<div class="info-item"><i>🕐</i><div><b>Giờ làm việc</b><br><span>' . $e($workingHours) . '</span></div></div>' : '')
+    . '</div>';
+
+$actionButtons = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px">'
+    . '<a class="btn btn-teal" href="' . $ea($hotlineHref) . '">☎ Gọi ' . $e($hotline) . '</a>'
+    . '<a class="btn btn-white" href="' . $ea($zaloHref) . '" target="_blank" rel="noopener">Zalo</a></div>';
+if ($facebookUrl !== '') {
+    $actionButtons .= '<div style="margin-top:10px;text-align:center"><a href="' . $ea($facebookUrl) . '" target="_blank" rel="noopener" style="font-size:13px;color:var(--teal);font-weight:600">Facebook →</a></div>';
+}
+
+$mapCard = $mapUrl !== null
+    ? '<div class="map-card" style="height:280px"><iframe src="' . $ea($mapUrl) . '" width="100%" height="280" style="border:0" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen title="Bản đồ ' . $ea($companyName) . '"></iframe></div>'
+    : '<div class="map-card" style="height:280px;display:grid;place-items:center;background:var(--teal-pale);color:var(--muted);font-size:13px">Bản đồ chưa cấu hình — vui lòng cập nhật địa chỉ trong Admin → Cài đặt.</div>';
+
+$leftCard = '<div class="card info-card"><h3>KẾT NỐI VỚI ' . $e(mb_strtoupper($companyName, 'UTF-8')) . '</h3>'
+    . '<p>Mọi câu hỏi, ý kiến đóng góp hoặc yêu cầu dịch vụ của quý khách đều rất quan trọng đối với chúng tôi. Đừng ngần ngại liên hệ qua các kênh dưới đây.</p>'
+    . $infoRows . $actionButtons . '</div>';
+
+$rightCard = '<div style="display:flex;flex-direction:column;gap:14px">'
+    . '<div><h4 style="font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--teal)">Bản đồ vị trí</h4>' . $mapCard . '</div>'
+    . '<div class="commit"><h4>Cam kết của Vạn Lang</h4><div class="commit-grid">'
+    . '<div class="commit-item"><i>✓</i><div><b>Bảo mật thông tin</b><span>Thông tin của bạn được bảo mật tuyệt đối.</span></div></div>'
+    . '<div class="commit-item"><i>⚡</i><div><b>Phản hồi nhanh</b><span>Cam kết phản hồi trong vòng 24h.</span></div></div>'
+    . '<div class="commit-item"><i>🤝</i><div><b>Tư vấn chính xác</b><span>Đội ngũ y khoa giàu kinh nghiệm.</span></div></div>'
+    . '<div class="commit-item"><i>🛡</i><div><b>Hỗ trợ tận tâm</b><span>Đồng hành cùng gia đình.</span></div></div>'
+    . '</div></div></div>';
+
+$html = $banner
+    . '<div class="container" style="padding-top:14px">' . $sentAlert . $errorAlert . '</div>'
+    . '<div class="container contact-layout">' . $leftCard . $rightCard . '</div>';
+
+echo $html;

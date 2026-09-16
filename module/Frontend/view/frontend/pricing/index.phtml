@@ -1,0 +1,157 @@
+<?php
+
+declare(strict_types=1);
+
+/**
+ * Trang bảng giá /bang-gia (Medlatec-style):
+ * - Filter GET ?nhom=&q=&page=; Service kẹp page và trả 20 dòng/trang.
+ * - Bảng 4 cột: STT / Tên dịch vụ / Giá dịch vụ / Giá BHYT.
+ * - Chuẩn .phtml chuỗi-based (AGENTS §2 / 07 §8): không control structure trong body.
+ *
+ * @var \Laminas\View\Renderer\PhpRenderer $this
+ * @var list<array<string, mixed>> $items
+ * @var array<string, string> $groups
+ * @var int $total
+ * @var int $page
+ * @var int $pages
+ * @var int $perPage
+ * @var string $group
+ * @var string $q
+ */
+
+$items   = is_array($this->items ?? null) ? $this->items : [];
+$groups  = is_array($this->groups ?? null) ? $this->groups : [];
+$total   = (int) ($this->total ?? 0);
+$page    = max(1, (int) ($this->page ?? 1));
+$pages   = max(0, (int) ($this->pages ?? 0));
+$perPage = max(1, (int) ($this->perPage ?? \Frontend\Constant\FrontendConst::PRICING_PAGE_SIZE));
+$group   = (string) ($this->group ?? '');
+$q       = (string) ($this->q ?? '');
+
+$this->headTitle('Bảng giá · Vạn Lang');
+
+$view = $this;
+$e    = static fn (mixed $v): string => $view->escapeHtml((string) $v);
+$ea   = static fn (mixed $v): string => $view->escapeHtmlAttr((string) $v);
+
+$queryBase = [];
+if ($group !== '') {
+    $queryBase['nhom'] = $group;
+}
+if ($q !== '') {
+    $queryBase['q'] = $q;
+}
+$pageUrl = static function (int $p) use ($view, $queryBase): string {
+    return $view->url('pricing', [], ['query' => $queryBase + ['page' => $p]]);
+};
+
+$priceText = static function (mixed $raw): string {
+    if ($raw === null || $raw === '') {
+        return 'Liên hệ';
+    }
+
+    return number_format((int) $raw, 0, ',', '.');
+};
+
+$breadcrumb = '<nav class="breadcrumb" aria-label="Breadcrumb">'
+    . '<a href="/">Trang chủ</a><span> › </span><span aria-current="page">Bảng giá</span></nav>';
+
+$banner = '<section class="page-banner pricing-hero"><div class="container"><h1>BẢNG GIÁ DỊCH VỤ</h1>'
+    . $breadcrumb
+    . '</div><div class="banner-img"><img src="https://images.unsplash.com/photo-1576765607924-3f7b8410a787?w=900&q=80" alt=""></div></section>';
+
+$groupOptions = '<option value="">Tất cả nhóm dịch vụ</option>';
+foreach ($groups as $code => $label) {
+    $selected = $code === $group ? ' selected' : '';
+    $groupOptions .= '<option value="' . $ea($code) . '"' . $selected . '>' . $e($label) . '</option>';
+}
+
+$filterBar = '<form class="pricing-search" method="get" action="' . $ea($this->url('pricing')) . '">'
+    . '<input class="input pricing-search-input" type="search" name="q" value="' . $ea($q)
+    . '" placeholder="Tra cứu giá dịch vụ">'
+    . '<select name="nhom" class="select pricing-search-select">' . $groupOptions . '</select>'
+    . '<button class="btn btn-teal" type="submit">Tra cứu</button>'
+    . ($group !== '' || $q !== '' ? '<a class="btn btn-white" href="' . $ea($this->url('pricing')) . '">Xoá lọc</a>' : '')
+    . '</form>';
+
+$startIndex = ($page - 1) * $perPage;
+$rowsHtml   = '';
+foreach ($items as $idx => $row) {
+    $name      = (string) ($row['name'] ?? '');
+    $note      = (string) ($row['note'] ?? '');
+    $unit      = (string) ($row['unit'] ?? '');
+    $groupCode = (string) ($row['groupCode'] ?? '');
+    $groupName = $groups[$groupCode] ?? $groupCode;
+    $price     = $priceText($row['price'] ?? null);
+    $priceCls  = $price === 'Liên hệ' ? 'pricing-price pricing-contact' : 'pricing-price';
+    $meta      = trim($groupName . ($unit !== '' ? ' · ' . $unit : ''));
+    $rowsHtml .= '<tr>'
+        . '<td class="pricing-index">' . $e($startIndex + $idx + 1) . '</td>'
+        . '<td class="pricing-name"><strong>' . $e($name) . '</strong>'
+        . ($meta !== '' ? '<span>' . $e($meta) . '</span>' : '')
+        . ($note !== '' ? '<small>' . $e($note) . '</small>' : '')
+        . '</td>'
+        . '<td class="' . $priceCls . '">' . $e($price) . '</td>'
+        . '<td class="pricing-insurance">—</td>'
+        . '</tr>';
+}
+
+if ($rowsHtml === '') {
+    $rowsHtml = '<tr><td colspan="4" class="news-empty">Không có mục nào khớp thông tin tra cứu.</td></tr>';
+}
+
+$from = $total > 0 ? $startIndex + 1 : 0;
+$to   = min($total, $startIndex + count($items));
+$summary = $total > 0
+    ? '<p class="news-count">Đang hiển thị ' . $e($from) . '-' . $e($to)
+        . ' / ' . $e($total) . ' mục · trang ' . $e($page) . '/' . $e(max(1, $pages)) . '</p>'
+    : '<p class="news-count">Không có mục bảng giá phù hợp.</p>';
+
+$pager = '';
+if ($pages > 1) {
+    $window = \Frontend\Constant\FrontendConst::PAGER_WINDOW;
+    $start  = max(1, $page - $window);
+    $end    = min($pages, $page + $window);
+    $pager  = '<nav class="pager" aria-label="Phân trang bảng giá">';
+    if ($page > 1) {
+        $pager .= '<a class="pager-link" href="' . $e($pageUrl($page - 1)) . '">&laquo; Trước</a>';
+    }
+    if ($start > 1) {
+        $pager .= '<a class="pager-link" href="' . $e($pageUrl(1)) . '">1</a>'
+            . ($start > 2 ? '<span class="pager-gap">…</span>' : '');
+    }
+    $numbers = '';
+    for ($p = $start; $p <= $end; $p++) {
+        $numbers .= $p === $page
+            ? '<span class="pager-current" aria-current="page">' . $p . '</span>'
+            : '<a class="pager-link" href="' . $e($pageUrl($p)) . '">' . $p . '</a>';
+    }
+    $pager .= $numbers;
+    if ($end < $pages) {
+        $pager .= ($end < $pages - 1 ? '<span class="pager-gap">…</span>' : '')
+            . '<a class="pager-link" href="' . $e($pageUrl($pages)) . '">' . $pages . '</a>';
+    }
+    if ($page < $pages) {
+        $pager .= '<a class="pager-link" href="' . $e($pageUrl($page + 1)) . '">Sau &raquo;</a>';
+    }
+    $pager .= '</nav>';
+}
+
+$table = '<div class="pricing-card"><div class="table-wrap"><table class="data-table pricing-table pricing-table-public">'
+    . '<thead><tr><th>STT</th><th>Tên dịch vụ</th><th>Giá dịch vụ (VNĐ)</th><th>Giá BHYT (VNĐ)</th></tr></thead>'
+    . '<tbody>' . $rowsHtml . '</tbody></table></div>' . $pager . '</div>';
+
+$sideCard = '<aside class="pricing-side-card"><div class="pricing-hotline-icon">☎</div>'
+    . '<span>Hotline</span><strong>1900 1234</strong>'
+    . '<p>Liên hệ ngay với Vạn Lang để được tư vấn gói dịch vụ phù hợp và nhận báo giá chi tiết.</p>'
+    . '<a class="btn btn-teal" href="/lien-he">Liên hệ với chúng tôi</a></aside>';
+
+$notice = '<p class="pricing-note-lead">Lưu ý: bảng giá dưới đây dùng để tham khảo. Giá dịch vụ thực tế có thể thay đổi theo thời điểm, khu vực và tình trạng chăm sóc. Quý khách vui lòng liên hệ hotline để biết thông tin chi tiết.</p>';
+
+$html = $banner
+    . '<section class="section"><div class="container pricing-layout">'
+    . '<main><h2 class="pricing-title">BẢNG GIÁ DỊCH VỤ CHUNG</h2>'
+    . $notice . $filterBar . $summary . $table . '</main>'
+    . $sideCard . '</div></section>';
+
+echo $html;

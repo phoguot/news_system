@@ -1,0 +1,1932 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CMS Doanh nghiệp</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>/* ========== RESET & BASE ========== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --sidebar-w: 220px;
+  --topbar-h: 58px;
+
+  --primary: #2563eb;
+  --primary-light: #dbeafe;
+  --primary-dark: #1d4ed8;
+
+  --sidebar-bg: #0f1c3a;
+  --sidebar-hover: #1e3a6b;
+  --sidebar-active: #2563eb;
+  --sidebar-text: #94a3b8;
+  --sidebar-text-active: #ffffff;
+
+  --bg: #f1f5f9;
+  --surface: #ffffff;
+  --border: #e2e8f0;
+  --border-light: #f1f5f9;
+
+  --text: #0f172a;
+  --text-secondary: #64748b;
+  --text-muted: #94a3b8;
+
+  --success: #16a34a;
+  --success-bg: #dcfce7;
+  --warning: #d97706;
+  --warning-bg: #fef3c7;
+  --danger: #dc2626;
+  --danger-bg: #fee2e2;
+  --info: #0891b2;
+  --info-bg: #cffafe;
+
+  --radius: 10px;
+  --radius-sm: 6px;
+  --shadow: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
+  --shadow-md: 0 4px 12px rgba(0,0,0,.08);
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.5;
+  min-height: 100vh;
+}
+
+/* ========== LAYOUT ========== */
+.app-layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* ========== SIDEBAR ========== */
+.sidebar {
+  width: var(--sidebar-w);
+  background: var(--sidebar-bg);
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  z-index: 100;
+  transition: transform .25s ease;
+}
+
+.sidebar-header {
+  padding: 18px 16px;
+  border-bottom: 1px solid rgba(255,255,255,.07);
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.logo-icon {
+  width: 32px; height: 32px;
+  background: var(--primary);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+
+.logo-text {
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  line-height: 1.2;
+}
+
+.sidebar-nav {
+  flex: 1;
+  padding: 12px 8px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 8px;
+  color: var(--sidebar-text);
+  text-decoration: none;
+  font-size: 13.5px;
+  font-weight: 500;
+  transition: background .15s, color .15s;
+  cursor: pointer;
+}
+
+.nav-item:hover {
+  background: var(--sidebar-hover);
+  color: #fff;
+}
+
+.nav-item.active {
+  background: var(--sidebar-active);
+  color: var(--sidebar-text-active);
+}
+
+.nav-item svg {
+  flex-shrink: 0;
+  opacity: .85;
+}
+
+.sidebar-footer {
+  padding: 12px 8px;
+  border-top: 1px solid rgba(255,255,255,.07);
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background .15s;
+}
+
+.user-info:hover { background: var(--sidebar-hover); }
+
+.user-info svg { color: var(--sidebar-text); margin-left: auto; flex-shrink: 0; }
+
+.user-details { flex: 1; min-width: 0; }
+.user-name { font-size: 13px; font-weight: 600; color: #fff; }
+.user-role { font-size: 11px; color: var(--sidebar-text); }
+
+/* ========== MAIN WRAPPER ========== */
+.main-wrapper {
+  flex: 1;
+  margin-left: var(--sidebar-w);
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* ========== TOPBAR ========== */
+.topbar {
+  height: var(--topbar-h);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  position: sticky;
+  top: 0;
+  z-index: 90;
+}
+
+.menu-toggle {
+  display: none;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+}
+
+.icon-btn {
+  position: relative;
+  background: none;
+  border: none;
+  width: 36px; height: 36px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: background .15s;
+}
+
+.icon-btn:hover { background: var(--bg); }
+
+.badge {
+  position: absolute;
+  top: 4px; right: 4px;
+  width: 16px; height: 16px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  border: 2px solid #fff;
+}
+
+.topbar-user {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 8px;
+  transition: background .15s;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.topbar-user:hover { background: var(--bg); }
+
+.avatar {
+  width: 34px; height: 34px;
+  background: var(--primary);
+  color: #fff;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.avatar.sm { width: 28px; height: 28px; font-size: 11px; }
+
+/* ========== CONTENT ========== */
+.content {
+  flex: 1;
+  padding: 28px 28px;
+  overflow-y: auto;
+}
+
+.page { display: none; }
+.page.active { display: block; }
+
+/* ========== PAGE HEADER ========== */
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.page-header h1 {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.2;
+}
+
+.subtitle {
+  margin-top: 4px;
+  color: var(--text-secondary);
+  font-size: 13.5px;
+}
+
+/* ========== CARD ========== */
+.card {
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.card-header h3 {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.view-all {
+  font-size: 13px;
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.view-all:hover { text-decoration: underline; }
+
+/* ========== BUTTONS ========== */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all .15s;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: #fff;
+}
+
+.btn-primary:hover { background: var(--primary-dark); }
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+}
+
+.btn-ghost:hover { background: var(--bg); }
+
+.btn.sm { padding: 5px 12px; font-size: 12.5px; }
+
+/* ========== STATS GRID ========== */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  box-shadow: var(--shadow);
+}
+
+.stat-icon {
+  width: 44px; height: 44px;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+
+.stat-icon.blue { background: #dbeafe; color: #2563eb; }
+.stat-icon.purple { background: #ede9fe; color: #7c3aed; }
+.stat-icon.orange { background: #fff7ed; color: #ea580c; }
+.stat-icon.green { background: #dcfce7; color: #16a34a; }
+
+.stat-label {
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.stat-value {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1;
+  margin-bottom: 6px;
+}
+
+.stat-change {
+  font-size: 11.5px;
+  font-weight: 500;
+}
+
+.stat-change.positive { color: var(--success); }
+.stat-change.negative { color: var(--danger); }
+
+/* ========== DASHBOARD GRID ========== */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 20px;
+}
+
+/* ========== BAR CHART ========== */
+.bar-chart { padding-top: 8px; }
+
+.chart-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  height: 160px;
+}
+
+.bar-group {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  height: 100%;
+  justify-content: flex-end;
+}
+
+.bar {
+  width: 100%;
+  background: #bfdbfe;
+  border-radius: 4px 4px 0 0;
+  transition: background .15s;
+  min-height: 4px;
+}
+
+.bar:hover, .bar.active { background: var(--primary); }
+
+.bar-group span {
+  font-size: 10px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+/* ========== RECENT LIST ========== */
+.recent-list { display: flex; flex-direction: column; gap: 14px; }
+
+.recent-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.recent-thumb {
+  width: 52px; height: 38px;
+  border-radius: 6px;
+  background: #bfdbfe;
+  flex-shrink: 0;
+}
+
+.recent-thumb.orange-thumb { background: #fed7aa; }
+.recent-thumb.purple-thumb { background: #ddd6fe; }
+
+.recent-info { flex: 1; min-width: 0; }
+
+.recent-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.recent-meta {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+/* ========== TAG BADGES ========== */
+.tag-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 20px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.tag-badge.cyan { background: var(--info-bg); color: var(--info); }
+.tag-badge.green { background: var(--success-bg); color: var(--success); }
+.tag-badge.purple { background: #ede9fe; color: #7c3aed; }
+.tag-badge.orange { background: var(--warning-bg); color: var(--warning); }
+
+/* ========== TABLE ========== */
+.table-toolbar {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.search-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 7px 12px;
+  flex: 1;
+  min-width: 200px;
+}
+
+.search-box svg { color: var(--text-muted); flex-shrink: 0; }
+
+.search-box input {
+  border: none;
+  background: none;
+  font-size: 13.5px;
+  color: var(--text);
+  width: 100%;
+  outline: none;
+}
+
+.filter-select select {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 7px 12px;
+  font-size: 13.5px;
+  color: var(--text);
+  background: var(--bg);
+  cursor: pointer;
+  outline: none;
+}
+
+.table-wrap { overflow-x: auto; }
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.data-table th {
+  text-align: left;
+  padding: 10px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+  white-space: nowrap;
+}
+
+.data-table td {
+  padding: 13px 14px;
+  border-bottom: 1px solid var(--border-light);
+  font-size: 13.5px;
+  color: var(--text);
+  vertical-align: middle;
+}
+
+.data-table tbody tr:last-child td { border-bottom: none; }
+
+.data-table tbody tr:hover td { background: #f8fafc; }
+
+.check-col { width: 40px; }
+.action-col { width: 80px; text-align: center; }
+
+.post-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 320px;
+}
+
+.post-cell span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.post-thumb {
+  width: 44px; height: 32px;
+  border-radius: 5px;
+  flex-shrink: 0;
+}
+
+.post-thumb.t1 { background: linear-gradient(135deg, #60a5fa, #3b82f6); }
+.post-thumb.t2 { background: linear-gradient(135deg, #fb923c, #f97316); }
+.post-thumb.t3 { background: linear-gradient(135deg, #a78bfa, #8b5cf6); }
+.post-thumb.t4 { background: linear-gradient(135deg, #34d399, #10b981); }
+.post-thumb.t5 { background: linear-gradient(135deg, #f472b6, #ec4899); }
+
+.service-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.service-thumb {
+  width: 36px; height: 36px;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.service-thumb.s1 { background: linear-gradient(135deg, #60a5fa, #2563eb); }
+.service-thumb.s2 { background: linear-gradient(135deg, #34d399, #059669); }
+.service-thumb.s3 { background: linear-gradient(135deg, #f472b6, #db2777); }
+.service-thumb.s4 { background: linear-gradient(135deg, #fb923c, #ea580c); }
+.service-thumb.s5 { background: linear-gradient(135deg, #a78bfa, #7c3aed); }
+
+.slug-text {
+  color: var(--text-secondary);
+  font-size: 12.5px;
+  font-family: monospace;
+}
+
+.email-text, .msg-text {
+  color: var(--text-secondary);
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 160px;
+}
+
+/* ========== STATUS BADGES ========== */
+.status {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+
+.status.published { background: var(--success-bg); color: var(--success); }
+.status.draft { background: var(--warning-bg); color: var(--warning); }
+.status.new { background: #dbeafe; color: #1d4ed8; }
+.status.read { background: var(--border-light); color: var(--text-secondary); }
+.status.replied { background: var(--success-bg); color: var(--success); }
+
+/* ========== TAG CHIPS ========== */
+.tag-chip {
+  display: inline-block;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 7px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-right: 3px;
+}
+
+/* ========== MORE BTN ========== */
+.more-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  transition: background .15s;
+  letter-spacing: 1px;
+}
+
+.more-btn:hover { background: var(--bg); color: var(--text); }
+
+/* ========== PAGINATION ========== */
+.table-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-light);
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.count-text { font-size: 13px; color: var(--text-secondary); }
+
+.pagination {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.page-btn {
+  min-width: 30px; height: 30px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: 6px;
+  font-size: 12.5px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-secondary);
+  transition: all .15s;
+  padding: 0 6px;
+}
+
+.page-btn:hover:not(:disabled) { border-color: var(--primary); color: var(--primary); }
+.page-btn.active { background: var(--primary); border-color: var(--primary); color: #fff; font-weight: 600; }
+.page-btn:disabled { opacity: .4; cursor: not-allowed; }
+
+.page-ellipsis { color: var(--text-muted); font-size: 13px; padding: 0 4px; }
+
+/* ========== CREATE POST ========== */
+.create-post-layout {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 20px;
+  align-items: start;
+}
+
+.post-form-main .card,
+.post-form-side .card {
+  padding: 22px;
+}
+
+.form-group {
+  margin-bottom: 18px;
+}
+
+.form-group:last-child { margin-bottom: 0; }
+
+.form-group label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 7px;
+}
+
+.req { color: #ef4444; }
+
+.form-input, .form-select, .form-textarea {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  font-size: 13.5px;
+  color: var(--text);
+  background: var(--surface);
+  font-family: inherit;
+  transition: border-color .15s, box-shadow .15s;
+  outline: none;
+}
+
+.form-input:focus, .form-select:focus, .form-textarea:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(37,99,235,.1);
+}
+
+.form-textarea {
+  min-height: 220px;
+  resize: vertical;
+}
+
+.form-textarea.sm { min-height: 80px; }
+
+.field-hint { font-size: 11.5px; color: var(--text-muted); margin-top: 5px; }
+
+.char-count { text-align: right; font-size: 11.5px; color: var(--text-muted); margin-top: 4px; }
+
+/* Editor Toolbar */
+.editor-toolbar {
+  display: flex;
+  gap: 2px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-bottom: none;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  background: var(--bg);
+  flex-wrap: wrap;
+}
+
+.editor-toolbar button {
+  background: none;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 13px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: background .15s;
+}
+
+.editor-toolbar button:hover { background: var(--border); color: var(--text); }
+
+.editor-toolbar .sep {
+  width: 1px;
+  background: var(--border);
+  margin: 2px 4px;
+  align-self: stretch;
+}
+
+.editor-toolbar + .form-textarea {
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+}
+
+/* Upload area */
+.upload-area {
+  border: 1.5px dashed var(--border);
+  border-radius: var(--radius-sm);
+  padding: 28px 20px;
+  text-align: center;
+  background: var(--bg);
+  cursor: pointer;
+  transition: border-color .15s;
+}
+
+.upload-area:hover { border-color: var(--primary); }
+
+.upload-area p {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-top: 8px;
+}
+
+.upload-area a { color: var(--primary); text-decoration: none; }
+
+.upload-hint { font-size: 11.5px; color: var(--text-muted); margin-top: 4px !important; }
+
+.upload-area.sm { padding: 16px; }
+
+/* Radio Group */
+.radio-group { display: flex; gap: 20px; }
+
+.radio-label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13.5px;
+  cursor: pointer;
+  font-weight: 400;
+}
+
+.radio-label input { cursor: pointer; }
+
+/* Form Actions */
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+/* ========== TEAM AVATARS ========== */
+.team-avatar {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.av1 { background: #2563eb; }
+.av2 { background: #7c3aed; }
+.av3 { background: #059669; }
+.av4 { background: #db2777; }
+.av5 { background: #ea580c; }
+
+/* ========== MEDIA ========== */
+.media-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 18px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0;
+}
+
+.media-tab {
+  background: none;
+  border: none;
+  padding: 7px 16px;
+  font-size: 13.5px;
+  font-weight: 500;
+  cursor: pointer;
+  color: var(--text-secondary);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color .15s, border-color .15s;
+}
+
+.media-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+.media-tab:hover:not(.active) { color: var(--text); }
+
+.media-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 14px;
+}
+
+.media-item {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--bg);
+  cursor: pointer;
+  transition: box-shadow .15s, border-color .15s;
+}
+
+.media-item:hover { box-shadow: var(--shadow-md); border-color: var(--primary); }
+
+.media-preview {
+  width: 100%;
+  height: 100px;
+  object-fit: cover;
+}
+
+.m1 { background: linear-gradient(135deg, #60a5fa 0%, #1d4ed8 100%); }
+.m2 { background: linear-gradient(135deg, #6ee7b7 0%, #059669 100%); }
+.m3 { background: linear-gradient(135deg, #c4b5fd 0%, #7c3aed 100%); }
+.m4 { background: linear-gradient(135deg, #fda4af 0%, #e11d48 100%); }
+.m5 { background: linear-gradient(135deg, #fdba74 0%, #ea580c 100%); }
+.m6 { background: linear-gradient(135deg, #67e8f9 0%, #0891b2 100%); }
+.m7 { background: linear-gradient(135deg, #d1fae5 0%, #10b981 100%); }
+
+.doc-preview {
+  background: #fef2f2;
+  display: flex; align-items: center; justify-content: center;
+}
+
+.media-name {
+  padding: 6px 10px 2px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.media-size {
+  padding: 0 10px 8px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* ========== SETTINGS ========== */
+.settings-layout {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+.settings-tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px;
+  box-shadow: var(--shadow);
+}
+
+.settings-tab {
+  background: none;
+  border: none;
+  text-align: left;
+  padding: 9px 14px;
+  border-radius: 7px;
+  font-size: 13.5px;
+  font-weight: 500;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: background .15s, color .15s;
+}
+
+.settings-tab:hover { background: var(--bg); color: var(--text); }
+.settings-tab.active { background: var(--primary-light); color: var(--primary); font-weight: 600; }
+
+.settings-panel { margin-bottom: 0; }
+
+.logo-upload {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.logo-preview {
+  width: 52px; height: 52px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--bg);
+}
+
+/* ========== RESPONSIVE ========== */
+@media (max-width: 1200px) {
+  .stats-grid { grid-template-columns: repeat(2, 1fr); }
+  .dashboard-grid { grid-template-columns: 1fr; }
+  .create-post-layout { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 900px) {
+  :root { --sidebar-w: 0px; }
+
+  .sidebar {
+    transform: translateX(-220px);
+    width: 220px;
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+    box-shadow: 0 0 0 100vw rgba(0,0,0,.4);
+  }
+
+  .main-wrapper { margin-left: 0; }
+
+  .menu-toggle { display: flex; }
+
+  .content { padding: 20px 16px; }
+
+  .stats-grid { grid-template-columns: repeat(2, 1fr); }
+
+  .settings-layout { grid-template-columns: 1fr; }
+  .settings-tabs { flex-direction: row; flex-wrap: wrap; }
+
+  .page-header { flex-direction: column; align-items: flex-start; }
+}
+
+@media (max-width: 600px) {
+  .stats-grid { grid-template-columns: 1fr 1fr; }
+
+  .topbar { padding: 0 14px; }
+
+  .content { padding: 16px 12px; }
+
+  .card { padding: 16px; }
+
+  .data-table th, .data-table td {
+    padding: 10px 10px;
+    font-size: 12.5px;
+  }
+
+  .media-grid { grid-template-columns: repeat(2, 1fr); }
+
+  .stat-value { font-size: 22px; }
+
+  .table-footer { flex-direction: column; align-items: flex-start; }
+
+  .dashboard-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 420px) {
+  .stats-grid { grid-template-columns: 1fr; }
+  .pagination { flex-wrap: wrap; }
+}
+
+/* ========== OVERLAY ========== */
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.3);
+  z-index: 99;
+}
+
+.sidebar-overlay.active { display: block; }
+</style>
+</head>
+<body>
+  <div class="app-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="logo">
+          <div class="logo-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="8" height="8" rx="1.5" fill="#fff"/><rect x="13" y="3" width="8" height="8" rx="1.5" fill="#fff" opacity=".6"/><rect x="3" y="13" width="8" height="8" rx="1.5" fill="#fff" opacity=".6"/><rect x="13" y="13" width="8" height="8" rx="1.5" fill="#fff" opacity=".4"/></svg>
+          </div>
+          <span class="logo-text">CMS Doanh nghiệp</span>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <a href="#" class="nav-item active" data-page="dashboard">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          <span>Tổng quan</span>
+        </a>
+        <a href="#" class="nav-item" data-page="posts">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          <span>Bài viết</span>
+        </a>
+        <a href="#" class="nav-item" data-page="categories">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+          <span>Danh mục</span>
+        </a>
+        <a href="#" class="nav-item" data-page="tags">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+          <span>Tag</span>
+        </a>
+        <a href="#" class="nav-item" data-page="services">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93A10 10 0 0 0 5 19.07M4.93 19.07A10 10 0 0 0 19.07 5"/></svg>
+          <span>Dịch vụ</span>
+        </a>
+        <a href="#" class="nav-item" data-page="team">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <span>Đội ngũ</span>
+        </a>
+        <a href="#" class="nav-item" data-page="contacts">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+          <span>Liên hệ</span>
+        </a>
+        <a href="#" class="nav-item" data-page="media">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          <span>Media</span>
+        </a>
+        <a href="#" class="nav-item" data-page="settings">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          <span>Cài đặt</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="user-info">
+          <div class="avatar">A</div>
+          <div class="user-details">
+            <div class="user-name">Admin</div>
+            <div class="user-role">Quản trị viên</div>
+          </div>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <div class="main-wrapper">
+      <!-- Topbar -->
+      <header class="topbar">
+        <button class="menu-toggle" id="menuToggle">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <div class="topbar-right">
+          <button class="icon-btn" title="Thông báo">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            <span class="badge">3</span>
+          </button>
+          <div class="topbar-user">
+            <div class="avatar sm">A</div>
+            <span>Admin</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+        </div>
+      </header>
+
+      <!-- Pages -->
+      <main class="content">
+
+        <!-- DASHBOARD PAGE -->
+        <div class="page active" id="page-dashboard">
+          <div class="page-header">
+            <div>
+              <h1>Tổng quan</h1>
+              <p class="subtitle">Chào mừng bạn trở lại! Dưới đây là tổng quan hoạt động của website.</p>
+            </div>
+          </div>
+
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-icon blue"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+              <div class="stat-info">
+                <div class="stat-label">Tổng bài viết</div>
+                <div class="stat-value">124</div>
+                <div class="stat-change positive">+12% so với tháng trước</div>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon purple"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></div>
+              <div class="stat-info">
+                <div class="stat-label">Danh mục</div>
+                <div class="stat-value">8</div>
+                <div class="stat-change positive">+1 danh mục mới</div>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon orange"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93A10 10 0 0 0 5 19.07"/></svg></div>
+              <div class="stat-info">
+                <div class="stat-label">Dịch vụ</div>
+                <div class="stat-value">6</div>
+                <div class="stat-change positive">+1 dịch vụ mới</div>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon green"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></div>
+              <div class="stat-info">
+                <div class="stat-label">Liên hệ mới</div>
+                <div class="stat-value">18</div>
+                <div class="stat-change positive">+5 so với tháng trước</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="dashboard-grid">
+            <div class="card chart-card">
+              <div class="card-header">
+                <h3>Bài viết theo tháng</h3>
+              </div>
+              <div class="bar-chart">
+                <div class="chart-bars">
+                  <div class="bar-group"><div class="bar" style="height:35%"></div><span>T1</span></div>
+                  <div class="bar-group"><div class="bar" style="height:45%"></div><span>T2</span></div>
+                  <div class="bar-group"><div class="bar" style="height:30%"></div><span>T3</span></div>
+                  <div class="bar-group"><div class="bar" style="height:55%"></div><span>T4</span></div>
+                  <div class="bar-group"><div class="bar" style="height:40%"></div><span>T5</span></div>
+                  <div class="bar-group"><div class="bar" style="height:65%"></div><span>T6</span></div>
+                  <div class="bar-group"><div class="bar" style="height:50%"></div><span>T7</span></div>
+                  <div class="bar-group"><div class="bar" style="height:70%"></div><span>T8</span></div>
+                  <div class="bar-group"><div class="bar" style="height:60%"></div><span>T9</span></div>
+                  <div class="bar-group"><div class="bar" style="height:80%"></div><span>T10</span></div>
+                  <div class="bar-group"><div class="bar" style="height:75%"></div><span>T11</span></div>
+                  <div class="bar-group"><div class="bar active" style="height:90%"></div><span>T12</span></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card recent-posts-card">
+              <div class="card-header">
+                <h3>Bài viết mới nhất</h3>
+                <a href="#" class="view-all" data-page="posts">Xem tất cả →</a>
+              </div>
+              <div class="recent-list">
+                <div class="recent-item">
+                  <div class="recent-thumb"></div>
+                  <div class="recent-info">
+                    <div class="recent-title">Xu hướng công nghệ 2026: Những thay đổi đang chờ đợi</div>
+                    <div class="recent-meta">12/09/2026</div>
+                  </div>
+                  <span class="tag-badge cyan">Công nghệ</span>
+                </div>
+                <div class="recent-item">
+                  <div class="recent-thumb orange-thumb"></div>
+                  <div class="recent-info">
+                    <div class="recent-title">Dịch vụ tư vấn chuyển đổi số cho doanh nghiệp</div>
+                    <div class="recent-meta">10/09/2026</div>
+                  </div>
+                  <span class="tag-badge green">Dịch vụ</span>
+                </div>
+                <div class="recent-item">
+                  <div class="recent-thumb purple-thumb"></div>
+                  <div class="recent-info">
+                    <div class="recent-title">Đội ngũ chuyên gia giàu kinh nghiệm</div>
+                    <div class="recent-meta">08/09/2026</div>
+                  </div>
+                  <span class="tag-badge purple">Đội ngũ</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- POSTS PAGE -->
+        <div class="page" id="page-posts">
+          <div class="page-header">
+            <div>
+              <h1>Danh sách bài viết</h1>
+              <p class="subtitle">Quản lý tất cả bài viết trên website.</p>
+            </div>
+            <button class="btn btn-primary" onclick="showCreatePost()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Tạo bài viết
+            </button>
+          </div>
+
+          <div class="card">
+            <div class="table-toolbar">
+              <div class="search-box">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input type="text" placeholder="Tìm kiếm tiêu đề, slug..." />
+              </div>
+              <div class="filter-select">
+                <select>
+                  <option>Tất cả danh mục</option>
+                  <option>Công nghệ</option>
+                  <option>Dịch vụ</option>
+                  <option>Đội ngũ</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th class="check-col"><input type="checkbox" /></th>
+                    <th>Tiêu đề</th>
+                    <th>Danh mục</th>
+                    <th>Tag</th>
+                    <th>Trạng thái</th>
+                    <th>Ngày đăng</th>
+                    <th class="action-col">Hành động</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><input type="checkbox" /></td>
+                    <td>
+                      <div class="post-cell">
+                        <div class="post-thumb t1"></div>
+                        <span>Xu hướng công nghệ 2026: Những thay đổi đang chờ đợi</span>
+                      </div>
+                    </td>
+                    <td>Công nghệ</td>
+                    <td><span class="tag-chip">công nghệ</span> <span class="tag-chip">xu hướng</span></td>
+                    <td><span class="status published">Đã xuất bản</span></td>
+                    <td>12/09/2026 10:24</td>
+                    <td><button class="more-btn">···</button></td>
+                  </tr>
+                  <tr>
+                    <td><input type="checkbox" /></td>
+                    <td>
+                      <div class="post-cell">
+                        <div class="post-thumb t2"></div>
+                        <span>Dịch vụ tư vấn chuyển đổi số cho doanh nghiệp</span>
+                      </div>
+                    </td>
+                    <td>Dịch vụ</td>
+                    <td><span class="tag-chip">tư vấn</span> <span class="tag-chip">chuyển đổi số</span></td>
+                    <td><span class="status published">Đã xuất bản</span></td>
+                    <td>10/09/2026 14:33</td>
+                    <td><button class="more-btn">···</button></td>
+                  </tr>
+                  <tr>
+                    <td><input type="checkbox" /></td>
+                    <td>
+                      <div class="post-cell">
+                        <div class="post-thumb t3"></div>
+                        <span>Đội ngũ chuyên gia giàu kinh nghiệm</span>
+                      </div>
+                    </td>
+                    <td>Đội ngũ</td>
+                    <td><span class="tag-chip">đội ngũ</span> <span class="tag-chip">chuyên gia</span></td>
+                    <td><span class="status published">Đã xuất bản</span></td>
+                    <td>08/09/2026 09:12</td>
+                    <td><button class="more-btn">···</button></td>
+                  </tr>
+                  <tr>
+                    <td><input type="checkbox" /></td>
+                    <td>
+                      <div class="post-cell">
+                        <div class="post-thumb t4"></div>
+                        <span>Cách xây dựng thương hiệu bền vững</span>
+                      </div>
+                    </td>
+                    <td>Kinh doanh</td>
+                    <td><span class="tag-chip">thương hiệu</span> <span class="tag-chip">marketing</span></td>
+                    <td><span class="status published">Đã xuất bản</span></td>
+                    <td>05/09/2026 16:45</td>
+                    <td><button class="more-btn">···</button></td>
+                  </tr>
+                  <tr>
+                    <td><input type="checkbox" /></td>
+                    <td>
+                      <div class="post-cell">
+                        <div class="post-thumb t5"></div>
+                        <span>Giải pháp tối ưu hiệu suất làm việc</span>
+                      </div>
+                    </td>
+                    <td>Công nghệ</td>
+                    <td><span class="tag-chip">hiệu suất</span> <span class="tag-chip">công cụ</span></td>
+                    <td><span class="status draft">Nháp</span></td>
+                    <td>03/09/2026 11:20</td>
+                    <td><button class="more-btn">···</button></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="table-footer">
+              <span class="count-text">Hiển thị 1-5 trong tổng số 124 bài viết</span>
+              <div class="pagination">
+                <button class="page-btn" disabled>‹</button>
+                <button class="page-btn active">1</button>
+                <button class="page-btn">2</button>
+                <button class="page-btn">3</button>
+                <button class="page-btn">4</button>
+                <button class="page-btn">5</button>
+                <span class="page-ellipsis">...</span>
+                <button class="page-btn">25</button>
+                <button class="page-btn">›</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CREATE POST PAGE -->
+        <div class="page" id="page-create-post">
+          <div class="page-header">
+            <div>
+              <h1>Tạo bài viết</h1>
+              <p class="subtitle">Soạn thảo và xuất bản bài viết mới.</p>
+            </div>
+          </div>
+
+          <div class="create-post-layout">
+            <div class="post-form-main">
+              <div class="card">
+                <div class="form-group">
+                  <label>Tiêu đề <span class="req">*</span></label>
+                  <input type="text" class="form-input" placeholder="Nhập tiêu đề bài viết..." />
+                </div>
+                <div class="form-group">
+                  <label>Nội dung <span class="req">*</span></label>
+                  <div class="editor-toolbar">
+                    <button title="Bold"><b>B</b></button>
+                    <button title="Italic"><i>I</i></button>
+                    <button title="Strike"><s>S</s></button>
+                    <button>U</button>
+                    <button>H1</button>
+                    <button>H2</button>
+                    <div class="sep"></div>
+                    <button>≡</button>
+                    <button>○</button>
+                    <button>⊞</button>
+                    <button>🔗</button>
+                    <button>⌨</button>
+                  </div>
+                  <textarea class="form-textarea" placeholder="Nhập nội dung bài viết..."></textarea>
+                  <div class="char-count">0/200</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="post-form-side">
+              <div class="card">
+                <div class="form-group">
+                  <label>Danh mục <span class="req">*</span></label>
+                  <select class="form-select">
+                    <option>Chọn danh mục</option>
+                    <option>Công nghệ</option>
+                    <option>Dịch vụ</option>
+                    <option>Đội ngũ</option>
+                    <option>Kinh doanh</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Tag</label>
+                  <input type="text" class="form-input" placeholder="Nhập tag (tối đa 5 tag)" />
+                </div>
+                <div class="form-group">
+                  <label>Slug</label>
+                  <input type="text" class="form-input" placeholder="tu-dong-tao-tu-tieu-de" />
+                  <div class="field-hint">Ví dụ: xu-huong-cong-nghe-2026</div>
+                </div>
+                <div class="form-group">
+                  <label>Ảnh đại diện</label>
+                  <div class="upload-area">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    <p>Kéo thả ảnh vào đây hoặc <a href="#">chọn file</a></p>
+                    <p class="upload-hint">Kích thước tối đa: 1200x800px</p>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>Trạng thái <span class="req">*</span></label>
+                  <div class="radio-group">
+                    <label class="radio-label">
+                      <input type="radio" name="status" value="draft" /> Nháp
+                    </label>
+                    <label class="radio-label">
+                      <input type="radio" name="status" value="published" checked /> Đã xuất bản
+                    </label>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>Ngày xuất bản</label>
+                  <input type="text" class="form-input" value="12/09/2026 10:24" />
+                </div>
+                <div class="form-actions">
+                  <button class="btn btn-ghost" onclick="showPage('posts')">Hủy</button>
+                  <button class="btn btn-primary">Lưu</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CATEGORIES PAGE -->
+        <div class="page" id="page-categories">
+          <div class="page-header">
+            <div>
+              <h1>Danh mục</h1>
+              <p class="subtitle">Quản lý danh mục bài viết.</p>
+            </div>
+            <button class="btn btn-primary">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Tạo danh mục
+            </button>
+          </div>
+
+          <div class="card">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Tên danh mục</th>
+                  <th>Slug</th>
+                  <th>Thứ tự</th>
+                  <th>Trạng thái</th>
+                  <th class="action-col">Hành động</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td>Công nghệ</td><td class="slug-text">cong-nghe</td><td>1</td><td><span class="status published">Hiển thị</span></td><td><button class="more-btn">···</button></td></tr>
+                <tr><td>Kinh doanh</td><td class="slug-text">kinh-doanh</td><td>2</td><td><span class="status published">Hiển thị</span></td><td><button class="more-btn">···</button></td></tr>
+                <tr><td>Dịch vụ</td><td class="slug-text">dich-vu</td><td>3</td><td><span class="status published">Hiển thị</span></td><td><button class="more-btn">···</button></td></tr>
+                <tr><td>Đội ngũ</td><td class="slug-text">doi-ngu</td><td>4</td><td><span class="status published">Hiển thị</span></td><td><button class="more-btn">···</button></td></tr>
+                <tr><td>Sự kiện</td><td class="slug-text">su-kien</td><td>5</td><td><span class="status published">Hiển thị</span></td><td><button class="more-btn">···</button></td></tr>
+                <tr><td>Tin tức</td><td class="slug-text">tin-tuc</td><td>6</td><td><span class="status published">Hiển thị</span></td><td><button class="more-btn">···</button></td></tr>
+                <tr><td>Khác</td><td class="slug-text">khac</td><td>7</td><td><span class="status published">Hiển thị</span></td><td><button class="more-btn">···</button></td></tr>
+                <tr><td>Tuyển dụng</td><td class="slug-text">tuyen-dung</td><td>8</td><td><span class="status published">Hiển thị</span></td><td><button class="more-btn">···</button></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- SERVICES PAGE -->
+        <div class="page" id="page-services">
+          <div class="page-header">
+            <div>
+              <h1>Dịch vụ</h1>
+              <p class="subtitle">Quản lý dịch vụ của website.</p>
+            </div>
+            <button class="btn btn-primary">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Tạo dịch vụ
+            </button>
+          </div>
+
+          <div class="card">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Tên dịch vụ</th>
+                  <th>Slug</th>
+                  <th>Thứ tự</th>
+                  <th>Trạng thái</th>
+                  <th class="action-col">Hành động</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><div class="service-cell"><div class="service-thumb s1"></div><span>Tư vấn chuyển đổi số</span></div></td>
+                  <td class="slug-text">tu-van-chuyen-doi-so</td><td>1</td>
+                  <td><span class="status published">Hiển thị</span></td><td><button class="more-btn">···</button></td>
+                </tr>
+                <tr>
+                  <td><div class="service-cell"><div class="service-thumb s2"></div><span>Thiết kế website</span></div></td>
+                  <td class="slug-text">thiet-ke-website</td><td>2</td>
+                  <td><span class="status published">Hiển thị</span></td><td><button class="more-btn">···</button></td>
+                </tr>
+                <tr>
+                  <td><div class="service-cell"><div class="service-thumb s3"></div><span>Marketing online</span></div></td>
+                  <td class="slug-text">marketing-online</td><td>3</td>
+                  <td><span class="status published">Hiển thị</span></td><td><button class="more-btn">···</button></td>
+                </tr>
+                <tr>
+                  <td><div class="service-cell"><div class="service-thumb s4"></div><span>Chăm sóc khách hàng</span></div></td>
+                  <td class="slug-text">cham-soc-khach-hang</td><td>4</td>
+                  <td><span class="status published">Hiển thị</span></td><td><button class="more-btn">···</button></td>
+                </tr>
+                <tr>
+                  <td><div class="service-cell"><div class="service-thumb s5"></div><span>Giải pháp phần mềm</span></div></td>
+                  <td class="slug-text">giai-phap-phan-mem</td><td>5</td>
+                  <td><span class="status published">Hiển thị</span></td><td><button class="more-btn">···</button></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- TEAM PAGE -->
+        <div class="page" id="page-team">
+          <div class="page-header">
+            <div>
+              <h1>Đội ngũ</h1>
+              <p class="subtitle">Quản lý thông tin nhân sự trên website.</p>
+            </div>
+            <button class="btn btn-primary">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Thêm nhân sự
+            </button>
+          </div>
+
+          <div class="card">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Ảnh</th>
+                  <th>Tên</th>
+                  <th>Chức vụ</th>
+                  <th>Thứ tự</th>
+                  <th>Trạng thái</th>
+                  <th class="action-col">Hành động</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><div class="team-avatar av1">NA</div></td>
+                  <td>Nguyễn Văn An</td><td>CEO</td><td>1</td>
+                  <td><span class="status published">Hiển thị</span></td><td><button class="more-btn">···</button></td>
+                </tr>
+                <tr>
+                  <td><div class="team-avatar av2">TB</div></td>
+                  <td>Trần Thị Bích</td><td>Giám đốc kinh doanh</td><td>2</td>
+                  <td><span class="status published">Hiển thị</span></td><td><button class="more-btn">···</button></td>
+                </tr>
+                <tr>
+                  <td><div class="team-avatar av3">LT</div></td>
+                  <td>Lê Minh Tuấn</td><td>Trưởng phòng kỹ thuật</td><td>3</td>
+                  <td><span class="status published">Hiển thị</span></td><td><button class="more-btn">···</button></td>
+                </tr>
+                <tr>
+                  <td><div class="team-avatar av4">PH</div></td>
+                  <td>Phạm Thị Hồng</td><td>Chuyên viên Marketing</td><td>4</td>
+                  <td><span class="status published">Hiển thị</span></td><td><button class="more-btn">···</button></td>
+                </tr>
+                <tr>
+                  <td><div class="team-avatar av5">HN</div></td>
+                  <td>Hoàng Văn Nam</td><td>Thiết kế đồ họa</td><td>5</td>
+                  <td><span class="status published">Hiển thị</span></td><td><button class="more-btn">···</button></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- CONTACTS PAGE -->
+        <div class="page" id="page-contacts">
+          <div class="page-header">
+            <div>
+              <h1>Liên hệ</h1>
+              <p class="subtitle">Quản lý yêu cầu liên hệ từ khách hàng.</p>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Họ tên</th>
+                    <th>Email</th>
+                    <th>Số điện thoại</th>
+                    <th>Nội dung</th>
+                    <th>Ngày gửi</th>
+                    <th>Trạng thái</th>
+                    <th class="action-col">Hành động</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Hoàng Anh</td>
+                    <td class="email-text">hoanganh@...</td>
+                    <td>0987234567</td>
+                    <td class="msg-text">Tôi muốn tư vấn về...</td>
+                    <td>12/09/2026</td>
+                    <td><span class="status new">Mới</span></td>
+                    <td><button class="more-btn">···</button></td>
+                  </tr>
+                  <tr>
+                    <td>Trần Thị Hoa</td>
+                    <td class="email-text">tranthihoa@...</td>
+                    <td>0986764320</td>
+                    <td class="msg-text">Cần báo giá về...</td>
+                    <td>11/09/2026</td>
+                    <td><span class="status read">Đã đọc</span></td>
+                    <td><button class="more-btn">···</button></td>
+                  </tr>
+                  <tr>
+                    <td>Lê Văn Hùng</td>
+                    <td class="email-text">levanhung@...</td>
+                    <td>0912345678</td>
+                    <td class="msg-text">Câu hỏi về dịch vụ...</td>
+                    <td>10/09/2026</td>
+                    <td><span class="status read">Đã đọc</span></td>
+                    <td><button class="more-btn">···</button></td>
+                  </tr>
+                  <tr>
+                    <td>Phạm Thị Lan</td>
+                    <td class="email-text">phamlan@...</td>
+                    <td>0938765432</td>
+                    <td class="msg-text">Hợp tác dài hạn...</td>
+                    <td>09/09/2026</td>
+                    <td><span class="status replied">Đã trả lời</span></td>
+                    <td><button class="more-btn">···</button></td>
+                  </tr>
+                  <tr>
+                    <td>Hoàng Minh</td>
+                    <td class="email-text">hoangminh@...</td>
+                    <td>0876432190</td>
+                    <td class="msg-text">Yêu cầu demo...</td>
+                    <td>08/09/2026</td>
+                    <td><span class="status replied">Đã trả lời</span></td>
+                    <td><button class="more-btn">···</button></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- MEDIA PAGE -->
+        <div class="page" id="page-media">
+          <div class="page-header">
+            <div>
+              <h1>Thư viện media</h1>
+              <p class="subtitle">Quản lý hình ảnh, file đã sử dụng.</p>
+            </div>
+            <button class="btn btn-primary">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Tải lên
+            </button>
+          </div>
+
+          <div class="card">
+            <div class="media-tabs">
+              <button class="media-tab active">Tất cả</button>
+              <button class="media-tab">Hình ảnh</button>
+              <button class="media-tab">Tài liệu</button>
+            </div>
+            <div class="media-grid">
+              <div class="media-item img-item"><div class="media-preview m1"></div><div class="media-name">banner-hero.jpg</div><div class="media-size">630 KB</div></div>
+              <div class="media-item img-item"><div class="media-preview m2"></div><div class="media-name">about-us.jpg</div><div class="media-size">410 KB</div></div>
+              <div class="media-item img-item"><div class="media-preview m3"></div><div class="media-name">team.jpg</div><div class="media-size">620 KB</div></div>
+              <div class="media-item img-item"><div class="media-preview m4"></div><div class="media-name">service.jpg</div><div class="media-size">300 KB</div></div>
+              <div class="media-item img-item"><div class="media-preview m5"></div><div class="media-name">news-01.jpg</div><div class="media-size">198 KB</div></div>
+              <div class="media-item img-item"><div class="media-preview m6"></div><div class="media-name">news-02.jpg</div><div class="media-size">240 KB</div></div>
+              <div class="media-item img-item"><div class="media-preview m7"></div><div class="media-name">logo.png</div><div class="media-size">48 KB</div></div>
+              <div class="media-item doc-item">
+                <div class="media-preview doc-preview">
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                </div>
+                <div class="media-name">document.pdf</div>
+                <div class="media-size">320 KB</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SETTINGS PAGE -->
+        <div class="page" id="page-settings">
+          <div class="page-header">
+            <div>
+              <h1>Cài đặt</h1>
+              <p class="subtitle">Cấu hình chung website.</p>
+            </div>
+          </div>
+
+          <div class="settings-layout">
+            <div class="settings-tabs">
+              <button class="settings-tab active">Thông tin chung</button>
+              <button class="settings-tab">SEO</button>
+              <button class="settings-tab">Giao diện</button>
+              <button class="settings-tab">Liên hệ</button>
+              <button class="settings-tab">Khác</button>
+            </div>
+            <div class="card settings-panel">
+              <div class="form-group">
+                <label>Tên website</label>
+                <input type="text" class="form-input" value="Công ty TNHH ABC" />
+              </div>
+              <div class="form-group">
+                <label>Mô tả ngắn</label>
+                <textarea class="form-textarea sm" placeholder="Nhập mô tả website...">Đồng hành cùng doanh nghiệp trong hành trình chuyển đổi số và phát triển bền vững.</textarea>
+              </div>
+              <div class="form-group">
+                <label>Logo</label>
+                <div class="logo-upload">
+                  <div class="logo-preview">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2"><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1" opacity=".5"/><rect x="3" y="13" width="8" height="8" rx="1" opacity=".5"/><rect x="13" y="13" width="8" height="8" rx="1" opacity=".3"/></svg>
+                  </div>
+                  <button class="btn btn-ghost sm">Chọn ảnh</button>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>Ảnh nền (Chân ảnh)</label>
+                <div class="upload-area sm">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                  <p>Chọn ảnh</p>
+                </div>
+              </div>
+              <div class="form-actions">
+                <button class="btn btn-ghost">Hủy</button>
+                <button class="btn btn-primary">Lưu</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </main>
+    </div>
+  </div>
+
+  <script>// ========== NAVIGATION ==========
+function showPage(pageId) {
+  // Hide all pages
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  // Show target
+  const target = document.getElementById('page-' + pageId);
+  if (target) target.classList.add('active');
+
+  // Update nav
+  document.querySelectorAll('.nav-item').forEach(item => {
+    item.classList.toggle('active', item.dataset.page === pageId);
+  });
+
+  // Close sidebar on mobile
+  closeSidebar();
+
+  // Scroll to top
+  document.querySelector('.content').scrollTop = 0;
+}
+
+function showCreatePost() {
+  showPage('create-post');
+  document.querySelectorAll('.nav-item').forEach(item => {
+    item.classList.toggle('active', item.dataset.page === 'posts');
+  });
+}
+
+// ========== NAV LINKS ==========
+document.querySelectorAll('.nav-item').forEach(item => {
+  item.addEventListener('click', e => {
+    e.preventDefault();
+    const page = item.dataset.page;
+    if (page) showPage(page);
+  });
+});
+
+// "Xem tất cả" link
+document.querySelectorAll('.view-all[data-page]').forEach(link => {
+  link.addEventListener('click', e => {
+    e.preventDefault();
+    showPage(link.dataset.page);
+  });
+});
+
+// ========== SIDEBAR TOGGLE ==========
+const sidebar = document.getElementById('sidebar');
+const menuToggle = document.getElementById('menuToggle');
+
+// Create overlay
+const overlay = document.createElement('div');
+overlay.className = 'sidebar-overlay';
+document.body.appendChild(overlay);
+
+function openSidebar() {
+  sidebar.classList.add('open');
+  overlay.classList.add('active');
+}
+
+function closeSidebar() {
+  sidebar.classList.remove('open');
+  overlay.classList.remove('active');
+}
+
+menuToggle.addEventListener('click', () => {
+  if (sidebar.classList.contains('open')) closeSidebar();
+  else openSidebar();
+});
+
+overlay.addEventListener('click', closeSidebar);
+
+// ========== MEDIA TABS ==========
+document.querySelectorAll('.media-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.media-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+  });
+});
+
+// ========== SETTINGS TABS ==========
+document.querySelectorAll('.settings-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.settings-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+  });
+});
+
+// ========== BAR CHART ANIMATION ==========
+window.addEventListener('load', () => {
+  const bars = document.querySelectorAll('.bar');
+  bars.forEach((bar, i) => {
+    const h = bar.style.height;
+    bar.style.height = '0';
+    setTimeout(() => {
+      bar.style.transition = 'height .5s ease';
+      bar.style.height = h;
+    }, 100 + i * 50);
+  });
+});
+
+// ========== CHAR COUNTER ==========
+const textarea = document.querySelector('.form-group .form-textarea');
+const charCount = document.querySelector('.char-count');
+if (textarea && charCount) {
+  textarea.addEventListener('input', () => {
+    charCount.textContent = `${textarea.value.length}/200`;
+  });
+}
+
+// ========== TABLE CHECKBOXES ==========
+document.querySelectorAll('th input[type="checkbox"]').forEach(th => {
+  th.addEventListener('change', () => {
+    const table = th.closest('table');
+    table.querySelectorAll('td input[type="checkbox"]').forEach(td => {
+      td.checked = th.checked;
+    });
+  });
+});
+</script>
+</body>
+</html>

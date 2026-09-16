@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Liên hệ — Vạn Lang</title>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+
+<header class="header">
+  <div class="container header-inner">
+    <a class="logo" href="index.html"><span class="logo-mark">🪷</span><span><small>Trung tâm Sức khỏe</small><b>VẠN LANG</b></span></a>
+    <nav class="nav">
+      <a href="index.html">Trang chủ</a>
+      <a href="gioi-thieu.html">Giới thiệu</a>
+      <a href="#">Dịch vụ ▾</a>
+      <a href="#">Bảng giá</a>
+      <a href="#">Đội ngũ</a>
+      <a class="active" href="lien-he.html">Liên hệ</a>
+    </nav>
+    <div class="header-actions">
+      <a class="hotline" href="tel:19001234">☎ Hotline: 1900 1234</a>
+      <a class="btn btn-teal" href="#form">BẮT LỊCH</a>
+      <button class="hamburger" id="menuBtn">☰</button>
+    </div>
+  </div>
+  <nav class="mobile-nav" id="mobileNav">
+    <a href="index.html">Trang chủ</a><a href="gioi-thieu.html">Giới thiệu</a><a href="#">Dịch vụ</a><a href="#">Bảng giá</a><a href="#">Đội ngũ</a><a href="lien-he.html">Liên hệ</a>
+  </nav>
+</header>
+
+<section class="page-banner">
+  <div class="container" style="position:relative;z-index:1">
+    <h1>LIÊN HỆ</h1>
+    <div class="breadcrumb"><a href="index.html">⌂ Home</a> › Liên hệ</div>
+    <p class="contact-intro" style="margin-top:10px;max-width:520px;color:var(--muted);font-size:13.5px">Chúng tôi luôn lắng nghe và sẵn sàng hỗ trợ bạn. Kết nối với Vạn Lang ngay hôm nay để nhận tư vấn tốt nhất.</p>
+  </div>
+  <div class="banner-img"><img src="https://images.unsplash.com/photo-1576765607924-3f7b8410a787?w=900&q=80" alt=""></div>
+</section>
+
+<div class="container contact-layout">
+  <div>
+    <div class="card info-card">
+      <h3>KẾT NỐI VỚI VẠN LANG</h3>
+      <p>Mọi câu hỏi, ý kiến đóng góp hoặc yêu cầu dịch vụ của quý khách đều rất quan trọng đối với chúng tôi. Đừng ngần ngại liên hệ qua các kênh dưới đây hoặc điền vào form bên phải.</p>
+
+      <div class="info-list">
+        <h4 style="font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--primary);margin-top:6px">THÔNG TIN LIÊN LẠC CHI TIẾT</h4>
+        <div class="info-item"><i>📍</i><div><b>Địa chỉ: 122 Nguyễn Văn Cừ, Long Biên, Hà Nội</b></div></div>
+        <div class="info-item"><i>☎</i><div><b>Hotline: 1900 1234</b></div></div>
+        <div class="info-item"><i>✉</i><div><b>Email: lienhe.vanlang@gmail.com</b></div></div>
+      </div>
+
+      <div style="margin-top:14px">
+        <h4 style="font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--primary)">BẢN ĐỒ VỊ TRÍ</h4>
+        <div class="map-card">
+          <img src="https://images.unsplash.com/photo-1524661135-423995f22d0b?w=600&q=80" alt="Bản đồ">
+          <div class="map-pin"><span>📍</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <form class="form-card" id="form" onsubmit="event.preventDefault();alert('Đã gửi yêu cầu! Chúng tôi sẽ liên hệ sớm.');">
+      <h3>GỬI YÊU CẦU CHO CHÚNG TÔI</h3>
+      <div class="form-grid">
+        <div class="form-row">
+          <input class="input" placeholder="Họ và tên *" required>
+          <select class="select"><option>Loại dịch vụ quan tâm</option><option>Chăm sóc tại viện</option><option>Chăm sóc tại nhà</option><option>Theo giờ</option><option>Qua đêm</option><option>24/24</option></select>
+        </div>
+        <div class="form-row">
+          <input class="input" placeholder="Số điện thoại *" required>
+          <input class="input" placeholder="Nội dung tin nhắn">
+        </div>
+        <textarea class="textarea" placeholder="Nội dung chi tiết..."></textarea>
+        <button class="btn-submit" type="submit">GỬI TIN NHẮN</button>
+      </div>
+
+      <div class="commit">
+        <h4>CAM KẾT CỦA VẠN LANG</h4>
+        <div class="commit-grid">
+          <div class="commit-item"><i>✓</i><div><b>Bảo mật thông tin</b><span>Thông tin của bạn được bảo mật tuyệt đối.</span></div></div>
+          <div class="commit-item"><i>⚡</i><div><b>Phản hồi nhanh chóng</b><span>Cam kết phản hồi trong vòng 24h.</span></div></div>
+          <div class="commit-item"><i>🤝</i><div><b>Phản hồi chính xác</b><span>Cam kết phản hồi trong vòng 24h.</span></div></div>
+          <div class="commit-item"><i>🛡</i><div><b>Hỗ trợ tận tâm</b><span>Hỗ trợ chăm sóc gia đình sáng suốt.</span></div></div>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div><div class="footer-logo"><span class="logo-mark">🪷</span><span><b>VẠN LANG</b></span></div><p style="margin-top:8px">Về chúng tôi<br>chamsocsuckhoe Vạn Lang là đơn vị chăm sóc đàng và chăm sóc tận tâm đến với sức khỏe người cao tuổi và người khác.</p></div>
+      <div><h4>Về chúng tôi</h4><p>Trung tâm Vạn Lang là đơn vị chăm sóc tận tâm đến với sức khỏe người cao tuổi và người khác.</p></div>
+      <div><h4>Liên kết nhanh</h4><p>Liệu trình<br>Dịch vụ<br>Bảng giá<br>Đội ngũ<br>Liên hệ</p></div>
+      <div><h4>Theo dõi chúng tôi</h4><div class="socials"><a href="#">f</a><a href="#">▶</a><a href="#">◎</a><a href="#">✈</a></div></div>
+    </div>
+    <div class="footer-bottom"><span>© 2024 Vạn Lang. Tất cả quyền được bảo lưu.</span><span>Thiết kế bởi đội ngũ Vạn Lang</span></div>
+  </div>
+</footer>
+<script>document.getElementById('menuBtn').onclick=()=>document.getElementById('mobileNav').classList.toggle('open');</script>
+</body>
+</html>

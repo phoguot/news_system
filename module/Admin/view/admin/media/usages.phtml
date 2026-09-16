@@ -1,0 +1,81 @@
+<?php
+
+/** @var \Laminas\View\Renderer\PhpRenderer $this */
+/** @var \Admin\Model\Media\MediaModel $model */
+/** @var array<string, mixed> $usages */
+$model   = $this->model;
+$usages  = (array) ($this->usages ?? []);
+$e       = fn (mixed $v): string => $this->escapeHtml((string) $v);
+$url     = fn (array $params = []): string => $this->url('admin/media', $params);
+
+/**
+ * Dịch cấu trúc usages của MediaService thành dòng bảng.
+ *
+ * @param array<string, mixed> $usages
+ */
+$idList = static function (mixed $ids) use ($e): string {
+    if (! is_array($ids) || $ids === []) {
+        return '—';
+    }
+
+    /** @var array<array-key, mixed> $ids */
+    return implode(', ', array_map(
+        static fn (mixed $id): string => '#' . $e($id),
+        array_values($ids)
+    ));
+};
+
+$sections = [
+    ['Bài viết (ảnh bìa/thu nhỏ/nội dung)', $usages['posts'] ?? []],
+    ['Danh mục (ảnh bìa)', $usages['categories'] ?? []],
+    ['Banner (ảnh desktop/mobile)', $usages['banners'] ?? []],
+    ['Dịch vụ (icon/ảnh)', $usages['services'] ?? []],
+    ['Thành viên (avatar)', $usages['teamMembers'] ?? []],
+    ['Cài đặt media', $usages['settings'] ?? []],
+];
+
+$rows = '';
+$total = 0;
+foreach ($sections as [$label, $ids]) {
+    $count   = is_array($ids) ? count($ids) : 0;
+    $display = $label === 'Cài đặt media'
+        ? (is_array($ids) && $ids !== [] ? implode(', ', array_map(
+            static fn (mixed $key): string => $e($key),
+            array_values($ids)
+        )) : '—')
+        : $idList($ids);
+    if ($count > 0) {
+        $total += $count;
+    }
+
+    $rows .= '<tr><td><strong>' . $e($label) . '</strong></td>'
+        . '<td>' . $count . '</td><td class="muted mono" style="word-break:break-all">' . $display . '</td></tr>';
+}
+
+$userCount = (int) ($usages['users'] ?? 0);
+if ($userCount > 0) {
+    $total += $userCount;
+}
+
+$rows .= '<tr><td><strong>Tài khoản (avatar)</strong></td><td>' . $userCount . '</td><td class="muted">'
+    . ($userCount > 0 ? 'Đang được dùng làm ảnh đại diện quản trị' : '—') . '</td></tr>';
+
+$html = '<div class="page-header"><div><h1>Nơi sử dụng media #' . (int) $model->id . '</h1>'
+    . '<p class="subtitle">' . $e($model->originalName) . ' · <span class="mono">' . $e($model->path) . '</span></p></div>'
+    . '<a class="btn btn-ghost" href="' . $e($url()) . '">← Về thư viện</a></div>';
+
+$html .= '<div class="two-col"><div class="card"><h3 style="font-size:.95rem;font-weight:700;margin-bottom:12px">Ảnh</h3>'
+    . '<img src="' . $e($this->mediaUrl($model->path)) . '" alt="' . $e($model->altText ?? '') . '"'
+    . ' style="max-height:220px;width:100%;object-fit:contain;border-radius:8px;background:var(--bg)"></div>';
+
+$html .= '<div class="card"><h3 style="font-size:.95rem;font-weight:700;margin-bottom:12px">Bảng tham chiếu</h3>'
+    . '<div class="table-wrap"><table class="data-table"><thead><tr>'
+    . '<th>Nguồn</th><th>SL</th><th>Id/Key</th></tr></thead><tbody>' . $rows . '</tbody></table></div></div></div>';
+
+$html .= '<div class="alert ' . ($total === 0 ? 'alert-success' : 'alert-warning') . '">'
+    . ($total === 0
+        ? 'Không nơi nào đang dùng — có thể xoá an toàn.'
+        : 'Đang có ' . $total . ' nơi tham chiếu — chức năng xoá sẽ bị chặn cho tới khi nội dung bỏ dùng ảnh này.')
+    . '</div>';
+
+echo $html;

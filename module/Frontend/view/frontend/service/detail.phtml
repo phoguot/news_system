@@ -1,0 +1,94 @@
+<?php
+
+declare(strict_types=1);
+
+/**
+ * Trang chi tiết dịch vụ /dich-vu/:slug (FR-08, docs §2.1 / §3.5):
+ * - Hiển thị chi tiết dịch vụ: ảnh đại diện, tiêu đề, mô tả ngắn, nội dung rich text, CTA.
+ * - SEO meta title / description từ dịch vụ (có fallback).
+ * - Chuẩn .phtml (AGENTS §2 / 07 §8): thân template KHÔNG có control structure PHP,
+ *   mọi mảnh HTML động dựng bằng chuỗi trong block đầu file.
+ *
+ * @var \Laminas\View\Renderer\PhpRenderer $this
+ * @var array{
+ *     id: int,
+ *     name: string,
+ *     slug: string,
+ *     shortDescription: string,
+ *     content: string,
+ *     icon: ?array{path: string, alt: string, thumb: string},
+ *     image: ?array{path: string, alt: string, thumb: string},
+ *     metaTitle: string,
+ *     metaDescription: string
+ * } $service
+ */
+
+$service   = is_array($this->service ?? null) ? $this->service : [];
+$name      = (string) ($service['name'] ?? 'Chi tiết dịch vụ');
+$metaTitle = (string) ($service['metaTitle'] ?? $name);
+$metaDesc  = (string) ($service['metaDescription'] ?? '');
+$lede      = (string) ($service['shortDescription'] ?? '');
+$content   = (string) ($service['content'] ?? '');
+$image     = is_array($service['image'] ?? null) ? $service['image'] : null;
+
+$this->headTitle($metaTitle . ' · Dịch vụ');
+if ($metaDesc !== '') {
+    $this->headMeta()->appendName('description', $metaDesc);
+}
+
+$view = $this;
+$e    = static fn (mixed $v): string => $view->escapeHtml((string) $v);
+$img  = static function (mixed $image) use ($view, $e): string {
+    if (! is_array($image) || (string) ($image['path'] ?? '') === '') {
+        return '';
+    }
+
+    return '<img src="' . $e($view->mediaUrl((string) $image['path']))
+        . '" alt="' . $e($image['alt'] ?? '') . '" loading="lazy">';
+};
+
+/* ---- breadcrumb: Trang chủ › Dịch vụ › {name} ---- */
+$breadcrumb = '<nav class="breadcrumb" aria-label="Breadcrumb">'
+    . '<a href="/">Trang chủ</a><span>›</span>'
+    . '<a href="/dich-vu">Dịch vụ</a><span>›</span>'
+    . '<span aria-current="page">' . $e($name) . '</span>'
+    . '</nav>';
+
+/* ---- banner image ---- */
+$bannerHtml = $image !== null && $img($image) !== ''
+    ? '<figure class="article-banner">' . $img($image) . '</figure>'
+    : '';
+
+/* ---- lede ---- */
+$ledeHtml = $lede !== ''
+    ? '<div class="article-lede">' . $e($lede) . '</div>'
+    : '';
+
+/* ---- content body (rich text) ---- */
+$contentHtml = $content !== ''
+    ? '<div class="article-body">' . $content . '</div>'
+    : '<div class="article-body"><p>Thông tin chi tiết của dịch vụ đang được cập nhật.</p></div>';
+
+/* ---- CTA khối liên hệ tư vấn ---- */
+$ctaHtml = '<div class="cta-bottom">'
+    . '<div class="cta-left">'
+    . '<h3>Bạn quan tâm đến dịch vụ này?</h3>'
+    . '<p>Hãy liên hệ với chúng tôi ngay hôm nay để nhận được tư vấn tận tâm và giải pháp phù hợp nhất.</p>'
+    . '</div>'
+    . '<div class="cta-actions">'
+    . '<a class="btn btn-teal" href="/lien-he">Liên hệ tư vấn ngay</a>'
+    . '</div>'
+    . '</div>';
+
+$html = '<section class="section"><div class="container">'
+    . '<article class="article">'
+    . $breadcrumb
+    . '<div class="article-head"><h1>' . $e($name) . '</h1></div>'
+    . $bannerHtml
+    . $ledeHtml
+    . $contentHtml
+    . $ctaHtml
+    . '</article>'
+    . '</div></section>';
+
+echo $html;

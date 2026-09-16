@@ -1,0 +1,119 @@
+<?php
+
+/** @var \Laminas\View\Renderer\PhpRenderer $this */
+/** @var array<string, list<\Frontend\Model\Setting\SettingModel>> $groups */
+$groups = (array) ($this->groups ?? []);
+/** @var array<string, string> $groupLabels */
+$groupLabels = (array) ($this->groupLabels ?? []);
+/** @var array<array-key, mixed> $values */
+$values = (array) ($this->values ?? []);
+/** @var array<string, string> $errors */
+$errors = (array) ($this->errors ?? []);
+/** @var string|null $flag */
+$flag = isset($this->flag) && is_string($this->flag) ? $this->flag : null;
+$csrf = (string) ($this->csrfHash ?? '');
+/** @var list<array{id: int, label: string, path: string}> $mediaOptions */
+$mediaOptions = (array) ($this->mediaOptions ?? []);
+$e    = fn (mixed $v): string => $this->escapeHtml((string) $v);
+
+$flags = [
+    'updated' => ['alert-success', 'Đã lưu cài đặt.'],
+    'csrf'    => ['alert-danger', 'Token bảo mật không hợp lệ — hãy thử lại.'],
+];
+
+// Ô cài đặt media render bằng khung preview MediaPicker (07 §9.2) — closure
+// không-static để gọi được view helper qua $this.
+$picker = fn (string $name, string $current): string => $this->mediaPicker($name, $mediaOptions, $current);
+
+$control = static function (\Frontend\Model\Setting\SettingModel $s) use ($e, $values, $picker): string {
+    $input = 'setting_' . $s->id;
+    $val   = isset($values[$input]) && is_string($values[$input]) ? $values[$input] : (string) ($s->settingValue ?? '');
+
+    switch ($s->valueType) {
+        case \Frontend\Model\Setting\SettingConst::VALUE_TYPE_HTML:
+            // Ô nội dung HTML (footer_text) → editor WYSIWYG (07 §9.1) —
+            // admin.js biến textarea[data-wysiwyg] thành toolbar + contenteditable.
+            return '<textarea class="form-textarea" id="f-' . $input . '" name="' . $input . '" rows="6"'
+                . ' data-wysiwyg placeholder="Soạn nội dung chân trang…">' . $e($val) . '</textarea>';
+        case \Frontend\Model\Setting\SettingConst::VALUE_TYPE_TEXT:
+            if ($s->settingKey === \Frontend\Model\Setting\SettingConst::KEY_DEFAULT_META_DESCRIPTION) {
+                // Meta description mặc định là chuỗi 1 dòng cho SEO → input thường.
+                return '<input class="form-input" id="f-' . $input . '" name="' . $input . '"'
+                    . ' maxlength="500" value="' . $e($val) . '">';
+            }
+
+            return '<textarea class="form-textarea" id="f-' . $input . '" name="' . $input . '" rows="4">' . $e($val) . '</textarea>';
+        case \Frontend\Model\Setting\SettingConst::VALUE_TYPE_JSON:
+            return '<textarea class="form-textarea" id="f-' . $input . '" name="' . $input . '" rows="4">' . $e($val) . '</textarea>';
+        case \Frontend\Model\Setting\SettingConst::VALUE_TYPE_MEDIA:
+            return $picker($input, $val);
+        case \Frontend\Model\Setting\SettingConst::VALUE_TYPE_NUMBER:
+            return '<input class="form-input" id="f-' . $input . '" name="' . $input . '" type="number" value="' . $e($val) . '">';
+        case \Frontend\Model\Setting\SettingConst::VALUE_TYPE_BOOLEAN:
+            return '<select class="form-select" id="f-' . $input . '" name="' . $input . '">'
+                . '<option value="1"' . ($val === '1' ? ' selected' : '') . '>Có</option>'
+                . '<option value="0"' . ($val === '1' ? '' : ' selected') . '>Không</option></select>';
+        default:
+            return '<input class="form-input" id="f-' . $input . '" name="' . $input . '" value="' . $e($val) . '">';
+    }
+};
+
+$html = '<div class="page-header"><div><h1>Cài đặt chung</h1>'
+    . '<p class="subtitle">Cấu hình hiển thị và vận hành website — đổi xong nhớ “Lưu cài đặt”.</p></div></div>';
+
+if ($flag !== null && isset($flags[$flag])) {
+    [$cls, $msg] = $flags[$flag];
+    $html .= '<div class="alert ' . $cls . '">' . $msg . '</div>';
+}
+
+$html .= '<form method="post" action="' . $e($this->url('admin/settings', ['action' => 'save'])) . '">';
+$html .= '<input type="hidden" name="csrf" value="' . $e($csrf) . '">';
+
+$html .= '<div class="settings-layout"><div class="settings-tabs">';
+foreach ($groups as $groupCode => $settings) {
+    $html .= '<button class="settings-tab" type="button" data-panel="g-' . $e($groupCode) . '">'
+        . $e($groupLabels[$groupCode] ?? (string) $groupCode) . '</button>';
+}
+
+$html .= '</div><div>';
+
+foreach ($groups as $groupCode => $settings) {
+    $label = $groupLabels[$groupCode] ?? (string) $groupCode;
+    $html .= '<div class="settings-panel" data-panel="g-' . $e($groupCode) . '"><div class="card">'
+        . '<h3 style="font-size:.95rem;font-weight:700;margin-bottom:14px">' . $e($label) . '</h3>';
+
+    $html .= '<div class="form-row cols-2">';
+    /** @var \Frontend\Model\Setting\SettingModel $s */
+    foreach ($settings as $s) {
+        $input = 'setting_' . $s->id;
+        $err   = isset($errors[$input]) ? '<div class="field-error">' . $e($errors[$input]) . '</div>' : '';
+        if ($s->settingKey === \Frontend\Model\Setting\SettingConst::KEY_NOTIFY_EMAILS) {
+            $help = '<div class="field-hint">Mail cá nhân của bạn để nhận thông báo khi có liên hệ mới — nhập 1 hoặc nhiều email, phân tách bằng dấu phẩy (,). Ví dụ: ban@vanlang.vn, sep@vanlang.vn — để trống = không gửi mail.</div>';
+        } elseif ($s->valueType === \Frontend\Model\Setting\SettingConst::VALUE_TYPE_MEDIA) {
+            $help = '<div class="field-hint">Bấm vào khung để chọn ảnh từ thư viện Media — để trống = không có ảnh.</div>';
+        } else {
+            $help = '';
+        }
+        // Nhóm giá trị dựng bằng textarea (text/HTML/JSON) rộng → chiếm trọn hàng trong lưới 2 cột.
+        // Riêng meta description là input 1 dòng → đứng ô nửa hàng bình thường.
+        $isWide = in_array(
+            $s->valueType,
+            [
+                \Frontend\Model\Setting\SettingConst::VALUE_TYPE_TEXT,
+                \Frontend\Model\Setting\SettingConst::VALUE_TYPE_HTML,
+                \Frontend\Model\Setting\SettingConst::VALUE_TYPE_JSON,
+            ],
+            true
+        ) && $s->settingKey !== \Frontend\Model\Setting\SettingConst::KEY_DEFAULT_META_DESCRIPTION;
+        $html .= '<div class="form-group' . ($isWide ? ' span-2' : '') . '">'
+            . '<label for="f-' . $input . '">' . $e($s->label) . '</label>'
+            . $control($s) . $help . $err . '</div>';
+    }
+
+    $html .= '</div></div></div>';
+}
+
+$html .= '<div class="form-actions"><button class="btn btn-primary" type="submit">Lưu cài đặt</button></div>';
+$html .= '</div></div></form>';
+
+echo $html;

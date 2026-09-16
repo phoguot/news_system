@@ -1,0 +1,37 @@
+<?php
+
+declare(strict_types=1);
+
+/**
+ * sitemap.xml (FR-11, NFR-SEO-4 — docs §6.1/§7.1). Model terminal
+ * (`setTerminal(true)`) — không layout; Content-Type do controller gắn.
+ * Chuẩn .phtml (AGENTS §2 / 07 §8): mọi mảnh XML dựng bằng chuỗi trong block
+ * PHP đầu file, thân template không control structure.
+ *
+ * `path` tương đối từ SitemapService (payload cache không chứa host) →
+ * `serverUrl()` tuyệt đối hoá theo request hiện tại (precedent FR-03 share URL).
+ * escapeHtml đủ cho XML: &, <, > thành thực thể hợp lệ.
+ *
+ * @var \Laminas\View\Renderer\PhpRenderer $this
+ * @var list<array{path: string, lastmod: ?string}> $urls
+ */
+
+$urls = is_array($this->urls ?? null) ? $this->urls : [];
+
+$view = $this;
+$e    = static fn (mixed $v): string => $view->escapeHtml((string) $v);
+
+$items = '';
+foreach ($urls as $url) {
+    $path    = (string) ($url['path'] ?? '');
+    $lastmod = $url['lastmod'] ?? null;
+
+    $items .= '<url><loc>' . $e($view->serverUrl($path)) . '</loc>';
+    if (is_string($lastmod) && $lastmod !== '') {
+        $items .= '<lastmod>' . $e($lastmod) . '</lastmod>';
+    }
+    $items .= '</url>';
+}
+
+echo '<?xml version="1.0" encoding="UTF-8"?>'
+    . '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . $items . '</urlset>';

@@ -1,0 +1,19 @@
+<?php
+return [
+    'Laminas\Router',
+    'Laminas\Validator',
+    'Laminas\Session',
+    'Laminas\Cache',
+    'Laminas\Cache\Storage\Adapter\Filesystem',
+    'Laminas\Db',
+    'Laminas\Form',
+    'Laminas\InputFilter',
+    'Laminas\Filter',
+    'Laminas\Hydrator',
+    'Laminas\Paginator',
+    'Laminas\Mail',
+    'Laminas\I18n',
+    'Application',
+    'Frontend',
+    'Admin',
+];

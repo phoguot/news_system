@@ -1,0 +1,164 @@
+<?php
+
+declare(strict_types=1);
+
+/**
+ * Trang danh sách tin /tin-tuc (FR-02, docs §5.1/§5.3): dữ liệu mảng thuần
+ * do Frontend\Service\PostListService dựng (paginate + filterCategories).
+ * Chuẩn .phtml (AGENTS §2 / 07 §8): thân template KHÔNG có control structure
+ * PHP — mọi mảnh HTML động dựng bằng chuỗi trong block đầu file.
+ * Bộ lọc = select GET `?danh-muc={slug}` (JS submit-on-change, không JS vẫn
+ * còn nút Lọc); phân trang giữ nguyên slug đang lọc.
+ *
+ * @var \Laminas\View\Renderer\PhpRenderer $this
+ * @var list<array<string, mixed>> $posts
+ * @var int $total
+ * @var int $page
+ * @var int $pages
+ * @var ?array{id: int, name: string, slug: string} $category
+ * @var list<array{id: int, name: string, slug: string, depth: int}> $categories
+ * @var ?array{title: string, subtitle: string, href: string, button: string, image: string, newTab: bool} $topBanner
+ */
+
+$this->headTitle('Tin tức');
+
+$view  = $this;
+$e     = static fn (mixed $v): string => $view->escapeHtml((string) $v);
+$img   = static function (mixed $image) use ($view, $e): string {
+    if (! is_array($image) || (string) ($image['path'] ?? '') === '') {
+        return '';
+    }
+
+    return '<img src="' . $e($view->mediaUrl((string) $image['path']))
+        . '" alt="' . $e($image['alt'] ?? '') . '" loading="lazy">';
+};
+
+$posts      = is_array($this->posts ?? null) ? $this->posts : [];
+$categories = is_array($this->categories ?? null) ? $this->categories : [];
+$total      = (int) ($this->total ?? 0);
+$page       = max(1, (int) ($this->page ?? 1));
+$pages      = max(0, (int) ($this->pages ?? 0));
+$category   = is_array($this->category ?? null) ? $this->category : null;
+$curSlug    = (string) ($category['slug'] ?? '');
+$title      = $category === null ? 'Tin tức' : 'Tin tức · ' . (string) $category['name'];
+
+/** URL trang N giữ nguyên bộ lọc hiện tại. */
+$pageUrl = static function (int $p) use ($curSlug): string {
+    $query = ['page' => $p];
+    if ($curSlug !== '') {
+        $query['danh-muc'] = $curSlug;
+    }
+
+    return '/tin-tuc?' . http_build_query($query);
+};
+
+/* ---- toolbar: dropdown lọc danh mục (menu đã cache category-menu-v1) ---- */
+$options = '<option value="">Tất cả danh mục</option>';
+foreach ($categories as $cat) {
+    $label = ((int) ($cat['depth'] ?? 0) === 1 ? '— ' : '') . (string) $cat['name'];
+    $sel   = ((string) $cat['slug'] === $curSlug) ? ' selected' : '';
+    $options .= '<option value="' . $e($cat['slug']) . '"' . $sel . '>' . $e($label) . '</option>';
+}
+$toolbar = '<form class="news-filter" method="get" action="/tin-tuc">'
+    . '<label class="news-filter-label" for="danh-muc">Danh mục:</label>'
+    . '<select id="danh-muc" name="danh-muc" onchange="this.form.submit()">' . $options . '</select>'
+    . '<button class="btn btn-white" type="submit">Lọc</button>'
+    . '</form>';
+
+/* ---- cards ---- */
+$cards = '';
+foreach ($posts as $card) {
+    $minutes = (int) ($card['minutes'] ?? 0);
+    $date    = (string) ($card['date'] ?? '');
+    $catName = (string) ($card['categoryName'] ?? '');
+    $meta    = trim($catName . ($catName !== '' && $date !== '' ? ' · ' : '') . $date
+        . ($minutes > 0 ? ' · ' . $minutes . ' phút đọc' : ''));
+    $excerpt = (string) ($card['excerpt'] ?? '');
+    $cards  .= '<article class="post-card">'
+        . '<a class="post-thumb" href="' . $e($card['href']) . '">'
+        . $img($card['image'] ?? null) . '</a><div class="post-body">'
+        . ($meta !== '' ? '<span class="mini-badge">' . $e($meta) . '</span>' : '')
+        . '<h3><a href="' . $e($card['href']) . '">' . $e($card['title']) . '</a></h3>'
+        . ($excerpt !== '' ? '<p>' . $e($excerpt) . '</p>' : '')
+        . '</div></article>';
+}
+
+/* ---- banner news_top đầu trang (FR-31) — fragment chuỗi, không control ở body ---- */
+$tb         = is_array($this->topBanner ?? null) ? $this->topBanner : null;
+$bannerHtml = '';
+if ($tb !== null) {
+    $bTitle = (string) ($tb['title'] ?? '');
+    $bSub   = (string) ($tb['subtitle'] ?? '');
+    $bBtn   = (string) ($tb['button'] ?? '');
+    $bHref  = (string) ($tb['href'] ?? '');
+    $bImg   = (string) ($tb['image'] ?? '');
+
+    $inner  = '<figcaption class="ntb-text">'
+        . ($bTitle !== '' ? '<h2>' . $e($bTitle) . '</h2>' : '')
+        . ($bSub !== '' ? '<p>' . $e($bSub) . '</p>' : '')
+        . ($bBtn !== '' ? '<span class="btn btn-white">' . $e($bBtn) . '</span>' : '')
+        . '</figcaption>';
+    $style  = $bImg !== ''
+        ? ' style="background-image:url(' . $e($view->mediaUrl($bImg)) . ')"'
+        : '';
+    $figure = '<figure' . $style . '>'
+        . '<div class="ntb-overlay"></div>' . $inner . '</figure>';
+    $target = ! empty($tb['newTab']) ? ' target="_blank" rel="noopener"' : '';
+    $bannerHtml = '<div class="news-top-banner">'
+        . ($bHref !== '' ? '<a href="' . $e($bHref) . '"' . $target . '>' . $figure . '</a>' : $figure)
+        . '</div>';
+}
+
+$body = $cards === ''
+    ? '<p class="news-empty">Chưa có bài viết nào trong danh mục này.</p>'
+    : '<div class="post-grid">' . $cards . '</div>';
+
+/* ---- pager: trang hiện tại ± PAGER_WINDOW, kẹp đầu/cuối + ellipsis ---- */
+$pager = '';
+if ($pages > 1) {
+    $window = \Frontend\Constant\FrontendConst::PAGER_WINDOW;
+    $from   = max(1, $page - $window);
+    $to     = min($pages, $page + $window);
+
+    $pager = '<nav class="pager" aria-label="Phân trang">';
+    if ($page > 1) {
+        $pager .= '<a class="pager-link" href="' . $e($pageUrl($page - 1)) . '">&laquo; Trước</a>';
+    }
+
+    if ($from > 1) {
+        $pager .= '<a class="pager-link" href="' . $e($pageUrl(1)) . '">1</a>'
+            . ($from > 2 ? '<span class="pager-gap">…</span>' : '');
+    }
+
+    $numbers = '';
+    for ($p = $from; $p <= $to; $p++) {
+        $numbers .= $p === $page
+            ? '<span class="pager-current" aria-current="page">' . $p . '</span>'
+            : '<a class="pager-link" href="' . $e($pageUrl($p)) . '">' . $p . '</a>';
+    }
+
+    $pager .= $numbers;
+
+    if ($to < $pages) {
+        $pager .= ($to < $pages - 1 ? '<span class="pager-gap">…</span>' : '')
+            . '<a class="pager-link" href="' . $e($pageUrl($pages)) . '">' . $pages . '</a>';
+    }
+
+    if ($page < $pages) {
+        $pager .= '<a class="pager-link" href="' . $e($pageUrl($page + 1)) . '">Sau &raquo;</a>';
+    }
+
+    $pager .= '</nav>';
+}
+
+$summary = $total > 0
+    ? '<p class="news-count">' . $e($total) . ' bài viết · trang ' . $e($page)
+        . '/' . $e(max(1, $pages)) . '</p>'
+    : '';
+
+$pageHtml = '<section class="section"><div class="container">'
+    . '<h1 class="sec-label">' . $e($title) . '</h1>'
+    . $bannerHtml . $toolbar . $summary . $body . $pager
+    . '</div></section>';
+
+echo $pageHtml;

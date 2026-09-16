@@ -1,0 +1,42 @@
+<?php
+
+/** @var \Laminas\View\Renderer\PhpRenderer $this */
+/** @var int|null $id */
+$id = isset($this->id) ? (int) $this->id : null;
+/** @var array<array-key, mixed> $values */
+$values = (array) ($this->values ?? []);
+/** @var array<string, string> $errors */
+$errors = (array) ($this->errors ?? []);
+$title  = (string) ($this->title ?? 'Tag');
+$csrf   = (string) ($this->csrfHash ?? '');
+$e      = fn (mixed $v): string => $this->escapeHtml((string) $v);
+$actionUrl = $this->url('admin/tags', array_merge(['action' => 'save'], $id !== null ? ['id' => $id] : []));
+
+$html = '<div class="page-header"><div><h1>' . $e($title) . '</h1>'
+    . '<p class="subtitle">Quay lại <a href="' . $e($this->url('admin/tags')) . '">danh sách tag</a>.</p></div></div>';
+
+$html .= '<div class="card"><form method="post" action="' . $e($actionUrl) . '">'
+    . '<input type="hidden" name="csrf" value="' . $e($csrf) . '">';
+
+$name = (string) ($values['name'] ?? '');
+$slug = (string) ($values['slug'] ?? '');
+$html .= '<div class="form-row cols-2">';
+$html .= '<div class="form-group"><label for="f-name">Tên tag *</label>'
+    . '<input class="form-input" id="f-name" name="name" maxlength="100" required value="' . $e($name) . '">'
+    . (isset($errors['name']) ? '<div class="field-error">' . $e($errors['name']) . '</div>' : '')
+    . '</div>';
+$html .= '<div class="form-group"><label for="f-slug">Slug</label>'
+    . '<input class="form-input mono" id="f-slug" name="slug" maxlength="120" value="' . $e($slug) . '"'
+    . ' placeholder="de-trong-tu-sinh">'
+    . '<div class="field-hint">Để trống = tự sinh từ tên.</div>'
+    . (isset($errors['slug']) ? '<div class="field-error">' . $e($errors['slug']) . '</div>' : '')
+    . '</div>';
+$html .= '</div>';
+
+$html .= '<div class="form-actions">'
+    . '<button class="btn btn-primary" type="submit">Lưu</button>'
+    . '<a class="btn btn-ghost" href="' . $e($this->url('admin/tags')) . '">Hủy</a></div>';
+
+$html .= '</form></div>';
+
+echo $html;

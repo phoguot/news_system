@@ -1,0 +1,29 @@
+<?php
+
+return [
+    'db' => [
+        'hostname' => '127.0.0.1',
+        'database' => 'news_system',
+        'username' => 'root',
+        'password' => 'CHANGE_ME',
+    ],
+    'mail' => [
+        'transport' => [
+            'options' => [
+                'host'              => 'smtp.example.com',
+                'port'              => 587,
+                'connection_class'  => 'login',
+                'connection_config' => [
+                    'username' => 'CHANGE_ME',
+                    'password' => 'CHANGE_ME',
+                    'ssl'      => 'tls',
+                ],
+            ],
+        ],
+        'from' => 'no-reply@example.com',
+    ],
+    'recaptcha' => [
+        'site_key'   => '',
+        'secret_key' => '',
+    ],
+];

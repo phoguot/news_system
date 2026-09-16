@@ -1,0 +1,150 @@
+<?php
+
+declare(strict_types=1);
+
+/**
+ * Trang dịch vụ /dich-vu — lưới phẳng phân trang (FR-08):
+ * Box1 banner + Box danh sách phân trang 12/trang ?page= + Box bảng giá rút gọn + Box CTA.
+ * Phân trang ?page= kẹp trang cuối (service paginate), pager ± PAGER_WINDOW, ellipsis.
+ * Chuẩn .phtml chuỗi-based (AGENTS §2 / 07 §8): không control structure trong body, dựng bằng chuỗi.
+ *
+ * @var \Laminas\View\Renderer\PhpRenderer $this
+ * @var list<array<string, mixed>> $services
+ * @var int $total
+ * @var int $page
+ * @var int $pages
+ * @var array{items: list<array<string,mixed>>, total: int} $pricing
+ * @var string|null $mapUrl
+ * @var array<string, string|null> $settings
+ */
+
+$services = is_array($this->services ?? null) ? $this->services : [];
+$total    = (int) ($this->total ?? 0);
+$page     = max(1, (int) ($this->page ?? 1));
+$pages    = max(0, (int) ($this->pages ?? 0));
+$pricingData = is_array($this->pricing ?? null) ? $this->pricing : [];
+$pricingItems = is_array($pricingData['items'] ?? null) ? $pricingData['items'] : [];
+$mapUrl   = is_string($this->mapUrl ?? null) ? $this->mapUrl : null;
+$settings = is_array($this->settings ?? null) ? $this->settings : [];
+
+$this->headTitle('Dịch vụ · Vạn Lang');
+
+$view = $this;
+$e    = static fn (mixed $v): string => $view->escapeHtml((string) $v);
+$ea   = static fn (mixed $v): string => $view->escapeHtmlAttr((string) $v);
+$img  = static function (mixed $image) use ($view, $e): string {
+    if (! is_array($image) || (string) ($image['path'] ?? '') === '') {
+        return '';
+    }
+
+    return '<img src="' . $e($view->mediaUrl((string) $image['path'])) . '" alt="' . $e($image['alt'] ?? '') . '" loading="lazy">';
+};
+
+$hotline  = (string) ($settings['hotline'] ?? '1900 1234');
+$zaloUrl  = (string) ($settings['zalo_url'] ?? '');
+$address  = (string) ($settings['address'] ?? '');
+$hotlineHref = 'tel:' . preg_replace('/\s+/', '', $hotline);
+$breadcrumb = '<nav class="breadcrumb" aria-label="Breadcrumb"><a href="/">Trang chủ</a><span> › </span><span aria-current="page">Dịch vụ</span></nav>';
+
+/* Box1 banner */
+$banner = '<section class="page-banner"><div class="container" style="position:relative;z-index:1"><h1>DỊCH VỤ</h1>' . $breadcrumb
+    . '<p class="contact-intro" style="margin-top:10px;max-width:560px">Dịch vụ chăm sóc sức khỏe toàn diện — tại viện và tại nhà, chuẩn y khoa, tận tâm từng giờ.</p>'
+    . '</div><div class="banner-img"><img src="https://images.unsplash.com/photo-1576765607924-3f7b8410a787?w=900&q=80" alt=""></div></section>';
+
+/* ---- Lưới dịch vụ phẳng + phân trang ---- */
+$cards = '';
+foreach ($services as $card) {
+    $desc = (string) ($card['shortDescription'] ?? '');
+    $icon = '';
+    if (isset($card['icon']) && is_array($card['icon'])) {
+        $icon = '<span class="svc-icon">' . $img($card['icon']) . '</span>';
+    } elseif (isset($card['image']) && is_array($card['image'])) {
+        $icon = '<span class="svc-icon">' . $img($card['image']) . '</span>';
+    }
+    $cards .= '<a class="service-card" href="' . $ea($card['href'] ?? '/dich-vu/' . ($card['slug'] ?? '')) . '">'
+        . $icon . '<h4>' . $e($card['name'] ?? '') . '</h4>' . ($desc !== '' ? '<p>' . $e($desc) . '</p>' : '') . '</a>';
+}
+
+$body = $cards === ''
+    ? '<p class="news-empty">Hiện tại chưa có dịch vụ nào được công khai.</p>'
+    : '<div class="services-grid services-page-grid">' . $cards . '</div>';
+
+$summary = $total > 0
+    ? '<p class="news-count">' . $e($total) . ' dịch vụ · trang ' . $e($page) . '/' . $e(max(1, $pages)) . '</p>'
+    : '';
+
+$pageUrl = static fn (int $p): string => '/dich-vu?page=' . $p;
+
+$pager = '';
+if ($pages > 1) {
+    $window = \Frontend\Constant\FrontendConst::PAGER_WINDOW;
+    $from   = max(1, $page - $window);
+    $to     = min($pages, $page + $window);
+
+    $pager = '<nav class="pager" aria-label="Phân trang">';
+    if ($page > 1) {
+        $pager .= '<a class="pager-link" href="' . $e($pageUrl($page - 1)) . '">&laquo; Trước</a>';
+    }
+
+    if ($from > 1) {
+        $pager .= '<a class="pager-link" href="' . $e($pageUrl(1)) . '">1</a>'
+            . ($from > 2 ? '<span class="pager-gap">…</span>' : '');
+    }
+
+    $numbers = '';
+    for ($p = $from; $p <= $to; $p++) {
+        $numbers .= $p === $page
+            ? '<span class="pager-current" aria-current="page">' . $p . '</span>'
+            : '<a class="pager-link" href="' . $e($pageUrl($p)) . '">' . $p . '</a>';
+    }
+
+    $pager .= $numbers;
+
+    if ($to < $pages) {
+        $pager .= ($to < $pages - 1 ? '<span class="pager-gap">…</span>' : '')
+            . '<a class="pager-link" href="' . $e($pageUrl($pages)) . '">' . $pages . '</a>';
+    }
+
+    if ($page < $pages) {
+        $pager .= '<a class="pager-link" href="' . $e($pageUrl($page + 1)) . '">Sau &raquo;</a>';
+    }
+
+    $pager .= '</nav>';
+}
+
+$servicesBlock = '<section class="section"><div class="container">'
+    . '<div class="sec-label"><span class="arr">→</span> Dịch vụ <span class="arr">←</span></div>'
+    . $summary . $body . $pager
+    . '</div></section>';
+
+/* Box bảng giá rút gọn */
+$priceRows = '';
+foreach ($pricingItems as $row) {
+    $priceRows .= '<tr>'
+        . '<td class="pricing-name">' . $e($row['name'] ?? '') . '</td>'
+        . '<td class="pricing-unit">' . $e($row['unit'] ?? '') . '</td>'
+        . '<td class="pricing-price">' . $e($row['priceText'] ?? 'Liên hệ') . '</td>'
+        . '<td class="pricing-note">' . $e($row['note'] ?? '') . '</td>'
+        . '</tr>';
+}
+if ($priceRows === '') {
+    $priceRows = '<tr><td colspan="4" class="news-empty">Bảng giá đang cập nhật.</td></tr>';
+}
+$pricingBlock = '<section class="section section-alt"><div class="container">'
+    . '<div class="sec-label"><span class="arr">→</span> Bảng giá tham khảo <span class="arr">←</span></div>'
+    . '<div class="card" style="margin-top:14px"><div class="table-wrap"><table class="data-table pricing-table"><thead><tr><th>Tên dịch vụ</th><th>Đơn vị</th><th>Giá</th><th>Ghi chú</th></tr></thead><tbody>' . $priceRows . '</tbody></table></div></div>'
+    . '<div style="text-align:center;margin-top:14px"><a class="btn btn-teal" href="/bang-gia">Xem bảng giá đầy đủ →</a></div>'
+    . '</div></section>';
+
+/* Box CTA liên hệ */
+$zaloBtn = $zaloUrl !== '' ? '<a class="btn btn-white" href="' . $ea($zaloUrl) . '" target="_blank" rel="noopener">Zalo OA</a>' : '';
+$addrLine = $address !== '' ? '<p style="font-size:12.5px;color:var(--muted);margin-top:6px">📍 ' . $e($address) . '</p>' : '';
+$mapFrame = $mapUrl !== null && $mapUrl !== ''
+    ? '<div class="map-card" style="margin-top:12px;height:200px"><iframe src="' . $ea($mapUrl) . '" width="100%" height="200" style="border:0" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe></div>'
+    : '';
+$ctaBlock = '<section class="section"><div class="container"><div class="cta-bottom">'
+    . '<div class="cta-left"><div><h3>ĐỂ CHÚNG TÔI ĐỒNG HÀNH<br>VÀ CHĂM SÓC NGƯỜI THÂN CỦA BẠN</h3><p>Liên hệ ngay để được tư vấn và nhận báo giá chi tiết cho dịch vụ phù hợp.</p>' . $addrLine . '</div></div>'
+    . '<div class="cta-actions"><a class="btn btn-teal cta-phone" href="' . $ea($hotlineHref) . '">☎ ' . $e($hotline) . ' <small>Tư vấn · Đặt lịch</small></a>' . $zaloBtn . '<a class="btn btn-white cta-reg" href="/lien-he">Liên hệ ngay</a></div>'
+    . '</div>' . $mapFrame . '</div></section>';
+
+echo $banner . $servicesBlock . $pricingBlock . $ctaBlock;

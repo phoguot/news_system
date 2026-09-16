@@ -1,0 +1,96 @@
+<?php
+
+/** @var \Laminas\View\Renderer\PhpRenderer $this */
+/** @var list<\Admin\Model\TeamMember\TeamMemberModel> $items */
+$items = (array) ($this->items ?? []);
+/** @var string|null $flag */
+$flag    = isset($this->flag) && is_string($this->flag) ? $this->flag : null;
+/** @var array<int, array{path: string, alt: string, thumb: string, large: string}> $avatars */
+$avatars = (array) ($this->avatars ?? []);
+$csrf    = (string) ($this->csrfHash ?? '');
+$reorderCsrf = (string) ($this->reorderCsrfHash ?? '');
+$e       = fn (mixed $v): string => $this->escapeHtml((string) $v);
+$url     = fn (array $params = []): string => $this->url('admin/team', $params);
+
+$flags = [
+    'created'  => ['alert-success', 'Đã tạo thành viên.'],
+    'updated'  => ['alert-success', 'Đã cập nhật thành viên.'],
+    'deleted'  => ['alert-success', 'Đã xoá thành viên.'],
+    'csrf'     => ['alert-danger', 'Token bảo mật không hợp lệ.'],
+    'notfound' => ['alert-danger', 'Không tìm thấy thành viên.'],
+    'reordered' => ['alert-success', 'Đã cập nhật thứ tự thành viên.'],
+];
+
+$html = '<div class="page-header"><div><h1>Đội ngũ</h1>'
+    . '<p class="subtitle">Thành viên hiển thị ở trang giới thiệu.</p></div>'
+    . '<a class="btn btn-primary" href="' . $url(['action' => 'create']) . '">'
+    . '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">'
+    . '<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Thêm thành viên</a></div>';
+
+if ($flag !== null && isset($flags[$flag])) {
+    [$cls, $msg] = $flags[$flag];
+    $html .= '<div class="alert ' . $cls . '">' . $msg . '</div>';
+}
+
+$rowsHtml = '';
+foreach ($items as $member) {
+    /** @var \Admin\Model\TeamMember\TeamMemberModel $member */
+    $id       = $member->id;
+    $badge    = $member->isActive === \Admin\Model\TeamMember\TeamMemberConst::ACTIVE
+        ? '<span class="status published">Có</span>'
+        : '<span class="status off">Tắt</span>';
+    $featured = $member->isFeatured === \Admin\Model\TeamMember\TeamMemberConst::FEATURED
+        ? '<span class="tag-badge purple">★ Nổi bật</span>' : '<span class="muted">—</span>';
+    $initial  = $member->fullName !== '' ? mb_strtoupper(mb_substr(trim($member->fullName), 0, 1)) : '?';
+    /* Cột "Ảnh": thumbnail nhỏ — click mở lightbox ảnh to (admin.js).
+       Media bị xoá/không có trong map → fallback vòng chữ cái đầu + link #id. */
+    $card     = $member->avatarMediaId === null ? null : ($avatars[$member->avatarMediaId] ?? null);
+    if (is_array($card)) {
+        $label  = $card['alt'] !== '' ? $card['alt'] : $member->fullName;
+        $avatar = '<button type="button" class="thumb-zoom" data-lightbox'
+            . ' title="Nhấn để xem ảnh lớn"'
+            . ' data-full="' . $e($this->mediaUrl($card['large'])) . '"'
+            . ' data-caption="' . $e($label) . '">'
+            . '<img src="' . $e($this->mediaUrl($card['thumb'])) . '" alt="' . $e($label) . '"></button>';
+    } else {
+        $avatar = '<span class="post-cell"><span class="avatar sm">' . $e($initial) . '</span><span>'
+            . ($member->avatarMediaId !== null
+                ? '<a class="muted mono" style="text-decoration:none" href="'
+                    . $e($this->url('admin/media', ['action' => 'edit', 'id' => $member->avatarMediaId])) . '">#'
+                    . $member->avatarMediaId . '</a>'
+                : '<span class="muted">—</span>') . '</span></span>';
+    }
+    $contact  = $member->showContact === \Admin\Model\TeamMember\TeamMemberConst::ACTIVE
+        ? $e(trim((string) $member->email . ' ' . (string) $member->phone) ?: '—')
+        : '<span class="muted">Ẩn</span>';
+
+    $rowsHtml .= '<tr data-id="' . (int) $id . '">'
+        . '<td class="drag-col"><span class="drag-handle" title="Kéo để đổi thứ tự">⠿</span></td>'
+        . '<td><strong>' . $e($member->fullName) . '</strong></td>'
+        . '<td class="muted">' . $e($member->positionTitle) . '</td>'
+        . '<td>' . $avatar . '</td>'
+        . '<td class="muted">' . $contact . '</td>'
+        . '<td>' . $featured . '</td>'
+        . '<td class="muted sort-cell">' . $e($member->sortOrder) . '</td>'
+        . '<td>' . $badge . '</td>'
+        . '<td><div class="actions">'
+        . '<a class="btn sm btn-ghost" href="' . $url(['action' => 'edit', 'id' => $id]) . '">Sửa</a>'
+        . '<form method="post" action="' . $url(['action' => 'delete', 'id' => $id]) . '"'
+        . ' onsubmit="return confirm(\'Xoá vĩnh viễn thành viên này? Không thể khôi phục.\');">'
+        . '<input type="hidden" name="csrf" value="' . $e($csrf) . '">'
+        . '<button class="btn sm btn-ghost danger" type="submit">Xoá</button></form>'
+        . '</div></td></tr>';
+}
+
+if ($items === []) {
+    $rowsHtml = '<tr><td colspan="9" class="muted">Chưa có thành viên nào.</td></tr>';
+}
+
+$html .= '<div class="card"><div class="table-wrap"><table class="data-table"><thead><tr>'
+    . '<th class="drag-col"></th><th>Họ tên</th><th>Chức danh</th><th>Ảnh</th><th>Liên hệ</th>'
+    . '<th>Nổi bật</th><th>Thứ tự</th><th>Hiển thị</th><th class="action-col">Thao tác</th>'
+    . '</tr></thead><tbody class="js-sortable"'
+    . ' data-reorder-url="' . $e($url(['action' => 'reorder'])) . '" data-csrf="' . $e($reorderCsrf) . '">'
+    . $rowsHtml . '</tbody></table></div></div>';
+
+echo $html;

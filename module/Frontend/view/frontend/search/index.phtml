@@ -1,0 +1,90 @@
+<?php
+
+declare(strict_types=1);
+
+/**
+ * Trang tìm kiếm bài viết /tim-kiem?q= (FR-07, docs §5.11 / §4 / §7.1):
+ * - Dùng FULLTEXT ft_posts_title_excerpt kết hợp scope công khai, LIMIT 20.
+ * - Luôn gắn <meta name="robots" content="noindex"> (NFR-SEO-5).
+ * - Chuẩn .phtml (AGENTS §2 / 07 §8): thân template KHÔNG có control structure PHP,
+ *   mọi mảnh HTML động dựng bằng chuỗi trong block đầu file.
+ *
+ * @var \Laminas\View\Renderer\PhpRenderer $this
+ * @var string $q
+ * @var list<array<string, mixed>> $posts
+ * @var int $total
+ * @var bool $noindex
+ */
+
+$q     = is_string($this->q ?? null) ? $this->q : '';
+$posts = is_array($this->posts ?? null) ? $this->posts : [];
+$total = (int) ($this->total ?? 0);
+
+$this->headTitle($q !== '' ? 'Tìm kiếm · ' . $q : 'Tìm kiếm bài viết');
+$this->headMeta()->appendName('robots', 'noindex');
+
+$view = $this;
+$e    = static fn (mixed $v): string => $view->escapeHtml((string) $v);
+$img  = static function (mixed $image) use ($view, $e): string {
+    if (! is_array($image) || (string) ($image['path'] ?? '') === '') {
+        return '';
+    }
+
+    return '<img src="' . $e($view->mediaUrl((string) $image['path']))
+        . '" alt="' . $e($image['alt'] ?? '') . '" loading="lazy">';
+};
+
+/* ---- breadcrumb: Trang chủ › Tìm kiếm ---- */
+$breadcrumb = '<nav class="breadcrumb" aria-label="Breadcrumb">'
+    . '<a href="/">Trang chủ</a><span>›</span>'
+    . '<span aria-current="page">Tìm kiếm</span>'
+    . '</nav>';
+
+/* ---- search form ---- */
+$searchForm = '<div class="search-box">'
+    . '<form class="search-form" method="get" action="/tim-kiem" role="search">'
+    . '<input type="search" class="search-input" name="q" value="' . $e($q) . '"'
+    . ' placeholder="Nhập từ khóa tìm kiếm (tối thiểu 2 ký tự)..." aria-label="Từ khóa tìm kiếm">'
+    . '<button type="submit" class="btn btn-teal">Tìm kiếm</button>'
+    . '</form>'
+    . '</div>';
+
+/* ---- cards ---- */
+$cards = '';
+foreach ($posts as $card) {
+    $minutes = (int) ($card['minutes'] ?? 0);
+    $date    = (string) ($card['date'] ?? '');
+    $catName = (string) ($card['categoryName'] ?? '');
+    $meta    = trim($catName . ($catName !== '' && $date !== '' ? ' · ' : '') . $date
+        . ($minutes > 0 ? ' · ' . $minutes . ' phút đọc' : ''));
+    $excerpt = (string) ($card['excerpt'] ?? '');
+    $cards  .= '<article class="post-card">'
+        . '<a class="post-thumb" href="' . $e($card['href']) . '">'
+        . $img($card['image'] ?? null) . '</a><div class="post-body">'
+        . ($meta !== '' ? '<span class="mini-badge">' . $e($meta) . '</span>' : '')
+        . '<h3><a href="' . $e($card['href']) . '">' . $e($card['title']) . '</a></h3>'
+        . ($excerpt !== '' ? '<p>' . $e($excerpt) . '</p>' : '')
+        . '</div></article>';
+}
+
+/* ---- kết quả / thông báo ---- */
+$summary = '';
+if ($q === '') {
+    $body = '<p class="news-empty">Vui lòng nhập từ khóa để tìm kiếm bài viết.</p>';
+} elseif (mb_strlen($q, 'UTF-8') < 2) {
+    $body = '<p class="news-empty">Từ khóa tìm kiếm phải có ít nhất 2 ký tự.</p>';
+} elseif ($total === 0) {
+    $body = '<p class="news-empty">Không tìm thấy bài viết nào phù hợp với từ khóa &ldquo;' . $e($q) . '&rdquo;.</p>';
+} else {
+    $summary = '<p class="news-count">Tìm thấy ' . $e($total) . ' bài viết phù hợp với từ khóa &ldquo;' . $e($q) . '&rdquo;.</p>';
+    $body    = '<div class="post-grid">' . $cards . '</div>';
+}
+
+$html = '<section class="section"><div class="container">'
+    . $breadcrumb
+    . '<h1 class="sec-label">Tìm kiếm bài viết</h1>'
+    . $searchForm
+    . $summary . $body
+    . '</div></section>';
+
+echo $html;

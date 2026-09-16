@@ -1,0 +1,91 @@
+<?php
+
+declare(strict_types=1);
+
+/**
+ * Trang đội ngũ /doi-ngu (FR-09, docs §3.8 / §5.6):
+ * - Hiển thị toàn bộ thành viên active (isActive = 1) sắp theo sortOrder/id ASC.
+ * - email / SĐT đã được TeamViewService ẩn khi showContact = 0 — view chỉ render nếu có giá trị.
+ * - Chuẩn .phtml (AGENTS §2 / 07 §8): thân template KHÔNG có control structure PHP;
+ *   mọi mảnh HTML động dựng bằng chuỗi trong block đầu file.
+ *
+ * @var \Laminas\View\Renderer\PhpRenderer $this
+ * @var list<array<string, mixed>> $members
+ * @var int $total
+ */
+
+$members = is_array($this->members ?? null) ? $this->members : [];
+$total   = (int) ($this->total ?? 0);
+
+$this->headTitle('Đội ngũ · Van Lang News');
+
+$view = $this;
+$e    = static fn (mixed $v): string => $view->escapeHtml((string) $v);
+$eu   = static fn (mixed $v): string => $view->escapeHtmlAttr((string) $v);
+
+/* ---- avatar helper ---- */
+$avatar = static function (mixed $av, string $name) use ($view, $e): string {
+    if (is_array($av) && (string) ($av['path'] ?? '') !== '') {
+        $src   = $view->mediaUrl((string) ($av['thumb'] ?? $av['path']));
+        $alt   = (string) ($av['alt'] ?? $name);
+        return '<img src="' . $e($src) . '" alt="' . $e($alt) . '" loading="lazy">';
+    }
+    /* fallback: chữ cái đầu tên */
+    $initials = mb_strtoupper(mb_substr($name, 0, 1, 'UTF-8'), 'UTF-8');
+    return '<span class="team-avatar-placeholder">' . $e($initials) . '</span>';
+};
+
+/* ---- breadcrumb: Trang chủ › Đội ngũ ---- */
+$breadcrumb = '<nav class="breadcrumb" aria-label="Breadcrumb">'
+    . '<a href="/">Trang chủ</a><span>›</span>'
+    . '<span aria-current="page">Đội ngũ</span>'
+    . '</nav>';
+
+/* ---- member cards ---- */
+$cards = '';
+foreach ($members as $m) {
+    $name     = (string) ($m['fullName'] ?? '');
+    $pos      = (string) ($m['positionTitle'] ?? '');
+    $bio      = (string) ($m['bio'] ?? '');
+    $email    = (string) ($m['email'] ?? '');
+    $phone    = (string) ($m['phone'] ?? '');
+
+    /* avatar */
+    $avatarHtml = '<div class="team-avatar">' . $avatar($m['avatar'] ?? null, $name) . '</div>';
+
+    /* contact links — chỉ render khi service đã cho phép (showContact = 1) */
+    $contactHtml = '';
+    if ($email !== '') {
+        $contactHtml .= '<a href="mailto:' . $eu($email) . '" class="team-contact-link">✉ ' . $e($email) . '</a>';
+    }
+    if ($phone !== '') {
+        $contactHtml .= '<a href="tel:' . $eu($phone) . '" class="team-contact-link">☎ ' . $e($phone) . '</a>';
+    }
+    $contactBlock = $contactHtml !== ''
+        ? '<div class="team-contact">' . $contactHtml . '</div>'
+        : '';
+
+    $bioBlock = $bio !== '' ? '<p class="team-bio">' . $e($bio) . '</p>' : '';
+
+    $cards .= '<div class="team-card">'
+        . $avatarHtml
+        . '<div class="team-info">'
+        . '<h3 class="team-name">' . $e($name) . '</h3>'
+        . ($pos !== '' ? '<p class="team-pos">' . $e($pos) . '</p>' : '')
+        . $bioBlock
+        . $contactBlock
+        . '</div>'
+        . '</div>';
+}
+
+$body = $cards === ''
+    ? '<p class="news-empty">Hiện tại chưa có thành viên nào được công khai.</p>'
+    : '<div class="team-grid">' . $cards . '</div>';
+
+$html = '<section class="section"><div class="container">'
+    . $breadcrumb
+    . '<h1 class="sec-label">Đội ngũ của chúng tôi</h1>'
+    . $body
+    . '</div></section>';
+
+echo $html;

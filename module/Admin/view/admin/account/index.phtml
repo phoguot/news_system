@@ -1,0 +1,160 @@
+<?php
+
+/** @var \Laminas\View\Renderer\PhpRenderer $this */
+/** @var \Admin\Model\User\UserModel|null $user */
+$user = $this->user;
+/** @var \Admin\Model\Media\MediaModel|null $avatar */
+$avatar = $this->avatar;
+/** @var string|null $flag */
+$flag    = isset($this->flag) && is_string($this->flag) ? $this->flag : null;
+/** @var string $profileCsrfHash */
+$profileCsrfHash = (string) ($this->profileCsrfHash ?? '');
+/** @var string $passwordCsrfHash */
+$passwordCsrfHash = (string) ($this->passwordCsrfHash ?? '');
+/** @var array<string, string> $profileErrors */
+$profileErrors = (array) ($this->profileErrors ?? []);
+/** @var array<string, string> $passwordErrors */
+$passwordErrors = (array) ($this->passwordErrors ?? []);
+/** @var array<string, string> $values */
+$values  = (array) ($this->profileValues ?? []);
+/** @var list<array{id: int, label: string, path: string}> $mediaOptions */
+$mediaOptions = (array) ($this->mediaOptions ?? []);
+$e       = fn (mixed $v): string => $this->escapeHtml((string) $v);
+$url     = fn (array $params = []): string => $this->url('admin/account', $params);
+
+$alerts = [
+    'profile'  => ['alert-success', 'Đã cập nhật hồ sơ tài khoản.'],
+    'password' => ['alert-success', 'Đã đổi mật khẩu.'],
+    'csrf'     => ['alert-danger', 'Token bảo mật không hợp lệ, vui lòng thử lại.'],
+    'notfound' => ['alert-danger', 'Không tìm thấy tài khoản.'],
+];
+
+$field = static function (string $name, string $label, string $value, array $opts = []) use ($e): string {
+    $type  = (string) ($opts['type'] ?? 'text');
+    $id    = $opts['id'] ?? $name;
+    $req   = isset($opts['required']) && $opts['required'] ? ' required' : '';
+    $extra = '';
+    if (isset($opts['autocomplete'])) {
+        $extra .= ' autocomplete="' . $e($opts['autocomplete']) . '"';
+    }
+    if (isset($opts['hint'])) {
+        $extra .= ' aria-describedby="' . $e($id) . '-hint"';
+    }
+    $html = '<div class="form-group"><label for="' . $e($id) . '">' . $e($label)
+        . (isset($opts['required']) && $opts['required'] ? ' <span class="req">*</span>' : '') . '</label>'
+        . '<input class="form-input" type="' . $e($type) . '" id="' . $e($id) . '"'
+        . ' name="' . $e($name) . '" value="' . $e($value) . '"' . $extra . $req . '>';
+    if (isset($opts['hint'])) {
+        $html .= '<div class="field-hint" id="' . $e($id) . '-hint">' . $e($opts['hint']) . '</div>';
+    }
+    if (isset($opts['errors'][$name]) && $opts['errors'][$name] !== '') {
+        $html .= '<span class="field-error">' . $e($opts['errors'][$name]) . '</span>';
+    }
+
+    return $html . '</div>';
+};
+
+$profileValue = static function (string $key) use ($values, $user): string {
+    if (isset($values[$key]) && $values[$key] !== '') {
+        return (string) $values[$key];
+    }
+    if ($key === 'fullName') {
+        return (string) ($user?->fullName ?? '');
+    }
+    if ($key === 'email') {
+        return (string) ($user?->email ?? '');
+    }
+    if ($key === 'username') {
+        return (string) ($user?->username ?? '');
+    }
+    if ($key === 'phone') {
+        return (string) ($user?->phone ?? '');
+    }
+    if ($key === 'avatarMediaId') {
+        return (string) ($user?->avatarMediaId ?? '');
+    }
+
+    return '';
+};
+
+$html = '<div class="page-header"><div><h1>Tài khoản của tôi</h1>'
+    . '<p class="subtitle">Hồ sơ cá nhân và mật khẩu đăng nhập của tài khoản quản trị.</p></div></div>';
+
+if ($flag !== null && isset($alerts[$flag])) {
+    [$cls, $msg] = $alerts[$flag];
+    $html .= '<div class="alert ' . $cls . '">' . $msg . '</div>';
+}
+
+$html .= '<div class="two-col">';
+
+// ---- Form hồ sơ (FR-14) ----
+$html .= '<div class="card"><div class="card-header"><h3>Hồ sơ</h3></div>'
+    . '<form method="post" action="' . $url(['action' => 'save-profile']) . '">';
+if ($profileCsrfHash !== '') {
+    $html .= '<input type="hidden" name="csrf" value="' . $e($profileCsrfHash) . '">';
+}
+$perr = ['errors' => $profileErrors];
+$html .= $field('fullName', 'Họ tên', $profileValue('fullName'), ['required' => true] + $perr);
+$html .= $field('email', 'Email (dùng để đăng nhập)', $profileValue('email'), ['type' => 'email', 'required' => true] + $perr);
+$html .= $field(
+    'username',
+    'Tên đăng nhập',
+    $profileValue('username'),
+    ['autocomplete' => 'username', 'hint' => '3–32 ký tự chữ thường (a–z, 0–9, . _ -), bắt đầu bằng chữ cái. Để trống = chỉ đăng nhập bằng email.']
+    + $perr
+);
+$html .= $field('phone', 'Số điện thoại', $profileValue('phone'), ['hint' => 'Không bắt buộc.'] + $perr);
+$html .= '<div class="form-group"><label for="f-avatarMediaId">Ảnh đại diện</label>'
+    . $this->mediaPicker('avatarMediaId', $mediaOptions, $profileValue('avatarMediaId'))
+    . '<div class="field-hint">Chọn ảnh trong thư viện Media. Để trống = không có avatar.</div>';
+if (isset($profileErrors['avatarMediaId']) && $profileErrors['avatarMediaId'] !== '') {
+    $html .= '<span class="field-error">' . $e($profileErrors['avatarMediaId']) . '</span>';
+}
+$html .= '</div>';
+if ($avatar === null && (int) ($user?->avatarMediaId ?? 0) > 0) {
+    $html .= '<div class="alert alert-warning">Media avatar #' . $e((string) $user?->avatarMediaId)
+        . ' không tồn tại — hãy chọn ảnh khác.</div>';
+}
+$html .= '<div class="form-actions"><button class="btn btn-primary" type="submit">Lưu hồ sơ</button></div>';
+if (isset($profileErrors['csrf']) && $profileErrors['csrf'] !== '') {
+    $html .= '<span class="field-error">' . $e($profileErrors['csrf']) . '</span>';
+}
+$html .= '</form></div>';
+
+// ---- Form đổi mật khẩu ----
+$verr = ['errors' => $passwordErrors];
+$html .= '<div class="card"><div class="card-header"><h3>Đổi mật khẩu</h3></div>'
+    . '<form method="post" action="' . $url(['action' => 'save-password']) . '">';
+if ($passwordCsrfHash !== '') {
+    $html .= '<input type="hidden" name="csrf" value="' . $e($passwordCsrfHash) . '">';
+}
+$html .= $field(
+    'currentPassword',
+    'Mật khẩu hiện tại',
+    '',
+    ['type' => 'password', 'required' => true, 'autocomplete' => 'current-password'] + $verr
+);
+$html .= $field(
+    'newPassword',
+    'Mật khẩu mới',
+    '',
+    [
+        'type' => 'password',
+        'required' => true,
+        'autocomplete' => 'new-password',
+        'hint' => 'Tối thiểu 8 ký tự.',
+    ] + $verr
+);
+$html .= $field(
+    'confirmPassword',
+    'Nhập lại mật khẩu mới',
+    '',
+    ['type' => 'password', 'required' => true, 'autocomplete' => 'new-password'] + $verr
+);
+$html .= '<div class="form-actions"><button class="btn btn-primary" type="submit">Đổi mật khẩu</button></div>';
+if (isset($passwordErrors['csrf']) && $passwordErrors['csrf'] !== '') {
+    $html .= '<span class="field-error">' . $e($passwordErrors['csrf']) . '</span>';
+}
+$html .= '</form></div></div>';
+
+echo $html;

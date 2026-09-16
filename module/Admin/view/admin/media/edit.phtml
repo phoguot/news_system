@@ -1,0 +1,58 @@
+<?php
+
+/** @var \Laminas\View\Renderer\PhpRenderer $this */
+/** @var \Admin\Model\Media\MediaModel $model */
+/** @var array<array-key, mixed> $values */
+/** @var array<string, string> $errors */
+$model    = $this->model;
+$values   = (array) ($this->values ?? []);
+$errors   = (array) ($this->errors ?? []);
+$csrf     = (string) ($this->csrfHash ?? '');
+$e        = fn (mixed $v): string => $this->escapeHtml((string) $v);
+$url      = fn (array $params = []): string => $this->url('admin/media', $params);
+$id       = $model->id;
+$src      = $this->mediaUrl($model->path);
+$variants = $model->variantsArray();
+$altValue = (string) ($values['altText'] ?? $model->altText ?? '');
+
+$errorList = '';
+foreach ($errors as $message) {
+    $errorList .= '<div class="alert alert-danger">' . $e($message) . '</div>';
+}
+
+$dims = $model->width !== null && $model->height !== null ? $model->width . '×' . $model->height : '—';
+
+$html = '<div class="page-header"><div><h1>Media #' . $id . '</h1>'
+    . '<p class="subtitle">' . $e($model->originalName) . ' · ' . $e($model->mimeType) . ' · ' . $e($dims)
+    . ' · <span class="mono">' . $e($model->path) . '</span></p></div>'
+    . '<a class="btn btn-ghost" href="' . $e($url()) . '">← Về thư viện</a></div>';
+
+$html .= $errorList;
+
+$html .= '<div class="two-col"><div class="card"><a href="' . $e($src) . '" target="_blank" rel="noopener">'
+    . '<img src="' . $e($src) . '" alt="' . $e($altValue) . '" style="width:100%;border-radius:8px;display:block"></a></div>';
+
+$html .= '<div class="card"><h3 style="font-size:.95rem;font-weight:700;margin-bottom:12px">Alt text</h3>'
+    . '<form method="post" action="' . $url(['action' => 'save-alt', 'id' => $id]) . '">'
+    . '<input type="hidden" name="csrf" value="' . $e($csrf) . '">'
+    . '<div class="form-group"><label for="altText">Mô tả ảnh (accessibility / SEO)</label>'
+    . '<input class="form-input" type="text" id="altText" name="altText" maxlength="255" value="' . $e($altValue) . '"></div>'
+    . '<div class="form-actions" style="margin-top:0"><button class="btn btn-primary" type="submit">Lưu</button>'
+    . '<a class="btn btn-ghost" href="' . $e($url(['action' => 'usages', 'id' => $id])) . '">Xem nơi đang sử dụng</a></div></form>';
+
+if ($variants !== []) {
+    $variantRows = '';
+    foreach ($variants as $name => $path) {
+        $variantRows .= '<li style="font-size:12.5px;padding:4px 0">'
+            . '<a href="' . $e($this->mediaUrl($path)) . '" target="_blank" rel="noopener">' . $e($name) . '</a>'
+            . ' <span class="muted mono">' . $e($path) . '</span></li>';
+    }
+
+    $html .= '<div style="border-top:1px solid var(--border);padding-top:12px;margin-top:4px">'
+        . '<div style="font-weight:600;font-size:.85rem;margin-bottom:6px">Biến thể đã sinh</div>'
+        . '<ul style="list-style:none;margin:0;padding:0">' . $variantRows . '</ul></div>';
+}
+
+$html .= '</div></div>';
+
+echo $html;

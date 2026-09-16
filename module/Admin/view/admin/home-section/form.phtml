@@ -1,0 +1,181 @@
+<?php
+
+/** @var \Laminas\View\Renderer\PhpRenderer $this */
+/** @var int|null $id */
+$id     = isset($this->id) ? (int) $this->id : null;
+/** @var array<array-key, mixed> $values */
+$values = (array) ($this->values ?? []);
+/** @var array<string, string> $errors */
+$errors = (array) ($this->errors ?? []);
+/** @var array<int, string> $typeLabels */
+$typeLabels = (array) ($this->typeLabels ?? []);
+$title  = (string) ($this->title ?? 'Section trang chủ');
+$csrf   = (string) ($this->csrfHash ?? '');
+$e      = fn (mixed $v): string => $this->escapeHtml((string) $v);
+$val    = static fn (string $key, mixed $default = ''): string => (string) ($values[$key] ?? $default);
+$actionUrl = $this->url('admin/home-sections', array_merge(['action' => 'save'], $id !== null ? ['id' => $id] : []));
+
+$field = static function (string $name, string $label, string $control, string $hint = '') use ($errors, $e): string {
+    $err  = isset($errors[$name]) ? '<div class="field-error">' . $e($errors[$name]) . '</div>' : '';
+    $hintHtml = $hint !== '' ? '<div class="field-hint">' . $hint . '</div>' : '';
+
+    return '<div class="form-group"><label for="f-' . $name . '">' . $e($label) . '</label>'
+        . $control . $hintHtml . $err . '</div>';
+};
+
+$flagValue = static function (string $key) use ($values): bool {
+    $raw = $values[$key] ?? null;
+
+    return ! ($raw === null || $raw === '' || $raw === 0 || $raw === '0' || $raw === false);
+};
+
+$currentType = is_numeric($val('type')) ? (int) $val('type') : \Admin\Model\HomeSection\HomeSectionConst::TYPE_FEATURED_POSTS;
+
+$html = '<div class="page-header"><div><h1>' . $e($title) . '</h1>'
+    . '<p class="subtitle">Quay lại <a href="' . $e($this->url('admin/home-sections')) . '">danh sách section</a>.</p></div></div>';
+
+$html .= '<div class="card"><form method="post" action="' . $e($actionUrl) . '">'
+    . '<input type="hidden" name="csrf" value="' . $e($csrf) . '">';
+
+$typeHtml = '<select class="form-select" id="f-type" name="type">';
+foreach ($typeLabels as $typeCode => $typeLabel) {
+    $selected = $currentType === (int) $typeCode ? ' selected' : '';
+    $typeHtml .= '<option value="' . $e($typeCode) . '"' . $selected . '>' . $e($typeLabel) . '</option>';
+}
+
+$typeHtml .= '</select>';
+
+$html .= '<div class="form-row cols-2">';
+$html .= $field('type', 'Loại section *', $typeHtml);
+$html .= $field(
+    'title',
+    'Tiêu đề',
+    '<input class="form-input" id="f-title" name="title" maxlength="255" value="' . $e($val('title')) . '">'
+);
+$html .= $field(
+    'subtitle',
+    'Tiêu đề phụ',
+    '<input class="form-input" id="f-subtitle" name="subtitle" maxlength="500"'
+    . ' value="' . $e($val('subtitle')) . '">'
+);
+$html .= $field(
+    'sortOrder',
+    'Thứ tự',
+    '<input class="form-input" id="f-sortOrder" name="sortOrder" type="number" value="'
+    . $e($val('sortOrder', '0')) . '">'
+);
+$html .= $field(
+    'isActive',
+    'Hiển thị',
+    '<select class="form-select" id="f-isActive" name="isActive">'
+    . '<option value="1"' . ($flagValue('isActive') ? ' selected' : '') . '>Có</option>'
+    . '<option value="0"' . ($flagValue('isActive') ? '' : ' selected') . '>Tắt</option></select>'
+);
+$html .= '</div>';
+
+$configHint = 'JSON object theo loại section — hero: <span class="mono">autoplay</span>,'
+    . ' <span class="mono">interval_ms</span>; tin nổi bật/dịch vụ/đội ngũ:'
+    . ' <span class="mono">mode</span> (auto|manual), <span class="mono">limit</span> 1–50;'
+    . ' tin theo danh mục: <span class="mono">category_id</span> (bắt buộc), <span class="mono">limit</span>;'
+    . ' CTA: <span class="mono">button_text</span>, <span class="mono">button_url</span>;'
+    . ' Quy trình: <span class="mono">{"steps":[{"title":"…","desc":"…"},…]}</span> 3–6 bước. Để trống = dùng mặc định.';
+$html .= $field(
+    'config',
+    'Config (JSON)',
+    '<textarea class="form-textarea mono" id="f-config" name="config" rows="6">' . $e($val('config')) . '</textarea>',
+    $configHint
+);
+
+$html .= '<div class="form-actions"><button class="btn btn-primary" type="submit">Lưu</button>'
+    . '<a class="btn btn-ghost" href="' . $e($this->url('admin/home-sections')) . '">Hủy</a></div>';
+$html .= '</form></div>';
+
+/* ---- FR-33: quản mục cho section `mode=manual` (docs §4.4.4) ---- */
+$flag        = (string) ($this->flag ?? '');
+$items       = (array) ($this->items ?? []);
+$itemLabels  = (array) ($this->itemLabels ?? []);
+/** @var list<array{id: int, label: string}> $itemOptions */
+$itemOptions = (array) ($this->itemOptions ?? []);
+$itemsCsrf   = (string) ($this->itemsCsrfHash ?? '');
+$manualMode  = (bool) ($this->manualMode ?? false);
+$allowedType = isset($this->allowedItemType) && is_numeric($this->allowedItemType)
+    ? (int) $this->allowedItemType
+    : null;
+
+$itemNameById = [];
+foreach ($itemOptions as $opt) {
+    $itemNameById[(int) $opt['id']] = (string) $opt['label'];
+}
+
+$itemsHtml = '';
+if ($id !== null && $allowedType !== null) {
+    $itemsUrl  = $this->url('admin/home-sections', ['action' => 'items', 'id' => $id]);
+    $itemAlert = [
+        \Admin\Model\HomeSection\HomeSectionConst::FLAG_ITEM_ADDED     => ['alert-success', 'Đã thêm mục vào section.'],
+        \Admin\Model\HomeSection\HomeSectionConst::FLAG_ITEM_REMOVED   => ['alert-success', 'Đã xoá mục khỏi section.'],
+        \Admin\Model\HomeSection\HomeSectionConst::FLAG_ITEM_MOVED     => ['alert-success', 'Đã đổi thứ tự mục.'],
+        \Admin\Model\HomeSection\HomeSectionConst::FLAG_ITEM_DUPLICATE => ['alert-warning', 'Mục này đã nằm trong section.'],
+        \Admin\Model\HomeSection\HomeSectionConst::FLAG_ITEM_MISSING   => ['alert-warning', 'Bản ghi được tham chiếu không tồn tại.'],
+        \Admin\Model\HomeSection\HomeSectionConst::FLAG_ITEM_LIMIT     => ['alert-warning', 'Section đã đạt trần số mục cho phép.'],
+        'csrf'                                => ['alert-danger',  'CSRF hết hạn — tải lại trang rồi thử lại.'],
+        'invalid'                             => ['alert-danger',  'Dữ liệu thao tác mục không hợp lệ.'],
+        'notfound'                            => ['alert-warning', 'Không tìm thấy mục trong section này.'],
+    ];
+
+    $itemsHtml = '<div class="card" style="max-width:760px;margin-top:20px">'
+        . '<h3 style="font-size:.95rem;font-weight:700;margin-bottom:6px">Mục của section (mode=manual)</h3>';
+    if ($flag !== '' && isset($itemAlert[$flag])) {
+        $itemsHtml .= '<div class="alert ' . $itemAlert[$flag][0] . '">' . $e($itemAlert[$flag][1]) . '</div>';
+    }
+
+    if (! $manualMode) {
+        $itemsHtml .= '<div class="field-hint">Section đang ở chế độ auto. Chuyển <span class="mono">config</span> sang'
+            . ' <span class="mono">{"mode":"manual", …}</span> và lưu để chọn mục cụ thể (FR-33).</div>';
+    } else {
+        $itemsHtml .= '<div class="field-hint" style="margin-bottom:12px">Loại mục được phép ở đây:'
+            . ' <strong>' . $e($itemLabels[$allowedType] ?? (string) $allowedType) . '</strong>'
+            . ' — chọn bản ghi từ danh sách bên dưới.</div>';
+
+        $rowHtml = '';
+        foreach ($items as $item) {
+            /** @var \Admin\Model\HomeSectionItem\HomeSectionItemModel $item */
+            $rowLabel = $itemNameById[$item->itemId] ?? ('#' . $item->itemId);
+            $rowHtml .= '<div class="list-row"><span>'
+                . $e($itemLabels[$item->itemType] ?? '?')
+                . ' <span class="tag-chip">' . $e($rowLabel) . '</span>'
+                . ' <span class="muted" style="font-size:12px">sort ' . $e($item->sortOrder) . '</span></span>'
+                . '<span class="row-actions">';
+            $rowHtml .= '<form method="post" action="' . $e($itemsUrl) . '">';
+            $rowHtml .= '<input type="hidden" name="csrf" value="' . $e($itemsCsrf) . '">';
+            $rowHtml .= '<input type="hidden" name="id" value="' . $e($item->id) . '">';
+            $rowHtml .= '<button class="btn sm btn-ghost" type="submit" name="op" value="up" title="Lên">↑</button>';
+            $rowHtml .= '<button class="btn sm btn-ghost" type="submit" name="op" value="down" title="Xuống">↓</button>';
+            $rowHtml .= '<button class="btn sm btn-ghost danger" type="submit" name="op" value="remove">Xoá</button>';
+            $rowHtml .= '</form></span></div>';
+        }
+
+        $itemsHtml .= $rowHtml === ''
+            ? '<p class="muted" style="margin-bottom:12px">Chưa có mục nào — thêm bằng form bên dưới.</p>'
+            : $rowHtml;
+
+        $itemsHtml .= '<form method="post" action="' . $e($itemsUrl) . '" class="toolbar-form" style="margin:12px 0 0">'
+            . '<input type="hidden" name="csrf" value="' . $e($itemsCsrf) . '">'
+            . '<input type="hidden" name="op" value="add">'
+            . '<input type="hidden" name="itemType" value="' . $e($allowedType) . '">'
+            . '<label for="f-itemId" style="font-size:13px;font-weight:600">'
+            . $e($itemLabels[$allowedType] ?? 'Mục') . '</label>'
+            . $this->selectField(
+                'itemId',
+                $itemOptions,
+                '',
+                true,
+                '— Chọn ' . strtolower((string) ($itemLabels[$allowedType] ?? 'mục')) . ' —'
+            )
+            . '<button class="btn btn-ghost sm" type="submit">+ Thêm mục</button>'
+            . '</form>';
+    }
+
+    $itemsHtml .= '</div>';
+}
+
+echo $html . $itemsHtml;

@@ -1,0 +1,204 @@
+<?php
+
+/** @var \Laminas\View\Renderer\PhpRenderer $this */
+/** @var int|null $id */
+$id     = isset($this->id) ? (int) $this->id : null;
+/** @var array<array-key, mixed> $values */
+$values = (array) ($this->values ?? []);
+/** @var array<string, string> $errors */
+$errors = (array) ($this->errors ?? []);
+/** @var list<array{id: int, label: string}> $categoryOptions */
+$categoryOptions = (array) ($this->categoryOptions ?? []);
+/** @var list<array{id: int, label: string, path: string}> $mediaOptions */
+$mediaOptions = (array) ($this->mediaOptions ?? []);
+/** @var int|null $status */
+$status = isset($this->status) && is_numeric($this->status) ? (int) $this->status : null;
+$title  = (string) ($this->title ?? 'Bài viết');
+$csrf   = (string) ($this->csrfHash ?? '');
+$e      = fn (mixed $v): string => $this->escapeHtml((string) $v);
+$val    = static fn (string $key, mixed $default = ''): string => (string) ($values[$key] ?? $default);
+$actionUrl = $this->url('admin/posts', array_merge(['action' => 'save'], $id !== null ? ['id' => $id] : []));
+
+$field = static function (string $name, string $label, string $control, string $hint = '') use ($errors, $e): string {
+    $err  = isset($errors[$name]) ? '<div class="field-error">' . $e($errors[$name]) . '</div>' : '';
+    $hintHtml = $hint !== '' ? '<div class="field-hint">' . $hint . '</div>' : '';
+
+    return '<div class="form-group"><label for="f-' . $name . '">' . $e($label) . '</label>'
+        . $control . $hintHtml . $err . '</div>';
+};
+
+$statusHtml = '';
+if ($status !== null) {
+    $labels = [
+        \Application\Constant\ContentConst::STATUS_DRAFT     => ['draft', 'Nháp'],
+        \Application\Constant\ContentConst::STATUS_PUBLISHED => ['published', 'Đã xuất bản'],
+        \Application\Constant\ContentConst::STATUS_ARCHIVED  => ['archived', 'Lưu trữ'],
+    ];
+    [$cls, $label] = $labels[$status] ?? ['draft', 'Không rõ'];
+    $statusHtml = '<span class="status ' . $cls . '">' . $e($label) . '</span>';
+}
+
+$html = '<div class="page-header"><div><h1>' . $e($title) . '</h1>'
+    . '<p class="subtitle">Quay lại <a href="' . $e($this->url('admin/posts')) . '">danh sách bài viết</a>.</p></div>'
+    . '<div>' . $statusHtml . '</div></div>';
+
+$html .= '<form method="post" action="' . $e($actionUrl) . '">'
+    . '<input type="hidden" name="csrf" value="' . $e($csrf) . '">';
+
+$html .= '<div class="create-post-layout"><div class="post-form-main"><div class="card">';
+
+$html .= '<div class="form-group"><input class="form-input" id="f-title" name="title" maxlength="255" required'
+    . ' style="font-size:1.15rem;font-weight:600" placeholder="Tiêu đề bài viết *" value="' . $e($val('title')) . '">'
+    . (isset($errors['title']) ? '<div class="field-error">' . $e($errors['title']) . '</div>' : '') . '</div>';
+
+$html .= $field(
+    'excerpt',
+    'Mô tả',
+    '<textarea class="form-textarea" id="f-excerpt" name="excerpt" rows="2" maxlength="500" placeholder="Đoạn mở đầu hiển thị ở danh sách...">'
+    . $e($val('excerpt')) . '</textarea><span class="char-count"></span>'
+);
+
+// Ô soạn nội dung: admin.js biến textarea[data-wysiwyg] thành editor
+// WYSIWYG (toolbar + contenteditable) — textarea gốc vẫn là người submit.
+$html .= $field(
+    'content',
+    'Nội dung *',
+    '<textarea class="form-textarea" id="f-content" name="content" rows="16" required'
+    . ' data-wysiwyg placeholder="Soạn nội dung bài viết…"'
+    . ' style="min-height:340px">'
+    . $e($val('content')) . '</textarea>',
+    'Soạn thảo trực tiếp (đậm, nghiêng, heading, danh sách, liên kết, chèn ảnh từ thư viện) — '
+    . 'HTML sẽ được lọc mã độc khi lưu (docs §3.3.4(6)).'
+);
+
+$html .= '</div></div><div class="post-form-side">';
+
+// ---- Cột phải: xuất bản ----
+$html .= '<div class="card"><h3 style="font-size:.95rem;font-weight:700;margin-bottom:12px">Xuất bản</h3>';
+$html .= '<div class="form-group"><label for="f-publishedAt">Hẹn giờ (giờ VN)</label>'
+    . '<input class="form-input" id="f-publishedAt" name="publishedAt" type="datetime-local" value="'
+    . $e($val('publishedAt')) . '">'
+    . '<div class="field-hint">Chỉ dùng với nút “Hẹn giờ”.</div>'
+    . (isset($errors['publishedAt']) ? '<div class="field-error">' . $e($errors['publishedAt']) . '</div>' : '') . '</div>';
+$html .= '<div class="form-group"><label for="f-isFeatured">Nổi bật trang chủ</label>'
+    . '<select class="form-select" id="f-isFeatured" name="isFeatured">'
+    . '<option value="0"' . ($val('isFeatured') === '1' ? '' : ' selected') . '>Không</option>'
+    . '<option value="1"' . ($val('isFeatured') === '1' ? ' selected' : '') . '>Có</option></select></div>';
+$html .= '<div class="form-actions">'
+    . '<button class="btn btn-ghost" type="submit" name="intent" value="draft" formnovalidate="formnovalidate">Lưu nháp</button>'
+    . '<button class="btn btn-warn" type="submit" name="intent" value="schedule">Hẹn giờ</button>'
+    . '<button class="btn btn-primary" type="submit" name="intent" value="publish">Xuất bản</button></div>';
+$html .= '</div>';
+
+// ---- Cột phải: thuộc tính ----
+$catHtml = '<select class="form-select" id="f-categoryId" name="categoryId" required>'
+    . '<option value="">— Chọn chuyên mục —</option>';
+foreach ($categoryOptions as $opt) {
+    $selected = (string) $opt['id'] === $val('categoryId') ? ' selected' : '';
+    $catHtml .= '<option value="' . $e($opt['id']) . '"' . $selected . '>' . $e($opt['label']) . '</option>';
+}
+
+$catHtml .= '</select>';
+
+$html .= '<div class="card"><h3 style="font-size:.95rem;font-weight:700;margin-bottom:12px">Thuộc tính</h3>';
+$html .= $field('categoryId', 'Chuyên mục *', $catHtml);
+$html .= $field(
+    'slug',
+    'Slug',
+    '<input class="form-input mono" id="f-slug" name="slug" maxlength="255"'
+    . ' value="' . $e($val('slug')) . '" placeholder="de-trong-tu-sinh">',
+    'Để trống = tự sinh từ tiêu đề.'
+);
+$html .= $field(
+    'tags',
+    'Tag',
+    '<input class="form-input" id="f-tags" name="tags" autocomplete="off"'
+    . ' data-tag-search="' . $e($this->url('admin-api', ['resource' => 'tags'])) . '"'
+    . ' value="' . $e($val('tags')) . '"'
+    . ' placeholder="Hà Nội, ẩm thực, …">',
+    'Gõ để gợi ý tag đã có (FR-28) — phân tách bằng dấu phẩy, tag mới tự tạo (docs §3.4).'
+);
+$html .= $field(
+    'bannerMediaId',
+    'Ảnh banner',
+    $this->mediaPicker('bannerMediaId', $mediaOptions, $val('bannerMediaId')),
+    'Bắt buộc chọn khi bấm Xuất bản.'
+);
+$html .= $field(
+    'thumbnailMediaId',
+    'Ảnh thumbnail',
+    $this->mediaPicker('thumbnailMediaId', $mediaOptions, $val('thumbnailMediaId'))
+);
+$html .= '</div>';
+
+// ---- Cột phải: SEO ----
+$html .= '<div class="card"><h3 style="font-size:.95rem;font-weight:700;margin-bottom:12px">SEO</h3>';
+$html .= $field(
+    'metaTitle',
+    'Meta title',
+    '<input class="form-input" id="f-metaTitle" name="metaTitle" maxlength="255"'
+    . ' value="' . $e($val('metaTitle')) . '">'
+);
+$html .= $field(
+    'metaDescription',
+    'Meta description',
+    '<input class="form-input" id="f-metaDescription" name="metaDescription" maxlength="500"'
+    . ' value="' . $e($val('metaDescription')) . '"><span class="char-count"></span>'
+);
+$html .= '</div>';
+
+$html .= '<div class="card"><div class="form-actions" style="margin-top:0">'
+    . '<a class="btn btn-ghost" style="flex:1;text-align:center" href="' . $e($this->url('admin/posts')) . '">Hủy</a>'
+    . '</div></div>';
+
+$html .= '</div></div></form>';
+
+// ---- Autosave + lịch sử (FR-21) ----
+if ($id !== null) {
+    $autosaveUrl = $this->url('admin-api', ['resource' => 'posts', 'id' => $id, 'sub' => 'autosave']);
+    $revisionsUrl = $this->url('admin/posts', ['action' => 'revisions', 'id' => $id]);
+    $html .= '<div id="autosave-bar" style="margin-top:12px;color:#6b7280;font-size:.85rem"'
+        . ' data-autosave-url="' . $e($autosaveUrl) . '"'
+        . ' data-post-id="' . $e((string) $id) . '"></div>';
+    $html .= '<div class="card" style="margin-top:16px"><h3 style="font-size:.95rem;font-weight:700;margin-bottom:12px">'
+        . 'Lịch sử phiên bản</h3>';
+    $html .= '<p class="subtitle" style="margin-bottom:8px">'
+        . 'Tự lưu mỗi 60 giây khi có thay đổi — chỉ giữ 1 bản mới nhất. Bản thủ công & trước-xuất-bản giữ 20 bản.'
+        . '</p>';
+    $html .= '<p><a class="btn btn-ghost" href="' . $e($revisionsUrl) . '">Xem lịch sử & khôi phục</a></p>';
+
+    /** @var \Admin\Model\PostRevision\PostRevisionModel[]|null $revisions */
+    $revisions = $this->revisions ?? null;
+    if (is_array($revisions) && $revisions !== []) {
+        $html .= '<ul style="margin-top:12px;list-style:none;padding:0">';
+        $revActionCsrf = (string) ($this->revisionActionCsrf ?? $csrf);
+        $restoreUrl = $this->url('admin/posts', ['action' => 'restore', 'id' => $id]);
+        foreach (array_slice($revisions, 0, 8) as $rev) {
+            $label = match ((int) $rev->type) {
+                \Admin\Model\PostRevision\PostRevisionMapper::TYPE_AUTOSAVE => 'Tự lưu',
+                \Admin\Model\PostRevision\PostRevisionMapper::TYPE_BEFORE_PUBLISH => 'Trước xuất bản',
+                default => 'Thủ công',
+            };
+            $html .= '<li style="display:flex;gap:8px;align-items:center;padding:6px 0;border-top:1px solid #f0f0f0">'
+                . '<span style="min-width:96px;color:#374151">' . $e($rev->createdAt) . '</span>'
+                . '<span class="status draft" style="font-size:.75rem">' . $e($label) . '</span>'
+                . '<span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' . $e($rev->title) . '</span>'
+                . '<button type="button" class="btn btn-ghost js-rev-compare" style="font-size:.8rem;padding:4px 8px"'
+                . ' data-title="' . $e($rev->title) . '"'
+                . ' data-excerpt="' . $e($rev->excerpt ?? '') . '"'
+                . ' data-content="' . $e($rev->content) . '">So sánh</button>'
+                . '<form method="post" action="' . $e($restoreUrl) . '" style="display:inline"'
+                . ' onsubmit="return confirm(\'Khôi phục phiên bản này? Bản hiện tại sẽ được lưu thành revision mới.\')">'
+                . '<input type="hidden" name="csrf" value="' . $e($revActionCsrf) . '">'
+                . '<input type="hidden" name="revisionId" value="' . $e((string) $rev->id) . '">'
+                . '<button class="btn btn-warn" style="font-size:.8rem;padding:4px 8px" type="submit">Khôi phục</button>'
+                . '</form></li>';
+        }
+        $html .= '</ul>';
+    } elseif (is_array($revisions)) {
+        $html .= '<p class="subtitle" style="margin-top:8px">Chưa có bản lưu nào.</p>';
+    }
+    $html .= '</div>';
+}
+
+echo $html;

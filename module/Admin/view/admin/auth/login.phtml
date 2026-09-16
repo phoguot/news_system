@@ -1,0 +1,500 @@
+<?php /** @var \Laminas\View\Renderer\PhpRenderer $this */
+
+/** @var string|null $error */
+$error    = isset($this->error) && is_string($this->error) ? $this->error : null;
+$csrfHash = (string) ($this->csrfHash ?? '');
+$identity = (string) ($this->identity ?? '');
+
+// Chuỗi dựng sẵn bằng ternary — phtml giữ sạch control structure (phpcs)
+$alertHtml = $error === null
+    ? ''
+    : '<div class="alert visible">'
+        . '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" '
+        . 'style="flex-shrink:0;margin-top:1px">'
+        . '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>'
+        . '<span>' . $this->escapeHtml($error) . '</span></div>';
+
+$inputClass = $error === null ? 'form-input' : 'form-input error';
+?>
+<!doctype html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Đăng nhập — Vạn Lang Admin</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --sidebar-bg: #0f1c3a;
+            --text: #0f172a;
+            --text-secondary: #64748b;
+            --text-muted: #94a3b8;
+            --border: #e2e8f0;
+            --surface: #ffffff;
+            --danger: #dc2626;
+            --danger-bg: #fee2e2;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            background: var(--sidebar-bg);
+            overflow: hidden;
+        }
+
+        /* ===== LEFT PANEL ===== */
+        .left-panel {
+            flex: 1;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 48px;
+            overflow: hidden;
+        }
+
+        .left-panel::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(ellipse 80% 60% at 20% 80%, rgba(37,99,235,.35) 0%, transparent 60%),
+                radial-gradient(ellipse 60% 50% at 80% 20%, rgba(99,102,241,.25) 0%, transparent 60%),
+                linear-gradient(145deg, #0f1c3a 0%, #142040 50%, #0e1832 100%);
+            z-index: 0;
+        }
+
+        .left-panel::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(255,255,255,.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,.03) 1px, transparent 1px);
+            background-size: 48px 48px;
+            z-index: 0;
+        }
+
+        .left-content { position: relative; z-index: 1; }
+
+        .brand { display: flex; align-items: center; gap: 12px; }
+
+        .brand-icon {
+            width: 40px; height: 40px;
+            background: var(--primary);
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        .brand-name { font-size: 16px; font-weight: 700; color: #fff; letter-spacing: -.2px; }
+
+        .hero { margin-top: auto; padding-top: 80px; }
+
+        .hero-headline {
+            font-size: clamp(28px, 3vw, 42px);
+            font-weight: 700;
+            color: #fff;
+            line-height: 1.2;
+            letter-spacing: -.5px;
+            max-width: 440px;
+        }
+
+        .hero-headline .accent { color: #60a5fa; }
+
+        .hero-sub {
+            margin-top: 16px;
+            color: #94a3b8;
+            font-size: 15px;
+            line-height: 1.6;
+            max-width: 380px;
+        }
+
+        .stats-row { display: flex; gap: 32px; margin-top: 48px; }
+
+        .stat-num { font-size: 26px; font-weight: 700; color: #fff; letter-spacing: -.5px; }
+
+        .stat-label { font-size: 12px; color: #64748b; margin-top: 2px; }
+
+        .preview-cards {
+            position: absolute;
+            right: -20px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        .preview-card {
+            background: rgba(255,255,255,.06);
+            border: 1px solid rgba(255,255,255,.1);
+            border-radius: 10px;
+            padding: 14px 18px;
+            backdrop-filter: blur(8px);
+            width: 200px;
+        }
+
+        .preview-card-label {
+            font-size: 10px;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: .8px;
+            margin-bottom: 6px;
+        }
+
+        .preview-card-value { font-size: 22px; font-weight: 700; color: #fff; }
+
+        .preview-card-change {
+            font-size: 11px;
+            color: #4ade80;
+            margin-top: 4px;
+            display: flex;
+            align-items: center;
+            gap: 3px;
+        }
+
+        .mini-bars { display: flex; align-items: flex-end; gap: 3px; height: 28px; margin-top: 10px; }
+
+        .mini-bar { flex: 1; border-radius: 2px; background: rgba(96,165,250,.3); }
+
+        .mini-bar.hi { background: #2563eb; }
+
+        .left-footer { position: relative; z-index: 1; font-size: 12px; color: #334155; }
+
+        /* ===== RIGHT PANEL ===== */
+        .right-panel {
+            width: 480px;
+            background: #f8fafc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 48px 52px;
+            position: relative;
+        }
+
+        .login-box { width: 100%; max-width: 360px; }
+
+        .login-header { margin-bottom: 36px; }
+
+        .login-title { font-size: 24px; font-weight: 700; color: var(--text); letter-spacing: -.4px; }
+
+        .login-desc { margin-top: 8px; font-size: 14px; color: var(--text-secondary); line-height: 1.5; }
+
+        .form-group { margin-bottom: 18px; }
+
+        .form-label { display: block; font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 7px; }
+
+        .input-wrap { position: relative; }
+
+        .input-icon {
+            position: absolute;
+            left: 13px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            display: flex;
+            pointer-events: none;
+        }
+
+        .form-input {
+            width: 100%;
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            padding: 10px 12px 10px 40px;
+            font-size: 14px;
+            color: var(--text);
+            background: var(--surface);
+            font-family: inherit;
+            outline: none;
+            transition: border-color .15s, box-shadow .15s;
+        }
+
+        .form-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37,99,235,.1); }
+
+        .form-input.error { border-color: var(--danger); box-shadow: 0 0 0 3px rgba(220,38,38,.08); }
+
+        .toggle-pw {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            display: flex;
+            padding: 2px;
+            border-radius: 4px;
+            transition: color .15s;
+        }
+
+        .toggle-pw:hover { color: var(--text); }
+
+        .btn-login {
+            width: 100%;
+            margin-top: 6px;
+            padding: 11px;
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 14.5px;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: inherit;
+            transition: background .15s, transform .1s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-login:hover { background: var(--primary-dark); }
+        .btn-login:active { transform: scale(.99); }
+        .btn-login.loading { pointer-events: none; opacity: .8; }
+
+        .spinner {
+            display: none;
+            width: 18px; height: 18px;
+            border: 2px solid rgba(255,255,255,.3);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin .7s linear infinite;
+        }
+
+        .btn-login.loading .spinner { display: block; }
+        .btn-login.loading .btn-text { opacity: .7; }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .alert {
+            display: none;
+            align-items: flex-start;
+            gap: 10px;
+            background: var(--danger-bg);
+            border: 1px solid #fecaca;
+            border-radius: 8px;
+            padding: 12px 14px;
+            margin-bottom: 20px;
+            font-size: 13.5px;
+            color: var(--danger);
+        }
+
+        .alert.visible { display: flex; }
+
+        .back-home {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 22px;
+            font-size: 13px;
+            color: var(--text-secondary);
+            text-decoration: none;
+        }
+
+        .back-home:hover { color: var(--primary); }
+
+        .right-footer {
+            position: absolute;
+            bottom: 24px;
+            left: 0; right: 0;
+            text-align: center;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 900px) {
+            body { flex-direction: column; overflow: auto; }
+
+            .left-panel { padding: 32px 28px 40px; flex: none; }
+
+            .preview-cards { display: none; }
+
+            .hero { padding-top: 32px; }
+
+            .stats-row { gap: 24px; }
+
+            .right-panel { width: 100%; padding: 40px 28px 60px; min-height: auto; }
+
+            .login-box { max-width: 100%; }
+        }
+
+        @media (max-width: 480px) {
+            .left-panel { padding: 24px 20px 32px; }
+            .right-panel { padding: 32px 20px 60px; }
+            .stats-row { gap: 20px; }
+            .stat-num { font-size: 22px; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- LEFT PANEL -->
+<div class="left-panel">
+    <div class="left-content brand">
+        <div class="brand-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                <rect x="3" y="3" width="8" height="8" rx="1.5" fill="#fff"/>
+                <rect x="13" y="3" width="8" height="8" rx="1.5" fill="#fff" opacity=".6"/>
+                <rect x="3" y="13" width="8" height="8" rx="1.5" fill="#fff" opacity=".6"/>
+                <rect x="13" y="13" width="8" height="8" rx="1.5" fill="#fff" opacity=".3"/>
+            </svg>
+        </div>
+        <span class="brand-name">Vạn Lang News</span>
+    </div>
+
+    <div class="left-content hero">
+        <h1 class="hero-headline">
+            Quản trị nội dung<br/><span class="accent">thông minh hơn</span><br/>mỗi ngày
+        </h1>
+        <p class="hero-sub">
+            Nền tảng quản lý bài viết, dịch vụ và đội ngũ — tập trung vào những gì quan trọng với tòa soạn của bạn.
+        </p>
+
+        <div class="stats-row">
+            <div class="stat-item">
+                <div class="stat-num">Bài viết</div>
+                <div class="stat-label">Nháp · hẹn giờ · xuất bản</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-num">Dịch vụ</div>
+                <div class="stat-label">Banner · đội ngũ · liên hệ</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-num">Thư viện</div>
+                <div class="stat-label">Media · biến thể WebP</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating mini dashboard cards -->
+    <div class="preview-cards">
+        <div class="preview-card">
+            <div class="preview-card-label">Bảng điều khiển</div>
+            <div class="preview-card-value">Dashboard</div>
+            <div class="preview-card-change">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"/></svg>
+                Tổng quan hoạt động
+            </div>
+            <div class="mini-bars">
+                <div class="mini-bar" style="height:40%"></div>
+                <div class="mini-bar" style="height:55%"></div>
+                <div class="mini-bar" style="height:35%"></div>
+                <div class="mini-bar" style="height:65%"></div>
+                <div class="mini-bar" style="height:50%"></div>
+                <div class="mini-bar" style="height:75%"></div>
+                <div class="mini-bar hi" style="height:90%"></div>
+            </div>
+        </div>
+        <div class="preview-card">
+            <div class="preview-card-label">Ca trực tiếp</div>
+            <div class="preview-card-value">15 phút</div>
+            <div class="preview-card-change">Khóa tài khoản sau 5 lần sai</div>
+        </div>
+    </div>
+
+    <div class="left-content left-footer">
+        © 2026 Vạn Lang News CMS. Bảo lưu mọi quyền.
+    </div>
+</div>
+
+<!-- RIGHT PANEL -->
+<div class="right-panel">
+    <div class="login-box">
+        <div class="login-header">
+            <h2 class="login-title">Đăng nhập</h2>
+            <p class="login-desc">Nhập thông tin tài khoản để truy cập hệ thống quản trị.</p>
+        </div>
+
+        <?= $alertHtml ?>
+
+        <form method="post" action="<?= $this->escapeHtmlAttr((string) $this->url('admin/login')) ?>" id="loginForm">
+            <input type="hidden" name="csrf" value="<?= $this->escapeHtmlAttr($csrfHash) ?>">
+
+            <div class="form-group">
+                <label class="form-label" for="identity">Email hoặc tên đăng nhập</label>
+                <div class="input-wrap">
+                    <span class="input-icon">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    </span>
+                    <input type="text" id="identity" name="identity"
+                           class="<?= $inputClass ?>"
+                           placeholder="admin hoặc admin@vanlang.vn" required autocomplete="username"
+                           value="<?= $this->escapeHtmlAttr($identity) ?>">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="password">Mật khẩu</label>
+                <div class="input-wrap">
+                    <span class="input-icon">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                    </span>
+                    <input type="password" id="password" name="password"
+                           class="<?= $inputClass ?>"
+                           placeholder="Nhập mật khẩu..." required autocomplete="current-password">
+                    <button type="button" class="toggle-pw" id="togglePw" title="Hiện/ẩn mật khẩu">
+                        <svg id="eyeIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    </button>
+                </div>
+            </div>
+
+            <button type="submit" class="btn-login" id="loginBtn">
+                <span class="spinner"></span>
+                <span class="btn-text">Đăng nhập</span>
+            </button>
+        </form>
+
+        <p style="margin-top:14px;font-size:13px">
+            <a href="<?= $this->escapeHtmlAttr((string) $this->url('admin/forgot-password')) ?>" style="color:#2563eb;text-decoration:none">Quên mật khẩu?</a>
+            <span style="color:#94a3b8"> · </span>
+            <a href="/" class="back-home" style="margin-top:0">Về trang chủ website</a>
+        </p>
+    </div>
+
+    <div class="right-footer">
+        Vạn Lang News CMS &nbsp;·&nbsp; Chỉ dành cho quản trị viên được ủy quyền
+    </div>
+</div>
+
+<script>
+    // Hiện/ẩn mật khẩu
+    var togglePw = document.getElementById('togglePw');
+    var pwInput = document.getElementById('password');
+    var eyeIcon = document.getElementById('eyeIcon');
+    var eyeOpen = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
+    var eyeClosed = '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>';
+    var pwVisible = false;
+
+    togglePw.addEventListener('click', function () {
+        pwVisible = !pwVisible;
+        pwInput.type = pwVisible ? 'text' : 'password';
+        eyeIcon.innerHTML = pwVisible ? eyeClosed : eyeOpen;
+    });
+
+    // Ẩn viền đỏ lỗi khi người dùng bắt đầu nhập lại
+    document.getElementById('identity').addEventListener('input', function () {
+        this.classList.remove('error');
+    });
+    pwInput.addEventListener('input', function () {
+        this.classList.remove('error');
+    });
+
+    // Nhấn Enter / nút → spinner trong lúc chờ server trả về (form POST thật, không preventDefault)
+    document.getElementById('loginForm').addEventListener('submit', function () {
+        document.getElementById('loginBtn').classList.add('loading');
+    });
+</script>
+</body>
+</html>

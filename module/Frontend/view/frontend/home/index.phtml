@@ -1,0 +1,175 @@
+<?php
+
+/**
+ * Trang chủ (FR-32): render list block do Frontend\Service\HomeService dựng
+ * (payload cache 'home-v1', TTL 60s — FR-39). Chuẩn .phtml (AGENTS §2 /
+ * 07 §8): thân template KHÔNG có control structure PHP — mọi mảnh HTML động
+ * dựng bằng chuỗi trong block đầu file. Dữ liệu là mảng thuần; path ảnh
+ * tương đối qua helper `mediaUrl`. Section rỗng/thiếu dữ liệu đã được
+ * HomeService loại trước — ở đây chỉ việc in.
+ *
+ * @var list<array<string, mixed>> $sections
+ */
+
+/** @var \Laminas\View\Renderer\PhpRenderer $this */
+
+$this->headTitle('Trang chủ');
+
+$view = $this;
+$e    = static fn (mixed $v): string => $view->escapeHtml((string) $v);
+$img  = static function (mixed $image) use ($view, $e): string {
+    if (! is_array($image) || (string) ($image['path'] ?? '') === '') {
+        return '';
+    }
+
+    return '<img src="' . $e($view->mediaUrl((string) $image['path']))
+        . '" alt="' . $e($image['alt'] ?? '') . '" loading="lazy">';
+};
+
+$sections = is_array($this->sections ?? null) ? $this->sections : [];
+$blocks   = [];
+$hasHero  = false;
+
+foreach ($sections as $section) {
+    /** @var array<string, mixed> $section */
+    $kind  = (string) ($section['kind'] ?? '');
+    $title = (string) ($section['title'] ?? '');
+    /** @var list<array<string, mixed>> $items */
+    $items = is_array($section['items'] ?? null) ? $section['items'] : [];
+
+    $head = $title !== '' ? '<h2 class="sec-label">' . $e($title) . '</h2>' : '';
+    if ((string) ($section['headingHref'] ?? '') !== '') {
+        $head .= '<a class="sec-more" href="' . $e($section['headingHref']) . '">Xem tất cả →</a>';
+    }
+
+    $cards = '';
+
+    if ($kind === 'hero') {
+        $hasHero = true;
+        $slides  = '';
+        $dots    = '';
+        foreach ($items as $i => $slide) {
+            $cover = (string) ($slide['image']['path'] ?? '');
+            $inner = '<div class="slide-inner container"><div class="slide-copy">';
+            if ((string) ($slide['title'] ?? '') !== '') {
+                $inner .= '<span class="slide-badge">' . $e($slide['title']) . '</span>';
+            }
+            if ((string) ($slide['subtitle'] ?? '') !== '') {
+                $inner .= '<p>' . $e($slide['subtitle']) . '</p>';
+            }
+            if ((string) ($slide['button'] ?? '') !== '') {
+                $target = ! empty($slide['newTab']) ? ' target="_blank" rel="noopener"' : '';
+                $inner .= '<div class="slide-actions"><a class="btn btn-white" href="'
+                    . $e($slide['href'] ?? '') . '"' . $target . '>' . $e($slide['button']) . '</a></div>';
+            }
+            $inner .= '</div></div>';
+            $style  = $cover !== ''
+                ? ' style="background-image:url(' . $e($view->mediaUrl($cover)) . ')"'
+                : '';
+            $slides .= '<figure class="slide"' . $style . '><div class="slide-overlay"></div>'
+                . $inner . '</figure>';
+            $dots  .= '<button type="button" class="dot' . ($i === 0 ? ' active' : '')
+                . '" data-index="' . (int) $i . '" aria-label="Slide ' . ((int) $i + 1) . '"></button>';
+        }
+        $nav = count($items) > 1
+            ? '<button type="button" class="slider-arrow prev" aria-label="Trước">‹</button>'
+                . '<button type="button" class="slider-arrow next" aria-label="Sau">›</button>'
+                . '<div class="slider-dots">' . $dots . '</div>'
+            : '';
+        $blocks[] = '<section class="main-slider" data-autoplay="'
+            . (! empty($section['autoplay']) ? '1' : '0')
+            . '" data-interval="' . (int) ($section['intervalMs'] ?? 5000) . '">'
+            . '<div class="slider-viewport"><div class="slider-track">' . $slides . '</div></div>'
+            . $nav . '</section>';
+        continue;
+    }
+
+    if ($kind === 'cta') {
+        $blocks[] = '<section class="container"><div class="cta-bottom">'
+            . '<div class="cta-left"><div><h2>' . $e($title) . '</h2></div></div>'
+            . '<div class="cta-actions"><a class="btn btn-teal" href="'
+            . $e($section['href'] ?? '') . '">' . $e($section['button'] ?? '') . '</a></div>'
+            . '</div></section>';
+        continue;
+    }
+
+    if ($kind === 'posts') {
+        foreach ($items as $card) {
+            $minutes = (int) ($card['minutes'] ?? 0);
+            $meta    = ((string) ($card['date'] ?? '') . ($minutes > 0
+                ? ' · ' . $minutes . ' phút đọc'
+                : ''));
+            $excerpt = (string) ($card['subtitle'] ?? '');
+            $cards  .= '<article class="post-card">'
+                . '<a class="post-thumb" href="' . $e($card['href']) . '">'
+                . $img($card['image'] ?? null) . '</a><div class="post-body">'
+                . ($meta !== '' ? '<span class="mini-badge">' . $e($meta) . '</span>' : '')
+                . '<h3><a href="' . $e($card['href']) . '">' . $e($card['title']) . '</a></h3>'
+                . ($excerpt !== '' ? '<p>' . $e($excerpt) . '</p>' : '')
+                . '</div></article>';
+        }
+        $blocks[] = '<section class="section"><div class="container">'
+            . '<div class="sec-head">' . $head . '</div>'
+            . '<div class="post-grid">' . $cards . '</div></div></section>';
+        continue;
+    }
+
+    if ($kind === 'services') {
+        foreach ($items as $card) {
+            $excerpt = (string) ($card['subtitle'] ?? '');
+            $icon    = $img($card['icon'] ?? null) !== ''
+                ? '<span class="svc-icon">' . $img($card['icon'] ?? null) . '</span>'
+                : '';
+            $cards  .= '<a class="service-card" href="' . $e($card['href']) . '">'
+                . $icon . '<h4>' . $e($card['title']) . '</h4>'
+                . ($excerpt !== '' ? '<p>' . $e($excerpt) . '</p>' : '')
+                . '</a>';
+        }
+        $blocks[] = '<section class="section section-alt"><div class="container">'
+            . '<div class="sec-head">' . $head . '</div>'
+            . '<div class="services-grid">' . $cards . '</div></div></section>';
+        continue;
+    }
+
+    if ($kind === 'process') {
+        $subtitle = (string) ($section['subtitle'] ?? '');
+        foreach ($items as $card) {
+            $idx  = (int) ($card['index'] ?? 0);
+            $desc = (string) ($card['subtitle'] ?? '');
+            $cards .= '<div class="process-step"><span class="process-num">' . $e($idx) . '</span>'
+                . '<h4>' . $e($card['title']) . '</h4>'
+                . ($desc !== '' ? '<p>' . $e($desc) . '</p>' : '')
+                . '</div>';
+        }
+        $blocks[] = '<section class="section section-alt"><div class="container">'
+            . '<div class="sec-head">' . $head
+            . ($subtitle !== '' ? '<p class="sec-subtitle">' . $e($subtitle) . '</p>' : '')
+            . '</div><div class="process-grid">' . $cards . '</div></div></section>';
+        continue;
+    }
+
+    if ($kind === 'team') {
+        foreach ($items as $card) {
+            $role    = (string) ($card['subtitle'] ?? '');
+            $cards  .= '<div class="team-card"><div class="team-avatar">'
+                . $img($card['image'] ?? null) . '</div><div><h4>' . $e($card['title']) . '</h4>'
+                . ($role !== '' ? '<span class="role">' . $e($role) . '</span>' : '')
+                . '</div></div>';
+        }
+        $blocks[] = '<section class="section"><div class="container">'
+            . '<div class="sec-head">' . $head . '</div>'
+            . '<div class="team-grid">' . $cards . '</div></div></section>';
+    }
+}
+
+$bodyHtml = $blocks === []
+    ? '<section class="section"><div class="container"><p>Trang chủ chưa có khối nào bật.'
+        . ' Vào <a href="/admin/home-sections">Admin → Bố cục trang chủ</a> để thêm và bật section.'
+        . '</p></div></section>'
+    : implode('', $blocks);
+
+$scriptHtml = $hasHero
+    ? '<script src="' . $e($this->basePath('assets/js/home-slider.js')) . '"></script>'
+    : '';
+
+echo $bodyHtml . $scriptHtml;

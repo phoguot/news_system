@@ -1,0 +1,134 @@
+<?php
+
+/** @var \Laminas\View\Renderer\PhpRenderer $this */
+/** @var array<array-key, mixed> $summary */
+$summary = (array) ($this->summary ?? []);
+$e       = fn (mixed $v): string => $this->escapeHtml((string) $v);
+
+/** UTC 'Y-m-d H:i:s' → 'd/m/Y' giờ VN (đọc thuận mắt admin — docs §5.2). */
+$fmtDayVn = static function (mixed $utc): string {
+    if (! is_string($utc) || $utc === '') {
+        return '—';
+    }
+
+    $dt = new \DateTimeImmutable(str_replace(' ', 'T', $utc) . 'Z');
+
+    return $dt->setTimezone(new \DateTimeZone('Asia/Ho_Chi_Minh'))->format('d/m/Y');
+};
+
+$svg = static function (string $inner): string {
+    return '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">'
+        . $inner . '</svg>';
+};
+
+/**
+ * Một thẻ thống kê theo đúng khuôn mockup `cms-doanh-nghiep.html`
+ * (page-dashboard): icon màu + label + value + dòng "so với tháng trước".
+ * Delta là số THẬT (bài/danh mục/dịch vụ/tin mới tạo tháng này so với tháng
+ * trước) — mockup chỉ là số demo cố định.
+ */
+$statCard = static function (
+    string $iconCls,
+    string $iconSvg,
+    string $label,
+    int $value,
+    int $delta,
+    string $unit
+): string {
+    if ($delta > 0) {
+        $change = '<div class="stat-change positive">+' . $delta . ' ' . $unit . ' so với tháng trước</div>';
+    } elseif ($delta < 0) {
+        $change = '<div class="stat-change negative">' . $delta . ' ' . $unit . ' so với tháng trước</div>';
+    } else {
+        $change = '<div class="stat-change">Không thay đổi so với tháng trước</div>';
+    }
+
+    return '<div class="stat-card">'
+        . '<div class="stat-icon ' . $iconCls . '">' . $iconSvg . '</div>'
+        . '<div class="stat-info"><div class="stat-label">' . $label . '</div>'
+        . '<div class="stat-value">' . $value . '</div>' . $change . '</div></div>';
+};
+
+$postsUrl = $this->url('admin/posts');
+
+/** @var list<int> $monthly */
+$monthly      = array_values(array_map('intval', (array) ($summary['monthlyPosts'] ?? [])));
+$currentMonth = max(1, min(12, (int) ($summary['currentMonth'] ?? 1)));
+$peak         = $monthly === [] ? 0 : max($monthly);
+
+$bars = '';
+for ($m = 1; $m <= 12; $m++) {
+    $cnt    = $monthly[$m - 1] ?? 0;
+    $height = $peak > 0 ? (int) round($cnt / $peak * 100) : 0;
+    $active = $m === $currentMonth ? ' active' : '';
+    $bars  .= '<div class="bar-group"><div class="bar' . $active . '" style="height:' . $height
+        . '%" title="' . $cnt . ' bài"></div><span>T' . $m . '</span></div>';
+}
+
+// Màu placeholder theo thứ tự mockup: xanh / cam / tím (không có ảnh thật).
+$thumbVariants = ['', ' orange-thumb', ' purple-thumb'];
+$badgeVariants = ['cyan', 'green', 'purple'];
+
+$recentHtml = '';
+/** @var list<array{title?: string, dateUtc?: string, categoryName?: string}> $recentPosts */
+$recentPosts = (array) ($summary['recentPosts'] ?? []);
+foreach ($recentPosts as $i => $row) {
+    $badge = isset($row['categoryName']) && $row['categoryName'] !== ''
+        ? '<span class="tag-badge ' . $badgeVariants[$i % 3] . '">' . $e($row['categoryName']) . '</span>'
+        : '';
+    $recentHtml .= '<div class="recent-item">'
+        . '<div class="recent-thumb' . $thumbVariants[$i % 3] . '"></div>'
+        . '<div class="recent-info"><div class="recent-title">' . $e($row['title'] ?? '') . '</div>'
+        . '<div class="recent-meta">' . $e($fmtDayVn($row['dateUtc'] ?? null)) . '</div></div>'
+        . $badge . '</div>';
+}
+
+$html = '<div class="page-header"><div><h1>Tổng quan</h1>'
+    . '<p class="subtitle">Chào mừng bạn trở lại! Dưới đây là tổng quan hoạt động của website.</p>'
+    . '</div></div>';
+
+$html .= '<div class="stats-grid">';
+$html .= $statCard(
+    'blue',
+    $svg('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>'),
+    'Tổng bài viết',
+    (int) ($summary['postTotal'] ?? 0),
+    (int) ($summary['postDelta'] ?? 0),
+    'bài'
+);
+$html .= $statCard(
+    'purple',
+    $svg('<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>'),
+    'Danh mục',
+    (int) ($summary['categoryTotal'] ?? 0),
+    (int) ($summary['categoryDelta'] ?? 0),
+    'danh mục'
+);
+$html .= $statCard(
+    'orange',
+    $svg('<circle cx="12" cy="12" r="3"/><path d="M19.07 4.93A10 10 0 0 0 5 19.07"/>'),
+    'Dịch vụ',
+    (int) ($summary['serviceTotal'] ?? 0),
+    (int) ($summary['serviceDelta'] ?? 0),
+    'dịch vụ'
+);
+$html .= $statCard(
+    'green',
+    $svg('<path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>'),
+    'Liên hệ mới',
+    (int) ($summary['newContacts'] ?? 0),
+    (int) ($summary['contactDelta'] ?? 0),
+    'tin'
+);
+$html .= '</div>';
+
+$html .= '<div class="dashboard-grid">'
+    . '<div class="card chart-card"><div class="card-header"><h3>Bài viết theo tháng</h3></div>'
+    . '<div class="bar-chart"><div class="chart-bars">' . $bars . '</div></div></div>'
+    . '<div class="card recent-posts-card"><div class="card-header">'
+    . '<h3>Bài viết mới nhất</h3>'
+    . '<a href="' . $postsUrl . '" class="view-all">Xem tất cả →</a></div>'
+    . '<div class="recent-list">' . $recentHtml . '</div></div>'
+    . '</div>';
+
+echo $html;

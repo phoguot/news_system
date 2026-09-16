@@ -1,0 +1,105 @@
+<?php
+
+/** @var \Laminas\View\Renderer\PhpRenderer $this */
+/** @var array{id: int, email: string, fullName: string, username: string|null}|null $adminIdentity */
+$adminIdentity = $this->adminIdentity ?? null;
+$e             = fn (mixed $v): string => $this->escapeHtml((string) $v);
+// Path hiện tại qua helper `serverUrl` — PhpRenderer không có getRequest()
+// (gọi $this->getRequest() sẽ rơi vào __call → "A plugin by the name getRequest")
+$path = (string) parse_url((string) $this->serverUrl(true), PHP_URL_PATH);
+
+// Icon feather-style dùng chung nav-item (khuôn như mockup cms-doanh-nghiep.html)
+$svg = static function (string $inner): string {
+    return '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">'
+        . $inner . '</svg>';
+};
+
+$navItems = [
+    ['Tổng quan', $this->url('admin/dashboard'), '/admin/dashboard', $svg('<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>')],
+    ['Bài viết', $this->url('admin/posts'), '/admin/posts', $svg('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>')],
+    ['Danh mục', $this->url('admin/categories'), '/admin/categories', $svg('<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>')],
+    ['Tag', $this->url('admin/tags'), '/admin/tags', $svg('<path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/>')],
+    ['Dịch vụ', $this->url('admin/services'), '/admin/services', $svg('<circle cx="12" cy="12" r="3"/><path d="M19.07 4.93A10 10 0 0 0 5 19.07M4.93 19.07A10 10 0 0 0 19.07 5"/>')],
+    ['Banner', $this->url('admin/banners'), '/admin/banners', $svg('<rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>')],
+    ['Trang chủ', $this->url('admin/home-sections'), '/admin/home-sections', $svg('<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>')],
+    ['Đội ngũ', $this->url('admin/team'), '/admin/team', $svg('<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>')],
+    ['Bảng giá', $this->url('admin/pricing'), '/admin/pricing', $svg('<line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/>')],
+    ['Liên hệ', $this->url('admin/contacts'), '/admin/contacts', $svg('<path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>')],
+    ['Media', $this->url('admin/media'), '/admin/media', $svg('<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>')],
+    ['Cài đặt', $this->url('admin/settings'), '/admin/settings', $svg('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>')],
+    ['Tài khoản', $this->url('admin/account'), '/admin/account', $svg('<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>')],
+];
+
+$navHtml = '';
+foreach ($navItems as [$label, $href, $prefix, $icon]) {
+    $active  = str_starts_with($path, $prefix) ? ' active' : '';
+    $navHtml .= '<a class="nav-item' . $active . '" href="' . $e($href) . '">' . $icon
+        . '<span>' . $e($label) . '</span></a>';
+}
+
+// Khối user cuối sidebar + topbar (nhận dữ liệu identity thật, không số liệu dựng)
+$fullName  = is_array($adminIdentity) ? (string) $adminIdentity['fullName'] : 'Quản trị';
+$initial   = mb_strtoupper(mb_substr(trim($fullName) !== '' ? trim($fullName) : 'Q', 0, 1));
+$secondL   = is_array($adminIdentity) ? (string) ($adminIdentity['username'] ?? $adminIdentity['email']) : '';
+$userFoot  = '<a class="user-info" href="' . $e($this->url('admin/account')) . '">'
+    . '<div class="avatar">' . $e($initial) . '</div>'
+    . '<div class="user-details"><div class="user-name">' . $e($fullName) . '</div>'
+    . '<div class="user-role">' . $e($secondL !== '' ? $secondL : 'Quản trị viên') . '</div></div>'
+    . $svg('<polyline points="6 9 12 15 18 9"/>') . '</a>';
+
+$viewSite = '<a class="icon-btn" href="' . $e($this->basePath('/')) . '" title="Xem website" target="_blank" rel="noopener">'
+    . '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">'
+    . '<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/>'
+    . '<line x1="10" y1="14" x2="21" y2="3"/></svg></a>';
+
+$logout = '<a class="btn btn-ghost sm" href="' . $e($this->url('admin/logout')) . '" title="Đăng xuất">'
+    . '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">'
+    . '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/>'
+    . '<line x1="21" y1="12" x2="9" y2="12"/></svg> Đăng xuất</a>';
+
+$this->headLink()->prependStylesheet($this->basePath('css/admin.css'));
+$this->inlineScript()->appendFile($this->basePath('js/admin.js'));
+?>
+<?= $this->doctype() ?>
+<html lang="vi">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <?= $this->headTitle('Vạn Lang Admin')->setSeparator(' - ') ?>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <?= $this->headLink() ?>
+    <?= $this->headMeta() ?>
+</head>
+<body>
+<div class="app-layout">
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <a class="logo" href="<?= $e($this->url('admin')) ?>" style="text-decoration:none">
+                <div class="logo-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="8" height="8" rx="1.5" fill="#fff"/><rect x="13" y="3" width="8" height="8" rx="1.5" fill="#fff" opacity=".6"/><rect x="3" y="13" width="8" height="8" rx="1.5" fill="#fff" opacity=".6"/><rect x="13" y="13" width="8" height="8" rx="1.5" fill="#fff" opacity=".4"/></svg>
+                </div>
+                <span class="logo-text">CMS News System</span>
+            </a>
+        </div>
+        <nav class="sidebar-nav"><?= $navHtml ?></nav>
+        <div class="sidebar-footer"><?= $userFoot ?></div>
+    </aside>
+    <div class="main-wrapper">
+        <header class="topbar">
+            <button class="menu-toggle" id="menuToggle" type="button">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+            </button>
+            <div class="topbar-right">
+                <?= $viewSite ?>
+                <?= $logout ?>
+            </div>
+        </header>
+        <main class="content">
+<?= $this->content ?>
+        </main>
+    </div>
+</div>
+<?= $this->inlineScript() ?>
+</body>
+</html>

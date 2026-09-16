@@ -1,0 +1,124 @@
+<?php
+
+declare(strict_types=1);
+
+/**
+ * Trang tag /tag/{slug} (FR-06, docs §2.1/§6.1): payload mảng thuần do
+ * Frontend\Service\TagListService::page dựng — tag lạ đã bị controller 404
+ * trước khi tới đây. Card + pager dùng lại đúng khuôn `category/view.phtml`
+ * (FR-05) và `post/list.phtml` (FR-02). Chuẩn .phtml (AGENTS §2 / 07 §8):
+ * thân template KHÔNG có control structure PHP — mọi mảnh HTML động dựng
+ * bằng chuỗi trong block đầu file.
+ *
+ * @var \Laminas\View\Renderer\PhpRenderer $this
+ * @var array{id: int, name: string, slug: string} $tag
+ * @var list<array<string, mixed>> $posts
+ * @var int $total
+ * @var int $page
+ * @var int $pages
+ */
+
+$tag     = is_array($this->tag ?? null) ? $this->tag : [];
+$name    = (string) ($tag['name'] ?? 'Tag');
+$slug    = (string) ($tag['slug'] ?? '');
+$posts   = is_array($this->posts ?? null) ? $this->posts : [];
+$total   = (int) ($this->total ?? 0);
+$page    = max(1, (int) ($this->page ?? 1));
+$pages   = max(0, (int) ($this->pages ?? 0));
+
+$this->headTitle('Tag · ' . $name);
+
+$view = $this;
+$e    = static fn (mixed $v): string => $view->escapeHtml((string) $v);
+$img  = static function (mixed $image) use ($view, $e): string {
+    if (! is_array($image) || (string) ($image['path'] ?? '') === '') {
+        return '';
+    }
+
+    return '<img src="' . $e($view->mediaUrl((string) $image['path']))
+        . '" alt="' . $e($image['alt'] ?? '') . '" loading="lazy">';
+};
+
+/** URL trang N trên chính trang tag này. */
+$pageUrl = static function (int $p) use ($slug): string {
+    return '/tag/' . rawurlencode($slug) . '?page=' . $p;
+};
+
+/* ---- breadcrumb: Trang chủ › Tag › tên ---- */
+$breadcrumb = '<nav class="breadcrumb" aria-label="Breadcrumb">'
+    . '<a href="/">Trang chủ</a><span>›</span><a href="/tin-tuc">Tin tức</a><span>›</span>'
+    . '<span aria-current="page">Tag: ' . $e($name) . '</span>'
+    . '</nav>';
+
+/* ---- cards (mark-up đồng nhất list.phtml / category / related) ---- */
+$cards = '';
+foreach ($posts as $card) {
+    $minutes = (int) ($card['minutes'] ?? 0);
+    $date    = (string) ($card['date'] ?? '');
+    $catName = (string) ($card['categoryName'] ?? '');
+    $meta    = trim($catName . ($catName !== '' && $date !== '' ? ' · ' : '') . $date
+        . ($minutes > 0 ? ' · ' . $minutes . ' phút đọc' : ''));
+    $excerpt = (string) ($card['excerpt'] ?? '');
+    $cards  .= '<article class="post-card">'
+        . '<a class="post-thumb" href="' . $e($card['href']) . '">'
+        . $img($card['image'] ?? null) . '</a><div class="post-body">'
+        . ($meta !== '' ? '<span class="mini-badge">' . $e($meta) . '</span>' : '')
+        . '<h3><a href="' . $e($card['href']) . '">' . $e($card['title']) . '</a></h3>'
+        . ($excerpt !== '' ? '<p>' . $e($excerpt) . '</p>' : '')
+        . '</div></article>';
+}
+
+$body = $cards === ''
+    ? '<p class="news-empty">Chưa có bài viết nào với tag này.</p>'
+    : '<div class="post-grid">' . $cards . '</div>';
+
+/* ---- pager cửa sổ ± PAGER_WINDOW — nguyên thuật toán FR-02 ---- */
+$pager = '';
+if ($pages > 1) {
+    $window = \Frontend\Constant\FrontendConst::PAGER_WINDOW;
+    $from   = max(1, $page - $window);
+    $to     = min($pages, $page + $window);
+
+    $pager = '<nav class="pager" aria-label="Phân trang">';
+    if ($page > 1) {
+        $pager .= '<a class="pager-link" href="' . $e($pageUrl($page - 1)) . '">&laquo; Trước</a>';
+    }
+
+    if ($from > 1) {
+        $pager .= '<a class="pager-link" href="' . $e($pageUrl(1)) . '">1</a>'
+            . ($from > 2 ? '<span class="pager-gap">…</span>' : '');
+    }
+
+    $numbers = '';
+    for ($p = $from; $p <= $to; $p++) {
+        $numbers .= $p === $page
+            ? '<span class="pager-current" aria-current="page">' . $p . '</span>'
+            : '<a class="pager-link" href="' . $e($pageUrl($p)) . '">' . $p . '</a>';
+    }
+
+    $pager .= $numbers;
+
+    if ($to < $pages) {
+        $pager .= ($to < $pages - 1 ? '<span class="pager-gap">…</span>' : '')
+            . '<a class="pager-link" href="' . $e($pageUrl($pages)) . '">' . $pages . '</a>';
+    }
+
+    if ($page < $pages) {
+        $pager .= '<a class="pager-link" href="' . $e($pageUrl($page + 1)) . '">Sau &raquo;</a>';
+    }
+
+    $pager .= '</nav>';
+}
+
+$summary = $total > 0
+    ? '<p class="news-count">' . $e($total) . ' bài viết · trang ' . $e($page)
+        . '/' . $e(max(1, $pages)) . '</p>'
+    : '';
+
+$html = '<section class="section"><div class="container">'
+    . $breadcrumb
+    . '<h1 class="sec-label">Tag: ' . $e($name) . '</h1>'
+    . $summary . $body . $pager
+    . '</div></section>';
+
+echo $html;

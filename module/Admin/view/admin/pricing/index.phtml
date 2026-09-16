@@ -1,0 +1,69 @@
+<?php
+
+/** @var \Laminas\View\Renderer\PhpRenderer $this */
+/** @var list<\Frontend\Model\Pricing\PricingModel> $items */
+$items = (array) ($this->items ?? []);
+$flag    = isset($this->flag) && is_string($this->flag) ? $this->flag : null;
+$csrf    = (string) ($this->csrfHash ?? '');
+$reorderCsrf = (string) ($this->reorderCsrfHash ?? '');
+$e       = fn (mixed $v): string => $this->escapeHtml((string) $v);
+$url     = fn (array $params = []): string => $this->url('admin/pricing', $params);
+
+$flags = [
+    'created'  => ['alert-success', 'Đã tạo mục bảng giá.'],
+    'updated'  => ['alert-success', 'Đã cập nhật mục bảng giá.'],
+    'deleted'  => ['alert-success', 'Đã xoá mục bảng giá.'],
+    'csrf'     => ['alert-danger', 'Token bảo mật không hợp lệ.'],
+    'notfound' => ['alert-danger', 'Không tìm thấy mục bảng giá.'],
+    'reordered' => ['alert-success', 'Đã cập nhật thứ tự bảng giá.'],
+];
+
+$html = '<div class="page-header"><div><h1>Bảng giá</h1>'
+    . '<p class="subtitle">Quản lý các mục bảng giá hiển thị ở /bang-gia và khối giá trong /dich-vu.</p></div>'
+    . '<a class="btn btn-primary" href="' . $url(['action' => 'create']) . '">'
+    . '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">'
+    . '<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Thêm mục</a></div>';
+
+if ($flag !== null && isset($flags[$flag])) {
+    [$cls, $msg] = $flags[$flag];
+    $html .= '<div class="alert ' . $cls . '">' . $msg . '</div>';
+}
+
+$groupLabels = \Frontend\Model\Pricing\PricingConst::GROUP_LABELS;
+
+$rowsHtml = '';
+foreach ($items as $item) {
+    /** @var \Frontend\Model\Pricing\PricingModel $item */
+    $id    = $item->id;
+    $badge = $item->isActive === \Frontend\Model\Pricing\PricingConst::ACTIVE
+        ? '<span class="status published">Có</span>'
+        : '<span class="status off">Tắt</span>';
+    $priceText = $item->price !== null ? number_format($item->price, 0, ',', '.') . ' đ' : 'Liên hệ';
+    $groupName = $groupLabels[$item->groupCode] ?? $e($item->groupCode);
+
+    $rowsHtml .= '<tr data-id="' . (int) $id . '">'
+        . '<td class="drag-col"><span class="drag-handle" title="Kéo để đổi thứ tự">⠿</span></td>'
+        . '<td><strong>' . $e($item->name) . '</strong><br><span class="slug-text">' . $e($item->slug) . '</span></td>'
+        . '<td>' . $e($groupName) . '</td>'
+        . '<td>' . $e($priceText) . ($item->unit !== null ? ' / ' . $e($item->unit) : '') . '</td>'
+        . '<td>' . $badge . '</td>'
+        . '<td><div class="actions">'
+        . '<a class="btn sm btn-ghost" href="' . $url(['action' => 'edit', 'id' => $id]) . '">Sửa</a>'
+        . '<form method="post" action="' . $url(['action' => 'delete', 'id' => $id]) . '"'
+        . ' onsubmit="return confirm(\'Xoá vĩnh viễn mục này?\');">'
+        . '<input type="hidden" name="csrf" value="' . $e($csrf) . '">'
+        . '<button class="btn sm btn-ghost danger" type="submit">Xoá</button></form>'
+        . '</div></td></tr>';
+}
+
+if ($items === []) {
+    $rowsHtml = '<tr><td colspan="6" class="muted">Chưa có mục bảng giá nào.</td></tr>';
+}
+
+$html .= '<div class="card"><div class="table-wrap"><table class="data-table"><thead><tr>'
+    . '<th class="drag-col"></th><th>Tên / Slug</th><th>Nhóm</th><th>Giá</th><th>Hiển thị</th><th class="action-col">Thao tác</th>'
+    . '</tr></thead><tbody class="js-sortable"'
+    . ' data-reorder-url="' . $e($url(['action' => 'reorder'])) . '" data-csrf="' . $e($reorderCsrf) . '">'
+    . $rowsHtml . '</tbody></table></div></div>';
+
+echo $html;
