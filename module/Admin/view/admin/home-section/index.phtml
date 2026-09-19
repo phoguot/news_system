@@ -9,6 +9,7 @@ $typeLabels = (array) ($this->typeLabels ?? []);
 $flag    = isset($this->flag) && is_string($this->flag) ? $this->flag : null;
 $csrf    = (string) ($this->csrfHash ?? '');
 $reorderCsrf = (string) ($this->reorderCsrfHash ?? '');
+$activeCsrf = (string) ($this->activeCsrfHash ?? '');
 $e       = fn (mixed $v): string => $this->escapeHtml((string) $v);
 $url     = fn (array $params = []): string => $this->url('admin/home-sections', $params);
 
@@ -19,7 +20,19 @@ $flags = [
     'csrf'     => ['alert-danger', 'Token bảo mật không hợp lệ.'],
     'notfound' => ['alert-danger', 'Không tìm thấy section trang chủ.'],
     'reordered' => ['alert-success', 'Đã cập nhật thứ tự section.'],
+    'active-updated' => ['alert-success', 'Đã cập nhật hiển thị section.'],
 ];
+
+$activeSelect = static function (int $id, int $current) use ($url, $e, $activeCsrf): string {
+    $yes = $current === \Admin\Model\HomeSection\HomeSectionConst::ACTIVE ? ' selected' : '';
+    $no  = $current === \Admin\Model\HomeSection\HomeSectionConst::ACTIVE ? '' : ' selected';
+
+    return '<form class="inline-status-form" method="post" action="' . $e($url(['action' => 'active', 'id' => $id])) . '">'
+        . '<input type="hidden" name="csrf" value="' . $e($activeCsrf) . '">'
+        . '<select class="form-select status-select" name="isActive" onchange="this.form.submit()">'
+        . '<option value="1"' . $yes . '>Có</option>'
+        . '<option value="0"' . $no . '>Tắt</option></select></form>';
+};
 
 $html = '<div class="page-header"><div><h1>Bố cục trang chủ</h1>'
     . '<p class="subtitle">Các section hiển thị ở trang chủ — thứ tự, chế độ auto/manual.</p></div>'
@@ -37,9 +50,7 @@ foreach ($items as $section) {
     /** @var \Admin\Model\HomeSection\HomeSectionModel $section */
     $id       = $section->id;
     $typeText = $typeLabels[$section->type] ?? ('type ' . $section->type);
-    $badge    = $section->isActive === \Admin\Model\HomeSection\HomeSectionConst::ACTIVE
-        ? '<span class="status published">Có</span>'
-        : '<span class="status off">Tắt</span>';
+    $statusSelect = $activeSelect((int) $id, (int) $section->isActive);
     $config   = $section->config ?? '—';
     if (mb_strlen($config) > 60) {
         $config = mb_substr($config, 0, 57) . '…';
@@ -51,7 +62,7 @@ foreach ($items as $section) {
         . '<td><strong>' . $e($section->title ?? '—') . '</strong></td>'
         . '<td class="muted mono" style="word-break:break-all">' . $e($config) . '</td>'
         . '<td class="muted sort-cell">' . $e($section->sortOrder) . '</td>'
-        . '<td>' . $badge . '</td>'
+        . '<td>' . $statusSelect . '</td>'
         . '<td><div class="actions">'
         . '<a class="btn sm btn-ghost" href="' . $url(['action' => 'edit', 'id' => $id]) . '">Sửa</a>'
         . '<form method="post" action="' . $url(['action' => 'delete', 'id' => $id]) . '"'

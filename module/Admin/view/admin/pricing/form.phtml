@@ -11,6 +11,8 @@ $csrf   = (string) ($this->csrfHash ?? '');
 $e      = fn (mixed $v): string => $this->escapeHtml((string) $v);
 $val    = static fn (string $key, mixed $default = ''): string => (string) ($values[$key] ?? $default);
 $actionUrl = $this->url('admin/pricing', array_merge(['action' => 'save'], $id !== null ? ['id' => $id] : []));
+$listUrl = $this->url('admin/pricing');
+$pageTitle = $id === null ? 'Thêm bảng giá' : $title;
 
 $field = static function (string $name, string $label, string $control, string $hint = '') use ($errors, $e): string {
     $err  = isset($errors[$name]) ? '<div class="field-error">' . $e($errors[$name]) . '</div>' : '';
@@ -18,6 +20,12 @@ $field = static function (string $name, string $label, string $control, string $
 
     return '<div class="form-group"><label for="f-' . $name . '">' . $e($label) . '</label>'
         . $control . $hintHtml . $err . '</div>';
+};
+
+$panelIcon = static function (string $inner): string {
+    return '<span class="form-panel-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"'
+        . ' stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+        . $inner . '</svg></span>';
 };
 
 $active          = $values['isActive'] ?? 1;
@@ -30,34 +38,94 @@ foreach ($groupLabels as $code => $label) {
     $groupOptions .= '<option value="' . $e($code) . '"' . $sel . '>' . $e($label) . '</option>';
 }
 
-$html = '<div class="page-header"><div><h1>' . $e($title) . '</h1>'
-    . '<p class="subtitle">Quay lại <a href="' . $e($this->url('admin/pricing')) . '">danh sách bảng giá</a>.</p></div></div>';
+$html = '<div class="entry-page"><div class="entry-page-head"><div>'
+    . '<div class="breadcrumb"><a href="' . $e($listUrl) . '">Bảng giá</a><span>&rsaquo;</span><span>'
+    . $e($pageTitle) . '</span></div>'
+    . '<h1>' . $e($pageTitle) . '</h1>'
+    . '<p class="subtitle">Khai báo dịch vụ, giá và nhóm hiển thị trên trang bảng giá.</p></div>'
+    . '<a class="btn btn-ghost entry-back" href="' . $e($listUrl) . '">'
+    . '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">'
+    . '<line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>'
+    . 'Quay lại danh sách</a></div>';
 
-$html .= '<div class="card"><form method="post" action="' . $e($actionUrl) . '">'
+$html .= '<form class="entry-form" method="post" action="' . $e($actionUrl) . '">'
     . '<input type="hidden" name="csrf" value="' . $e($csrf) . '">';
 
+$html .= '<div class="entry-form-grid"><div class="entry-main">';
+$html .= '<section class="form-panel"><div class="form-panel-head">'
+    . $panelIcon('<line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/>')
+    . '<div><h2>Thông tin giá</h2><p>Nhập tên mục, nhóm và giá dịch vụ.</p></div></div>';
 $html .= '<div class="form-row cols-2">';
-$html .= $field('groupCode', 'Nhóm *', '<select class="form-select" id="f-groupCode" name="groupCode">' . $groupOptions . '</select>');
-$html .= $field('name', 'Tên mục *', '<input class="form-input" id="f-name" name="name" maxlength="255" required value="' . $e($val('name')) . '">');
+$html .= $field(
+    'groupCode',
+    'Nhóm *',
+    '<select class="form-select" id="f-groupCode" name="groupCode">' . $groupOptions . '</select>'
+);
+$html .= $field(
+    'name',
+    'Tên mục *',
+    '<input class="form-input" id="f-name" name="name" maxlength="255" required'
+    . ' placeholder="Nhập tên mục bảng giá" value="' . $e($val('name')) . '">'
+);
 $html .= '</div>';
-
-$html .= $field('slug', 'Slug', '<input class="form-input mono" id="f-slug" name="slug" maxlength="255" value="' . $e($val('slug')) . '" placeholder="de-trong-tu-sinh">', 'Để trống = tự sinh từ tên.');
-
-$html .= '<div class="form-row cols-3">';
-$html .= $field('price', 'Giá (VNĐ)', '<input class="form-input" id="f-price" name="price" type="number" min="0" value="' . $e($val('price')) . '" placeholder="Để trống = Liên hệ">', 'Để trống hiển thị “Liên hệ”.');
-$html .= $field('unit', 'Đơn vị', '<input class="form-input" id="f-unit" name="unit" maxlength="100" value="' . $e($val('unit')) . '" placeholder="lần / giờ / gói">');
-$html .= $field('sortOrder', 'Thứ tự', '<input class="form-input" id="f-sortOrder" name="sortOrder" type="number" value="' . $e($val('sortOrder', '0')) . '">');
+$html .= $field(
+    'slug',
+    'Slug',
+    '<input class="form-input mono" id="f-slug" name="slug" maxlength="255" value="' . $e($val('slug')) . '"'
+    . ' placeholder="de-trong-tu-sinh">',
+    'Để trống = tự sinh từ tên.'
+);
+$html .= '<div class="form-row cols-2">';
+$html .= $field(
+    'price',
+    'Giá (VNĐ)',
+    '<input class="form-input" id="f-price" name="price" type="number" min="0" value="'
+    . $e($val('price')) . '" placeholder="Để trống = Liên hệ">',
+    'Để trống hiển thị “Liên hệ”.'
+);
+$html .= $field(
+    'unit',
+    'Đơn vị',
+    '<input class="form-input" id="f-unit" name="unit" maxlength="100" value="' . $e($val('unit')) . '"'
+    . ' placeholder="lần / giờ / gói">'
+);
 $html .= '</div>';
+$html .= $field(
+    'note',
+    'Ghi chú',
+    '<input class="form-input" id="f-note" name="note" maxlength="500" value="' . $e($val('note')) . '"'
+    . ' placeholder="Đã bao gồm vật tư...">'
+);
+$html .= '</section></div><div class="entry-side">';
 
-$html .= $field('note', 'Ghi chú', '<input class="form-input" id="f-note" name="note" maxlength="500" value="' . $e($val('note')) . '" placeholder="Đã bao gồm vật tư...">');
-
-$html .= $field('isActive', 'Hiển thị', '<select class="form-select" id="f-isActive" name="isActive">'
+$html .= '<section class="form-panel"><div class="form-panel-head">'
+    . $panelIcon('<path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/>')
+    . '<div><h2>Tùy chọn hiển thị</h2><p>Thiết lập thứ tự và trạng thái công khai.</p></div></div>';
+$html .= $field(
+    'sortOrder',
+    'Thứ tự',
+    '<input class="form-input" id="f-sortOrder" name="sortOrder" type="number" value="'
+    . $e($val('sortOrder', '0')) . '">',
+    'Số nhỏ hiển thị trước.'
+);
+$html .= $field(
+    'isActive',
+    'Hiển thị',
+    '<select class="form-select" id="f-isActive" name="isActive">'
     . '<option value="1"' . ($isActiveChecked ? ' selected' : '') . '>Có</option>'
-    . '<option value="0"' . ($isActiveChecked ? '' : ' selected') . '>Tắt</option></select>');
+    . '<option value="0"' . ($isActiveChecked ? '' : ' selected') . '>Tắt</option></select>'
+);
+$html .= '<div class="notice-box"><strong>Lưu ý</strong>'
+    . '<p>Giá để trống sẽ hiển thị là “Liên hệ” trên website.</p></div>';
+$html .= '</section></div></div>';
 
-$html .= '<div class="form-actions">'
-    . '<button class="btn btn-primary" type="submit">Lưu</button>'
-    . '<a class="btn btn-ghost" href="' . $e($this->url('admin/pricing')) . '">Hủy</a></div>';
+$html .= '<div class="entry-form-actions">'
+    . '<a class="btn btn-ghost" href="' . $e($listUrl) . '">Hủy</a>'
+    . '<button class="btn btn-primary" type="submit">'
+    . '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">'
+    . '<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>'
+    . '<polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>'
+    . 'Lưu bảng giá</button></div>';
 
 $html .= '</form></div>';
 

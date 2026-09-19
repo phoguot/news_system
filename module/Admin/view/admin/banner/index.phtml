@@ -9,6 +9,7 @@ $positionLabels = (array) ($this->positionLabels ?? []);
 $flag    = isset($this->flag) && is_string($this->flag) ? $this->flag : null;
 $csrf    = (string) ($this->csrfHash ?? '');
 $reorderCsrf = (string) ($this->reorderCsrfHash ?? '');
+$activeCsrf = (string) ($this->activeCsrfHash ?? '');
 $e       = fn (mixed $v): string => $this->escapeHtml((string) $v);
 $url     = fn (array $params = []): string => $this->url('admin/banners', $params);
 
@@ -19,7 +20,19 @@ $flags = [
     'csrf'     => ['alert-danger', 'Token bảo mật không hợp lệ.'],
     'notfound' => ['alert-danger', 'Không tìm thấy banner.'],
     'reordered' => ['alert-success', 'Đã cập nhật thứ tự banner.'],
+    'active-updated' => ['alert-success', 'Đã cập nhật hiển thị banner.'],
 ];
+
+$activeSelect = static function (int $id, int $current) use ($url, $e, $activeCsrf): string {
+    $yes = $current === \Admin\Model\Banner\BannerConst::ACTIVE ? ' selected' : '';
+    $no  = $current === \Admin\Model\Banner\BannerConst::ACTIVE ? '' : ' selected';
+
+    return '<form class="inline-status-form" method="post" action="' . $e($url(['action' => 'active', 'id' => $id])) . '">'
+        . '<input type="hidden" name="csrf" value="' . $e($activeCsrf) . '">'
+        . '<select class="form-select status-select" name="isActive" onchange="this.form.submit()">'
+        . '<option value="1"' . $yes . '>Có</option>'
+        . '<option value="0"' . $no . '>Tắt</option></select></form>';
+};
 
 $html = '<div class="page-header"><div><h1>Banner</h1>'
     . '<p class="subtitle">Ảnh quảng cáo theo vị trí trang, có lịch hiển thị.</p></div>'
@@ -37,9 +50,7 @@ foreach ($items as $banner) {
     /** @var \Admin\Model\Banner\BannerModel $banner */
     $id       = $banner->id;
     $posLabel = $positionLabels[$banner->position] ?? $banner->position;
-    $badge    = $banner->isActive === \Admin\Model\Banner\BannerConst::ACTIVE
-        ? '<span class="status published">Có</span>'
-        : '<span class="status off">Tắt</span>';
+    $statusSelect = $activeSelect((int) $id, (int) $banner->isActive);
     $schedule = $banner->startAt === null && $banner->endAt === null
         ? '—'
         : $e($banner->startAt ?? '…') . ' → ' . $e($banner->endAt ?? '…');
@@ -53,7 +64,7 @@ foreach ($items as $banner) {
         . '<td class="muted mono">' . $media . '</td>'
         . '<td class="muted">' . $schedule . '</td>'
         . '<td class="muted sort-cell">' . $e($banner->sortOrder) . '</td>'
-        . '<td>' . $badge . '</td>'
+        . '<td>' . $statusSelect . '</td>'
         . '<td><div class="actions">'
         . '<a class="btn sm btn-ghost" href="' . $url(['action' => 'edit', 'id' => $id]) . '">Sửa</a>'
         . '<form method="post" action="' . $url(['action' => 'delete', 'id' => $id]) . '"'

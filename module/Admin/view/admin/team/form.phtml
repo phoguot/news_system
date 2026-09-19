@@ -14,6 +14,8 @@ $csrf   = (string) ($this->csrfHash ?? '');
 $e      = fn (mixed $v): string => $this->escapeHtml((string) $v);
 $val    = static fn (string $key, mixed $default = ''): string => (string) ($values[$key] ?? $default);
 $actionUrl = $this->url('admin/team', array_merge(['action' => 'save'], $id !== null ? ['id' => $id] : []));
+$listUrl = $this->url('admin/team');
+$pageTitle = $id === null ? 'Thêm thành viên' : $title;
 
 $field = static function (string $name, string $label, string $control, string $hint = '') use ($errors, $e): string {
     $err  = isset($errors[$name]) ? '<div class="field-error">' . $e($errors[$name]) . '</div>' : '';
@@ -23,49 +25,72 @@ $field = static function (string $name, string $label, string $control, string $
         . $control . $hintHtml . $err . '</div>';
 };
 
-$flagValue  = static function (string $key) use ($values): bool {
+$flagValue = static function (string $key) use ($values): bool {
     $raw = $values[$key] ?? null;
 
     return ! ($raw === null || $raw === '' || $raw === 0 || $raw === '0' || $raw === false);
 };
 
-$html = '<div class="page-header"><div><h1>' . $e($title) . '</h1>'
-    . '<p class="subtitle">Quay lại <a href="' . $e($this->url('admin/team')) . '">danh sách đội ngũ</a>.</p></div></div>';
+$panelIcon = static function (string $inner): string {
+    return '<span class="form-panel-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"'
+        . ' stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+        . $inner . '</svg></span>';
+};
 
-$html .= '<div class="card"><form method="post" action="' . $e($actionUrl) . '">'
+$html = '<div class="entry-page"><div class="entry-page-head"><div>'
+    . '<div class="breadcrumb"><a href="' . $e($listUrl) . '">Đội ngũ</a><span>&rsaquo;</span><span>'
+    . $e($pageTitle) . '</span></div>'
+    . '<h1>' . $e($pageTitle) . '</h1>'
+    . '<p class="subtitle">Quản lý hồ sơ thành viên hiển thị trên website.</p></div>'
+    . '<a class="btn btn-ghost entry-back" href="' . $e($listUrl) . '">'
+    . '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">'
+    . '<line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>'
+    . 'Quay lại danh sách</a></div>';
+
+$html .= '<form class="entry-form" method="post" action="' . $e($actionUrl) . '">'
     . '<input type="hidden" name="csrf" value="' . $e($csrf) . '">';
 
+$html .= '<div class="entry-form-grid"><div class="entry-main">';
+$html .= '<section class="form-panel"><div class="form-panel-head">'
+    . $panelIcon('<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>')
+    . '<div><h2>Thông tin cá nhân</h2><p>Nhập tên, chức danh và mô tả ngắn của thành viên.</p></div></div>';
 $html .= '<div class="form-row cols-2">';
 $html .= $field(
     'fullName',
     'Họ tên *',
-    '<input class="form-input" id="f-fullName" name="fullName" maxlength="150" required value="' . $e($val('fullName')) . '">'
+    '<input class="form-input" id="f-fullName" name="fullName" maxlength="150" required'
+    . ' placeholder="Nhập họ tên" value="' . $e($val('fullName')) . '">'
 );
 $html .= $field(
     'positionTitle',
     'Chức danh *',
     '<input class="form-input" id="f-positionTitle" name="positionTitle" maxlength="150" required'
-    . ' value="' . $e($val('positionTitle')) . '">'
+    . ' placeholder="Nhập chức danh" value="' . $e($val('positionTitle')) . '">'
 );
 $html .= '</div>';
-
-$html .= $field(
-    'avatarMediaId',
-    'Ảnh đại diện',
-    $this->mediaPicker('avatarMediaId', $mediaOptions, $val('avatarMediaId'))
-);
-
 $html .= $field(
     'bio',
     'Tiểu sử',
-    '<textarea class="form-textarea" id="f-bio" name="bio" rows="4">' . $e($val('bio')) . '</textarea>'
+    '<textarea class="form-textarea sm" id="f-bio" name="bio" rows="4"'
+    . ' placeholder="Nhập mô tả ngắn về thành viên">' . $e($val('bio')) . '</textarea>'
 );
+$html .= '</section>';
 
+$html .= '<section class="form-panel"><div class="form-panel-head">'
+    . $panelIcon('<path d="M4 4h16v16H4z"/><circle cx="12" cy="10" r="3"/><path d="M6 20c1.5-3 10.5-3 12 0"/>')
+    . '<div><h2>Ảnh đại diện</h2><p>Chọn ảnh chân dung dùng trong trang đội ngũ.</p></div></div>';
+$html .= $field('avatarMediaId', 'Ảnh đại diện', $this->mediaPicker('avatarMediaId', $mediaOptions, $val('avatarMediaId')));
+$html .= '</section>';
+
+$html .= '<section class="form-panel"><div class="form-panel-head">'
+    . $panelIcon('<path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>')
+    . '<div><h2>Thông tin liên hệ</h2><p>Email, điện thoại và liên kết mạng xã hội.</p></div></div>';
 $html .= '<div class="form-row cols-2">';
 $html .= $field(
     'email',
     'Email',
-    '<input class="form-input" id="f-email" name="email" type="email" maxlength="255" value="' . $e($val('email')) . '">'
+    '<input class="form-input" id="f-email" name="email" type="email" maxlength="255"'
+    . ' value="' . $e($val('email')) . '">'
 );
 $html .= $field(
     'phone',
@@ -73,22 +98,20 @@ $html .= $field(
     '<input class="form-input" id="f-phone" name="phone" maxlength="20" value="' . $e($val('phone')) . '">'
 );
 $html .= '</div>';
-
-$html .= $field(
-    'userId',
-    'Tài khoản CMS',
-    '<input class="form-input" id="f-userId" name="userId" type="number" min="1" value="' . $e($val('userId')) . '">',
-    'ID tài khoản để liên kết (trống = không liên kết, unique).'
-);
-
 $html .= $field(
     'socialLinks',
     'Mạng xã hội',
-    '<textarea class="form-textarea" id="f-socialLinks" name="socialLinks" rows="3" placeholder="{&quot;facebook&quot;:&quot;https://...&quot;}">' . $e($val('socialLinks')) . '</textarea>',
+    '<textarea class="form-textarea sm" id="f-socialLinks" name="socialLinks" rows="3"'
+    . ' placeholder="{&quot;facebook&quot;:&quot;https://...&quot;}">'
+    . $e($val('socialLinks')) . '</textarea>',
     'JSON object: key là tên mạng, value là URL https.'
 );
+$html .= '</section></div><div class="entry-side">';
 
-$html .= '<div class="form-row cols-4">';
+$html .= '<section class="form-panel"><div class="form-panel-head">'
+    . $panelIcon('<path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/>')
+    . '<div><h2>Tùy chọn hiển thị</h2><p>Thiết lập trạng thái, nổi bật và thứ tự.</p></div></div>';
+$html .= '<div class="form-row cols-2">';
 $html .= $field(
     'showContact',
     'Hiện liên hệ',
@@ -100,9 +123,10 @@ $html .= $field(
     'isFeatured',
     'Nổi bật',
     '<select class="form-select" id="f-isFeatured" name="isFeatured">'
-    . '<option value="1"' . ($flagValue('isFeatured') ? ' selected' : '') . '>★ Có</option>'
+    . '<option value="1"' . ($flagValue('isFeatured') ? ' selected' : '') . '>Có</option>'
     . '<option value="0"' . ($flagValue('isFeatured') ? '' : ' selected') . '>Không</option></select>'
 );
+$html .= '</div><div class="form-row cols-2">';
 $html .= $field(
     'isActive',
     'Hiển thị',
@@ -117,10 +141,23 @@ $html .= $field(
     . $e($val('sortOrder', '0')) . '">'
 );
 $html .= '</div>';
+$html .= $field(
+    'userId',
+    'Tài khoản CMS',
+    '<input class="form-input" id="f-userId" name="userId" type="number" min="1" value="' . $e($val('userId')) . '">',
+    'ID tài khoản để liên kết (trống = không liên kết, unique).'
+);
+$html .= '<div class="notice-box"><strong>Lưu ý</strong>'
+    . '<p>Nếu tắt “Hiện liên hệ”, email và điện thoại sẽ không được trả ra phía website.</p></div>';
+$html .= '</section></div></div>';
 
-$html .= '<div class="form-actions">'
-    . '<button class="btn btn-primary" type="submit">Lưu</button>'
-    . '<a class="btn btn-ghost" href="' . $e($this->url('admin/team')) . '">Hủy</a></div>';
+$html .= '<div class="entry-form-actions">'
+    . '<a class="btn btn-ghost" href="' . $e($listUrl) . '">Hủy</a>'
+    . '<button class="btn btn-primary" type="submit">'
+    . '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">'
+    . '<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>'
+    . '<polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>'
+    . 'Lưu thành viên</button></div>';
 
 $html .= '</form></div>';
 

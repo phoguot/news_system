@@ -14,6 +14,8 @@ $csrf   = (string) ($this->csrfHash ?? '');
 $e      = fn (mixed $v): string => $this->escapeHtml((string) $v);
 $val    = static fn (string $key, mixed $default = ''): string => (string) ($values[$key] ?? $default);
 $actionUrl = $this->url('admin/home-sections', array_merge(['action' => 'save'], $id !== null ? ['id' => $id] : []));
+$listUrl = $this->url('admin/home-sections');
+$pageTitle = $id === null ? 'Thêm section' : $title;
 
 $field = static function (string $name, string $label, string $control, string $hint = '') use ($errors, $e): string {
     $err  = isset($errors[$name]) ? '<div class="field-error">' . $e($errors[$name]) . '</div>' : '';
@@ -29,12 +31,71 @@ $flagValue = static function (string $key) use ($values): bool {
     return ! ($raw === null || $raw === '' || $raw === 0 || $raw === '0' || $raw === false);
 };
 
+$panelIcon = static function (string $inner): string {
+    return '<span class="form-panel-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"'
+        . ' stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+        . $inner . '</svg></span>';
+};
+
 $currentType = is_numeric($val('type')) ? (int) $val('type') : \Admin\Model\HomeSection\HomeSectionConst::TYPE_FEATURED_POSTS;
+$configRaw = $val('config');
+$config = [];
+if ($configRaw !== '') {
+    $decoded = json_decode($configRaw, true);
+    $config = is_array($decoded) ? $decoded : [];
+}
+$cfg = static fn (string $key, mixed $default = ''): mixed => $config[$key] ?? $default;
+$cfgText = static fn (string $key, mixed $default = ''): string => (string) ($config[$key] ?? $default);
+$cfgBool = static fn (string $key, bool $default = true): bool => array_key_exists($key, $config)
+    ? (bool) $config[$key]
+    : $default;
+/** @var list<array{id: int, label: string}> $categoryOptions */
+$categoryOptions = (array) ($this->categoryOptions ?? []);
 
-$html = '<div class="page-header"><div><h1>' . $e($title) . '</h1>'
-    . '<p class="subtitle">Quay lại <a href="' . $e($this->url('admin/home-sections')) . '">danh sách section</a>.</p></div></div>';
+$optionHtml = static function (array $options, string $current, string $placeholder) use ($e): string {
+    $html = '<option value="">' . $e($placeholder) . '</option>';
+    foreach ($options as $option) {
+        $id = (string) ($option['id'] ?? '');
+        if ($id === '') {
+            continue;
+        }
+        $selected = $current === $id ? ' selected' : '';
+        $html .= '<option value="' . $e($id) . '"' . $selected . '>' . $e($option['label'] ?? ('#' . $id)) . '</option>';
+    }
 
-$html .= '<div class="card"><form method="post" action="' . $e($actionUrl) . '">'
+    return $html;
+};
+
+$configError = isset($errors['config']) ? '<div class="field-error">' . $e($errors['config']) . '</div>' : '';
+$modeOptions = '<option value="auto"' . ($cfgText('mode', 'auto') === 'auto' ? ' selected' : '') . '>Tự động</option>'
+    . '<option value="manual"' . ($cfgText('mode') === 'manual' ? ' selected' : '') . '>Chọn thủ công</option>';
+$autoplayOptions = '<option value="1"' . ($cfgBool('autoplay', true) ? ' selected' : '') . '>Có</option>'
+    . '<option value="0"' . ($cfgBool('autoplay', true) ? '' : ' selected') . '>Không</option>';
+
+$processRows = '';
+$steps = $cfg('steps', []);
+$steps = is_array($steps) ? array_values($steps) : [];
+for ($i = 0; $i < 6; $i++) {
+    $step = isset($steps[$i]) && is_array($steps[$i]) ? $steps[$i] : [];
+    $processRows .= '<div class="home-step-row">'
+        . '<input class="form-input" data-home-config-step-title placeholder="Tên bước ' . ($i + 1) . '" maxlength="80"'
+        . ' value="' . $e((string) ($step['title'] ?? '')) . '">'
+        . '<input class="form-input" data-home-config-step-desc placeholder="Mô tả ngắn" maxlength="300"'
+        . ' value="' . $e((string) ($step['desc'] ?? '')) . '">'
+        . '</div>';
+}
+
+$html = '<div class="entry-page"><div class="entry-page-head"><div>'
+    . '<div class="breadcrumb"><a href="' . $e($listUrl) . '">Trang chủ</a><span>&rsaquo;</span><span>'
+    . $e($pageTitle) . '</span></div>'
+    . '<h1>' . $e($pageTitle) . '</h1>'
+    . '<p class="subtitle">Thiết lập từng khối nội dung hiển thị trên trang chủ.</p></div>'
+    . '<a class="btn btn-ghost entry-back" href="' . $e($listUrl) . '">'
+    . '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">'
+    . '<line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>'
+    . 'Quay lại danh sách</a></div>';
+
+$html .= '<form class="entry-form js-home-config-form" method="post" action="' . $e($actionUrl) . '">'
     . '<input type="hidden" name="csrf" value="' . $e($csrf) . '">';
 
 $typeHtml = '<select class="form-select" id="f-type" name="type">';
@@ -45,6 +106,10 @@ foreach ($typeLabels as $typeCode => $typeLabel) {
 
 $typeHtml .= '</select>';
 
+$html .= '<div class="entry-form-grid"><div class="entry-main">';
+$html .= '<section class="form-panel"><div class="form-panel-head">'
+    . $panelIcon('<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>')
+    . '<div><h2>Thông tin cơ bản</h2><p>Chọn loại section và nội dung tiêu đề.</p></div></div>';
 $html .= '<div class="form-row cols-2">';
 $html .= $field('type', 'Loại section *', $typeHtml);
 $html .= $field(
@@ -58,6 +123,66 @@ $html .= $field(
     '<input class="form-input" id="f-subtitle" name="subtitle" maxlength="500"'
     . ' value="' . $e($val('subtitle')) . '">'
 );
+$html .= '</div></section>';
+$html .= '<section class="form-panel"><div class="form-panel-head">'
+    . $panelIcon('<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>')
+    . '<div><h2>Cấu hình section</h2><p>Thiết lập dữ liệu riêng theo từng loại section.</p></div></div>';
+$html .= '<div class="form-group config-builder">'
+    . '<label for="f-config">Cấu hình section</label>'
+    . '<input type="hidden" id="f-config" class="js-home-config-json" name="config" value="' . $e($configRaw) . '">'
+    . '<div class="home-config-panel" data-home-config-panel="' . \Admin\Model\HomeSection\HomeSectionConst::TYPE_HERO_BANNER . '">'
+    . '<div class="form-row cols-2">'
+    . '<div class="form-group"><label>Tự chạy banner</label><select class="form-select" data-home-config-key="autoplay"'
+    . ' data-home-config-type="bool">' . $autoplayOptions . '</select></div>'
+    . '<div class="form-group"><label>Thời gian chuyển</label><input class="form-input" type="number" min="1000" max="60000" step="500"'
+    . ' data-home-config-key="interval_ms" data-home-config-type="int" value="' . $e($cfgText('interval_ms', '5000')) . '"></div>'
+    . '</div></div>'
+    . '<div class="home-config-panel" data-home-config-panel="' . \Admin\Model\HomeSection\HomeSectionConst::TYPE_FEATURED_POSTS . '">'
+    . '<div class="form-row cols-2">'
+    . '<div class="form-group"><label>Chế độ lấy tin</label><select class="form-select" data-home-config-key="mode">' . $modeOptions . '</select></div>'
+    . '<div class="form-group"><label>Số tin hiển thị</label><input class="form-input" type="number" min="1" max="50"'
+    . ' data-home-config-key="limit" data-home-config-type="int" value="' . $e($cfgText('limit', '5')) . '"></div>'
+    . '</div></div>'
+    . '<div class="home-config-panel" data-home-config-panel="' . \Admin\Model\HomeSection\HomeSectionConst::TYPE_LATEST_POSTS . '">'
+    . '<div class="form-row cols-2"><div class="form-group"><label>Số tin hiển thị</label>'
+    . '<input class="form-input" type="number" min="1" max="50" data-home-config-key="limit" data-home-config-type="int"'
+    . ' value="' . $e($cfgText('limit', '6')) . '"></div></div></div>'
+    . '<div class="home-config-panel" data-home-config-panel="' . \Admin\Model\HomeSection\HomeSectionConst::TYPE_CATEGORY_POSTS . '">'
+    . '<div class="form-row cols-2">'
+    . '<div class="form-group"><label>Danh mục</label><select class="form-select" data-home-config-key="category_id"'
+    . ' data-home-config-type="int">' . $optionHtml($categoryOptions, $cfgText('category_id'), '— Chọn danh mục —') . '</select></div>'
+    . '<div class="form-group"><label>Số tin hiển thị</label><input class="form-input" type="number" min="1" max="50"'
+    . ' data-home-config-key="limit" data-home-config-type="int" value="' . $e($cfgText('limit', '4')) . '"></div>'
+    . '</div></div>'
+    . '<div class="home-config-panel" data-home-config-panel="' . \Admin\Model\HomeSection\HomeSectionConst::TYPE_SERVICES . '">'
+    . '<div class="form-row cols-2">'
+    . '<div class="form-group"><label>Chế độ lấy dịch vụ</label><select class="form-select" data-home-config-key="mode">' . $modeOptions . '</select></div>'
+    . '<div class="form-group"><label>Số dịch vụ hiển thị</label><input class="form-input" type="number" min="1" max="50"'
+    . ' data-home-config-key="limit" data-home-config-type="int" value="' . $e($cfgText('limit', '6')) . '"></div>'
+    . '</div></div>'
+    . '<div class="home-config-panel" data-home-config-panel="' . \Admin\Model\HomeSection\HomeSectionConst::TYPE_TEAM . '">'
+    . '<div class="form-row cols-2">'
+    . '<div class="form-group"><label>Chế độ lấy nhân sự</label><select class="form-select" data-home-config-key="mode">' . $modeOptions . '</select></div>'
+    . '<div class="form-group"><label>Số nhân sự hiển thị</label><input class="form-input" type="number" min="1" max="50"'
+    . ' data-home-config-key="limit" data-home-config-type="int" value="' . $e($cfgText('limit', '4')) . '"></div>'
+    . '</div></div>'
+    . '<div class="home-config-panel" data-home-config-panel="' . \Admin\Model\HomeSection\HomeSectionConst::TYPE_CONTACT_CTA . '">'
+    . '<div class="form-row cols-2">'
+    . '<div class="form-group"><label>Chữ trên nút</label><input class="form-input" maxlength="255" data-home-config-key="button_text"'
+    . ' value="' . $e($cfgText('button_text')) . '"></div>'
+    . '<div class="form-group"><label>Đường dẫn nút</label><input class="form-input" maxlength="500" data-home-config-key="button_url"'
+    . ' placeholder="/lien-he" value="' . $e($cfgText('button_url')) . '"></div>'
+    . '</div></div>'
+    . '<div class="home-config-panel" data-home-config-panel="' . \Admin\Model\HomeSection\HomeSectionConst::TYPE_PROCESS . '">'
+    . '<div class="process-config-grid">' . $processRows . '</div>'
+    . '</div>'
+    . $configError
+    . '</div></section></div><div class="entry-side">';
+
+$html .= '<section class="form-panel"><div class="form-panel-head">'
+    . $panelIcon('<path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/>')
+    . '<div><h2>Tùy chọn hiển thị</h2><p>Thiết lập thứ tự và trạng thái section.</p></div></div>';
+$html .= '<div class="form-row cols-2">';
 $html .= $field(
     'sortOrder',
     'Thứ tự',
@@ -71,23 +196,17 @@ $html .= $field(
     . '<option value="1"' . ($flagValue('isActive') ? ' selected' : '') . '>Có</option>'
     . '<option value="0"' . ($flagValue('isActive') ? '' : ' selected') . '>Tắt</option></select>'
 );
-$html .= '</div>';
+$html .= '</div><div class="notice-box"><strong>Lưu ý</strong>'
+    . '<p>Section được lưu sẽ tự làm mới cache trang chủ để website nhận cấu hình mới.</p></div>';
+$html .= '</section></div></div>';
 
-$configHint = 'JSON object theo loại section — hero: <span class="mono">autoplay</span>,'
-    . ' <span class="mono">interval_ms</span>; tin nổi bật/dịch vụ/đội ngũ:'
-    . ' <span class="mono">mode</span> (auto|manual), <span class="mono">limit</span> 1–50;'
-    . ' tin theo danh mục: <span class="mono">category_id</span> (bắt buộc), <span class="mono">limit</span>;'
-    . ' CTA: <span class="mono">button_text</span>, <span class="mono">button_url</span>;'
-    . ' Quy trình: <span class="mono">{"steps":[{"title":"…","desc":"…"},…]}</span> 3–6 bước. Để trống = dùng mặc định.';
-$html .= $field(
-    'config',
-    'Config (JSON)',
-    '<textarea class="form-textarea mono" id="f-config" name="config" rows="6">' . $e($val('config')) . '</textarea>',
-    $configHint
-);
-
-$html .= '<div class="form-actions"><button class="btn btn-primary" type="submit">Lưu</button>'
-    . '<a class="btn btn-ghost" href="' . $e($this->url('admin/home-sections')) . '">Hủy</a></div>';
+$html .= '<div class="entry-form-actions">'
+    . '<a class="btn btn-ghost" href="' . $e($listUrl) . '">Hủy</a>'
+    . '<button class="btn btn-primary" type="submit">'
+    . '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">'
+    . '<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>'
+    . '<polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>'
+    . 'Lưu section</button></div>';
 $html .= '</form></div>';
 
 /* ---- FR-33: quản mục cho section `mode=manual` (docs §4.4.4) ---- */

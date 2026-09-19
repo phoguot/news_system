@@ -4,8 +4,9 @@
 /** @var list<\Frontend\Model\Pricing\PricingModel> $items */
 $items = (array) ($this->items ?? []);
 $flag    = isset($this->flag) && is_string($this->flag) ? $this->flag : null;
-$csrf    = (string) ($this->csrfHash ?? '');
+$csrf    = (string) ($this->deleteCsrfHash ?? '');
 $reorderCsrf = (string) ($this->reorderCsrfHash ?? '');
+$activeCsrf = (string) ($this->activeCsrfHash ?? '');
 $e       = fn (mixed $v): string => $this->escapeHtml((string) $v);
 $url     = fn (array $params = []): string => $this->url('admin/pricing', $params);
 
@@ -16,7 +17,19 @@ $flags = [
     'csrf'     => ['alert-danger', 'Token bảo mật không hợp lệ.'],
     'notfound' => ['alert-danger', 'Không tìm thấy mục bảng giá.'],
     'reordered' => ['alert-success', 'Đã cập nhật thứ tự bảng giá.'],
+    'active-updated' => ['alert-success', 'Đã cập nhật hiển thị mục bảng giá.'],
 ];
+
+$activeSelect = static function (int $id, int $current) use ($url, $e, $activeCsrf): string {
+    $yes = $current === \Frontend\Model\Pricing\PricingConst::ACTIVE ? ' selected' : '';
+    $no  = $current === \Frontend\Model\Pricing\PricingConst::ACTIVE ? '' : ' selected';
+
+    return '<form class="inline-status-form" method="post" action="' . $e($url(['action' => 'active', 'id' => $id])) . '">'
+        . '<input type="hidden" name="csrf" value="' . $e($activeCsrf) . '">'
+        . '<select class="form-select status-select" name="isActive" onchange="this.form.submit()">'
+        . '<option value="1"' . $yes . '>Có</option>'
+        . '<option value="0"' . $no . '>Tắt</option></select></form>';
+};
 
 $html = '<div class="page-header"><div><h1>Bảng giá</h1>'
     . '<p class="subtitle">Quản lý các mục bảng giá hiển thị ở /bang-gia và khối giá trong /dich-vu.</p></div>'
@@ -35,9 +48,7 @@ $rowsHtml = '';
 foreach ($items as $item) {
     /** @var \Frontend\Model\Pricing\PricingModel $item */
     $id    = $item->id;
-    $badge = $item->isActive === \Frontend\Model\Pricing\PricingConst::ACTIVE
-        ? '<span class="status published">Có</span>'
-        : '<span class="status off">Tắt</span>';
+    $statusSelect = $activeSelect((int) $id, (int) $item->isActive);
     $priceText = $item->price !== null ? number_format($item->price, 0, ',', '.') . ' đ' : 'Liên hệ';
     $groupName = $groupLabels[$item->groupCode] ?? $e($item->groupCode);
 
@@ -46,7 +57,7 @@ foreach ($items as $item) {
         . '<td><strong>' . $e($item->name) . '</strong><br><span class="slug-text">' . $e($item->slug) . '</span></td>'
         . '<td>' . $e($groupName) . '</td>'
         . '<td>' . $e($priceText) . ($item->unit !== null ? ' / ' . $e($item->unit) : '') . '</td>'
-        . '<td>' . $badge . '</td>'
+        . '<td>' . $statusSelect . '</td>'
         . '<td><div class="actions">'
         . '<a class="btn sm btn-ghost" href="' . $url(['action' => 'edit', 'id' => $id]) . '">Sửa</a>'
         . '<form method="post" action="' . $url(['action' => 'delete', 'id' => $id]) . '"'

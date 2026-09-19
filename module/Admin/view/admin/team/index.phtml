@@ -9,6 +9,7 @@ $flag    = isset($this->flag) && is_string($this->flag) ? $this->flag : null;
 $avatars = (array) ($this->avatars ?? []);
 $csrf    = (string) ($this->csrfHash ?? '');
 $reorderCsrf = (string) ($this->reorderCsrfHash ?? '');
+$activeCsrf = (string) ($this->activeCsrfHash ?? '');
 $e       = fn (mixed $v): string => $this->escapeHtml((string) $v);
 $url     = fn (array $params = []): string => $this->url('admin/team', $params);
 
@@ -19,7 +20,19 @@ $flags = [
     'csrf'     => ['alert-danger', 'Token bảo mật không hợp lệ.'],
     'notfound' => ['alert-danger', 'Không tìm thấy thành viên.'],
     'reordered' => ['alert-success', 'Đã cập nhật thứ tự thành viên.'],
+    'active-updated' => ['alert-success', 'Đã cập nhật hiển thị thành viên.'],
 ];
+
+$activeSelect = static function (int $id, int $current) use ($url, $e, $activeCsrf): string {
+    $yes = $current === \Admin\Model\TeamMember\TeamMemberConst::ACTIVE ? ' selected' : '';
+    $no  = $current === \Admin\Model\TeamMember\TeamMemberConst::ACTIVE ? '' : ' selected';
+
+    return '<form class="inline-status-form" method="post" action="' . $e($url(['action' => 'active', 'id' => $id])) . '">'
+        . '<input type="hidden" name="csrf" value="' . $e($activeCsrf) . '">'
+        . '<select class="form-select status-select" name="isActive" onchange="this.form.submit()">'
+        . '<option value="1"' . $yes . '>Có</option>'
+        . '<option value="0"' . $no . '>Tắt</option></select></form>';
+};
 
 $html = '<div class="page-header"><div><h1>Đội ngũ</h1>'
     . '<p class="subtitle">Thành viên hiển thị ở trang giới thiệu.</p></div>'
@@ -36,9 +49,7 @@ $rowsHtml = '';
 foreach ($items as $member) {
     /** @var \Admin\Model\TeamMember\TeamMemberModel $member */
     $id       = $member->id;
-    $badge    = $member->isActive === \Admin\Model\TeamMember\TeamMemberConst::ACTIVE
-        ? '<span class="status published">Có</span>'
-        : '<span class="status off">Tắt</span>';
+    $statusSelect = $activeSelect((int) $id, (int) $member->isActive);
     $featured = $member->isFeatured === \Admin\Model\TeamMember\TeamMemberConst::FEATURED
         ? '<span class="tag-badge purple">★ Nổi bật</span>' : '<span class="muted">—</span>';
     $initial  = $member->fullName !== '' ? mb_strtoupper(mb_substr(trim($member->fullName), 0, 1)) : '?';
@@ -72,7 +83,7 @@ foreach ($items as $member) {
         . '<td class="muted">' . $contact . '</td>'
         . '<td>' . $featured . '</td>'
         . '<td class="muted sort-cell">' . $e($member->sortOrder) . '</td>'
-        . '<td>' . $badge . '</td>'
+        . '<td>' . $statusSelect . '</td>'
         . '<td><div class="actions">'
         . '<a class="btn sm btn-ghost" href="' . $url(['action' => 'edit', 'id' => $id]) . '">Sửa</a>'
         . '<form method="post" action="' . $url(['action' => 'delete', 'id' => $id]) . '"'

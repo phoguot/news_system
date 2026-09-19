@@ -44,6 +44,7 @@ class HomeSectionController extends AbstractActionController
             'flag'            => $this->queryFlag(),
             'csrfHash'        => $this->sections->deleteFormCsrfHash(),
             'reorderCsrfHash' => $this->sections->reorderCsrfHash(),
+            'activeCsrfHash'  => $this->sections->activeFormCsrfHash(),
         ]);
     }
 
@@ -175,6 +176,35 @@ class HomeSectionController extends AbstractActionController
     }
 
     /**
+     * POST /admin/home-sections/active/:id — đổi nhanh cột Hiển thị từ danh sách.
+     *
+     * @return Response
+     * @psalm-suppress PossiblyUnusedMethod router dispatch gọi action động, không có lời gọi tĩnh.
+     */
+    public function activeAction()
+    {
+        $request = $this->getRequest();
+        if (! $request instanceof HttpRequest || ! $request->isPost()) {
+            return $this->redirect()->toRoute('admin/home-sections');
+        }
+
+        /** @var ParametersInterface $post */
+        $post = $request->getPost();
+        $raw  = $post->toArray();
+
+        $id = $this->intParam('id');
+        if ($id !== null) {
+            $raw['id'] = (string) $id;
+        }
+
+        return $this->redirect()->toRoute(
+            'admin/home-sections',
+            [],
+            ['query' => ['flag' => $this->sections->activeForm($raw)]]
+        );
+    }
+
+    /**
      * POST /admin/home-sections/reorder — kéo-thả đổi thứ tự section (FR-32).
      * JS gửi XHR nhận JSON {flag, applied}; POST trực tiếp rơi về PRG.
      *
@@ -241,6 +271,7 @@ class HomeSectionController extends AbstractActionController
             'itemLabels'      => ContentConst::SECTION_ITEM_LABELS,
             'itemOptions'     => $this->sections->itemOptions($allowedType),
             'itemsCsrfHash'   => $this->sections->itemsFormCsrfHash(),
+            'categoryOptions' => $this->sections->categoryOptions(),
         ]);
         $model->setTemplate('admin/home-section/form');
 
@@ -272,6 +303,7 @@ class HomeSectionController extends AbstractActionController
             return null;
         }
 
+        /** @var mixed $flagRaw */
         $flagRaw = $request->getQuery('flag');
 
         return is_string($flagRaw) ? $flagRaw : null;

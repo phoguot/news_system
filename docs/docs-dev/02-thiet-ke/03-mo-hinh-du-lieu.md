@@ -34,7 +34,7 @@
 |---|---|---|---|
 | `services` | Dịch vụ | `id`; `uq_services_slug(slug)`; `iconMediaId`, `imageMediaId`, `isActive`, `sortOrder` | N→1 `media(×2)`; 1→N `contact_submissions.serviceId` |
 | `banners` | Banner theo vị trí + thời hạn | `id`; `position`, `imageMediaId`, `mobileImageMediaId`, `isActive`, `startAt`, `endAt`, `sortOrder` | N→1 `media(×2)` |
-| `home_sections` | Khối trang chủ (bố cục) | `id`; `type`(1–7), `config`(JSON), `isActive`, `sortOrder` | 1→N `home_section_items` |
+| `home_sections` | Khối trang chủ (bố cục) | `id`; `type`(1–8), `config`(JSON), `isActive`, `sortOrder` | 1→N `home_section_items` |
 | `home_section_items` | Mục **đa hình** chọn tay trong khối | `id`; `uq_...(sectionId,itemType,itemId)`; `itemType`,`itemId` | N→1 `home_sections`; `itemId` trỏ posts/services/team_members theo `itemType` (không FK) |
 | `pricing_items` | Bảng giá công khai | `id`; `uq_pricing_items_slug(slug)`; `groupCode`, `price`, `isActive`, `sortOrder` | Độc lập; Frontend sở hữu mapper, Admin ghi hộ |
 | `menu_items` | Menu header frontend | `id`; `label`, `url`, `target`, `isActive`, `sortOrder` | Độc lập; Frontend sở hữu mapper, Admin ghi hộ |

@@ -318,7 +318,7 @@ module/
     │   ├── Constant/AdminConst.php                          hằng kỹ thuật module (session ns, khoá đăng nhập) — giữ
     │   ├── Exception/                                       ✅  Validation/NotFound/Conflict (+ ExceptionInterface)
     │   ❌ Table/ · Form/ · Guard/ · Controller/Factory/ · Service/Factory/ (đã xoá)
-    └── view/admin/  ✅ dashboard · post · category · tag · service (16/09 thêm select parentId) · banner · home-section (16/09 hint TYPE_PROCESS steps JSON 3-6) · team · pricing (16/09 table drag + form group/price) · media
+    └── view/admin/  ✅ dashboard · post · category · tag · service (16/09 thêm select parentId) · banner · home-section (19/09 form cấu hình thân thiện, hidden JSON theo type) · team · pricing (16/09 table drag + form group/price) · media
                     · contact · setting · account · auth  + layout/admin.phtml
                     (post/category/tag/service/banner/team/home-section/media + contact index·view
                      + setting index là form/bảng thật; dashboard/account vẫn là khung)

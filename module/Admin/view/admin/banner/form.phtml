@@ -16,6 +16,8 @@ $csrf   = (string) ($this->csrfHash ?? '');
 $e      = fn (mixed $v): string => $this->escapeHtml((string) $v);
 $val    = static fn (string $key, mixed $default = ''): string => (string) ($values[$key] ?? $default);
 $actionUrl = $this->url('admin/banners', array_merge(['action' => 'save'], $id !== null ? ['id' => $id] : []));
+$listUrl = $this->url('admin/banners');
+$pageTitle = $id === null ? 'Thêm banner' : $title;
 
 $field = static function (string $name, string $label, string $control, string $hint = '') use ($errors, $e): string {
     $err  = isset($errors[$name]) ? '<div class="field-error">' . $e($errors[$name]) . '</div>' : '';
@@ -25,57 +27,61 @@ $field = static function (string $name, string $label, string $control, string $
         . $control . $hintHtml . $err . '</div>';
 };
 
-$flagValue  = static function (string $key) use ($values): bool {
+$flagValue = static function (string $key) use ($values): bool {
     $raw = $values[$key] ?? null;
 
     return ! ($raw === null || $raw === '' || $raw === 0 || $raw === '0' || $raw === false);
 };
 
-$html = '<div class="page-header"><div><h1>' . $e($title) . '</h1>'
-    . '<p class="subtitle">Quay lại <a href="' . $e($this->url('admin/banners')) . '">danh sách banner</a>.</p></div></div>';
-
-$html .= '<div class="card"><form method="post" action="' . $e($actionUrl) . '">'
-    . '<input type="hidden" name="csrf" value="' . $e($csrf) . '">';
+$panelIcon = static function (string $inner): string {
+    return '<span class="form-panel-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"'
+        . ' stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+        . $inner . '</svg></span>';
+};
 
 $positionHtml = '<select class="form-select" id="f-position" name="position">';
 foreach ($positionLabels as $posKey => $posLabel) {
-    $selected = $val('position') === $posKey || ($val('position') === '' && $posKey === \Admin\Model\Banner\BannerConst::POSITION_HOME_HERO)
+    $selected = $val('position') === $posKey
+        || ($val('position') === '' && $posKey === \Admin\Model\Banner\BannerConst::POSITION_HOME_HERO)
         ? ' selected'
         : '';
     $positionHtml .= '<option value="' . $e($posKey) . '"' . $selected . '>' . $e($posLabel) . '</option>';
 }
-
 $positionHtml .= '</select>';
-$html .= $field('position', 'Vị trí hiển thị *', $positionHtml);
 
+$html = '<div class="entry-page"><div class="entry-page-head"><div>'
+    . '<div class="breadcrumb"><a href="' . $e($listUrl) . '">Banner</a><span>&rsaquo;</span><span>'
+    . $e($pageTitle) . '</span></div>'
+    . '<h1>' . $e($pageTitle) . '</h1>'
+    . '<p class="subtitle">Thiết lập banner hiển thị trên các khu vực website.</p></div>'
+    . '<a class="btn btn-ghost entry-back" href="' . $e($listUrl) . '">'
+    . '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">'
+    . '<line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>'
+    . 'Quay lại danh sách</a></div>';
+
+$html .= '<form class="entry-form" method="post" action="' . $e($actionUrl) . '">'
+    . '<input type="hidden" name="csrf" value="' . $e($csrf) . '">';
+
+$html .= '<div class="entry-form-grid"><div class="entry-main">';
+
+$html .= '<section class="form-panel"><div class="form-panel-head">'
+    . $panelIcon('<rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>')
+    . '<div><h2>Nội dung banner</h2><p>Nhập thông điệp chính và lời kêu gọi hành động.</p></div></div>';
+$html .= $field('position', 'Vị trí hiển thị *', $positionHtml);
 $html .= '<div class="form-row cols-2">';
 $html .= $field(
     'title',
     'Tiêu đề',
-    '<input class="form-input" id="f-title" name="title" maxlength="255" value="' . $e($val('title')) . '">'
+    '<input class="form-input" id="f-title" name="title" maxlength="255"'
+    . ' placeholder="Nhập tiêu đề banner" value="' . $e($val('title')) . '">'
 );
 $html .= $field(
     'subtitle',
     'Tiêu đề phụ',
     '<input class="form-input" id="f-subtitle" name="subtitle" maxlength="500"'
-    . ' value="' . $e($val('subtitle')) . '">'
+    . ' placeholder="Nhập mô tả ngắn" value="' . $e($val('subtitle')) . '">'
 );
-$html .= '</div>';
-
-$html .= '<div class="form-row cols-2">';
-$html .= $field(
-    'imageMediaId',
-    'Ảnh chính *',
-    $this->mediaPicker('imageMediaId', $mediaOptions, $val('imageMediaId'))
-);
-$html .= $field(
-    'mobileImageMediaId',
-    'Ảnh mobile',
-    $this->mediaPicker('mobileImageMediaId', $mediaOptions, $val('mobileImageMediaId'))
-);
-$html .= '</div>';
-
-$html .= '<div class="form-row cols-2">';
+$html .= '</div><div class="form-row cols-2">';
 $html .= $field(
     'linkUrl',
     'Link khi bấm banner',
@@ -84,12 +90,44 @@ $html .= $field(
 );
 $html .= $field(
     'buttonText',
-    'Nhãn nút (tuỳ chọn)',
-    '<input class="form-input" id="f-buttonText" name="buttonText" maxlength="50" value="' . $e($val('buttonText')) . '">'
+    'Nhãn nút',
+    '<input class="form-input" id="f-buttonText" name="buttonText" maxlength="50"'
+    . ' placeholder="Ví dụ: Xem thêm" value="' . $e($val('buttonText')) . '">'
+);
+$html .= '</div></section>';
+
+$html .= '<section class="form-panel"><div class="form-panel-head">'
+    . $panelIcon('<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>')
+    . '<div><h2>Hình ảnh</h2><p>Chọn ảnh desktop và ảnh tối ưu cho mobile.</p></div></div>'
+    . '<div class="form-row cols-2">';
+$html .= $field('imageMediaId', 'Ảnh chính *', $this->mediaPicker('imageMediaId', $mediaOptions, $val('imageMediaId')));
+$html .= $field(
+    'mobileImageMediaId',
+    'Ảnh mobile',
+    $this->mediaPicker('mobileImageMediaId', $mediaOptions, $val('mobileImageMediaId'))
+);
+$html .= '</div></section></div><div class="entry-side">';
+
+$html .= '<section class="form-panel"><div class="form-panel-head">'
+    . $panelIcon('<path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/>')
+    . '<div><h2>Tùy chọn hiển thị</h2><p>Thiết lập lịch, thứ tự và trạng thái.</p></div></div>';
+$html .= '<div class="form-row cols-2">';
+$html .= $field(
+    'sortOrder',
+    'Thứ tự',
+    '<input class="form-input" id="f-sortOrder" name="sortOrder" type="number" value="'
+    . $e($val('sortOrder', '0')) . '">',
+    'Số nhỏ hiển thị trước.'
+);
+$html .= $field(
+    'isActive',
+    'Hiển thị',
+    '<select class="form-select" id="f-isActive" name="isActive">'
+    . '<option value="1"' . ($flagValue('isActive') ? ' selected' : '') . '>Có</option>'
+    . '<option value="0"' . ($flagValue('isActive') ? '' : ' selected') . '>Tắt</option></select>',
+    'Chọn trạng thái hiển thị.'
 );
 $html .= '</div>';
-
-$html .= '<div class="form-row cols-3">';
 $html .= $field(
     'openNewTab',
     'Mở tab mới',
@@ -97,37 +135,31 @@ $html .= $field(
     . '<option value="1"' . ($flagValue('openNewTab') ? ' selected' : '') . '>Có</option>'
     . '<option value="0"' . ($flagValue('openNewTab') ? '' : ' selected') . '>Không</option></select>'
 );
-$html .= $field(
-    'sortOrder',
-    'Thứ tự',
-    '<input class="form-input" id="f-sortOrder" name="sortOrder" type="number" value="'
-    . $e($val('sortOrder', '0')) . '">'
-);
-$html .= $field(
-    'isActive',
-    'Hiển thị',
-    '<select class="form-select" id="f-isActive" name="isActive">'
-    . '<option value="1"' . ($flagValue('isActive') ? ' selected' : '') . '>Có</option>'
-    . '<option value="0"' . ($flagValue('isActive') ? '' : ' selected') . '>Tắt</option></select>'
-);
-$html .= '</div>';
-
 $html .= '<div class="form-row cols-2">';
 $html .= $field(
     'startAt',
     'Bắt đầu hiển thị (giờ VN)',
-    '<input class="form-input" id="f-startAt" name="startAt" type="datetime-local" value="' . $e($val('startAt')) . '">'
+    '<input class="form-input" id="f-startAt" name="startAt" type="datetime-local" value="'
+    . $e($val('startAt')) . '">'
 );
 $html .= $field(
     'endAt',
     'Kết thúc hiển thị (giờ VN)',
-    '<input class="form-input" id="f-endAt" name="endAt" type="datetime-local" value="' . $e($val('endAt')) . '">'
+    '<input class="form-input" id="f-endAt" name="endAt" type="datetime-local" value="'
+    . $e($val('endAt')) . '">'
 );
 $html .= '</div>';
+$html .= '<div class="notice-box"><strong>Lưu ý</strong>'
+    . '<p>Banner chỉ hiển thị khi đang bật và nằm trong khoảng thời gian đã cấu hình.</p></div>';
+$html .= '</section></div></div>';
 
-$html .= '<div class="form-actions">'
-    . '<button class="btn btn-primary" type="submit">Lưu</button>'
-    . '<a class="btn btn-ghost" href="' . $e($this->url('admin/banners')) . '">Hủy</a></div>';
+$html .= '<div class="entry-form-actions">'
+    . '<a class="btn btn-ghost" href="' . $e($listUrl) . '">Hủy</a>'
+    . '<button class="btn btn-primary" type="submit">'
+    . '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">'
+    . '<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>'
+    . '<polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>'
+    . 'Lưu banner</button></div>';
 
 $html .= '</form></div>';
 

@@ -6,9 +6,9 @@ $items = (array) ($this->items ?? []);
 $flag = isset($this->flag) && is_string($this->flag) ? $this->flag : null;
 $csrf = (string) ($this->deleteCsrfHash ?? '');
 $reorderCsrf = (string) ($this->reorderCsrfHash ?? '');
+$activeCsrf = (string) ($this->activeCsrfHash ?? '');
 $e = fn (mixed $v): string => $this->escapeHtml((string) $v);
 $url = fn (array $params = []): string => $this->url('admin/menus', $params);
-
 $flags = [
     'created' => ['alert-success', 'Đã tạo menu.'],
     'updated' => ['alert-success', 'Đã cập nhật menu.'],
@@ -16,8 +16,18 @@ $flags = [
     'csrf' => ['alert-danger', 'Token bảo mật không hợp lệ.'],
     'notfound' => ['alert-danger', 'Không tìm thấy menu.'],
     'reordered' => ['alert-success', 'Đã cập nhật thứ tự menu.'],
+    'active-updated' => ['alert-success', 'Đã cập nhật hiển thị menu.'],
 ];
+$activeSelect = static function (int $id, int $current) use ($url, $e, $activeCsrf): string {
 
+    $yes = $current === \Frontend\Model\Menu\MenuConst::ACTIVE ? ' selected' : '';
+    $no = $current === \Frontend\Model\Menu\MenuConst::ACTIVE ? '' : ' selected';
+    return '<form class="inline-status-form" method="post" action="' . $e($url(['action' => 'active', 'id' => $id])) . '">'
+        . '<input type="hidden" name="csrf" value="' . $e($activeCsrf) . '">'
+        . '<select class="form-select status-select" name="isActive" onchange="this.form.submit()">'
+        . '<option value="1"' . $yes . '>Có</option>'
+        . '<option value="0"' . $no . '>Tắt</option></select></form>';
+};
 $html = '<div class="page-header"><div><h1>Menu website</h1>'
     . '<p class="subtitle">Tạo menu hiển thị ngoài frontend và kéo-thả để đổi vị trí.</p></div>'
     . '<a class="btn btn-primary" href="' . $e($url(['action' => 'create'])) . '">Thêm menu</a></div>';
@@ -30,9 +40,7 @@ if ($flag !== null && isset($flags[$flag])) {
 $rows = '';
 foreach ($items as $item) {
     /** @var \Frontend\Model\Menu\MenuModel $item */
-    $badge = $item->isActive === \Frontend\Model\Menu\MenuConst::ACTIVE
-        ? '<span class="status published">Có</span>'
-        : '<span class="status off">Tắt</span>';
+    $statusSelect = $activeSelect((int) $item->id, (int) $item->isActive);
     $target = \Frontend\Model\Menu\MenuConst::TARGET_LABELS[$item->target] ?? $item->target;
     $rows .= '<tr data-id="' . (int) $item->id . '">'
         . '<td class="drag-col"><span class="drag-handle" title="Kéo để đổi thứ tự">⠿</span></td>'
@@ -40,7 +48,7 @@ foreach ($items as $item) {
         . '<td><span class="slug-text">' . $e($item->url) . '</span></td>'
         . '<td>' . $e($target) . '</td>'
         . '<td class="muted sort-cell">' . $e($item->sortOrder) . '</td>'
-        . '<td>' . $badge . '</td>'
+        . '<td>' . $statusSelect . '</td>'
         . '<td><div class="actions">'
         . '<a class="btn sm btn-ghost" href="' . $e($url(['action' => 'edit', 'id' => $item->id])) . '">Sửa</a>'
         . '<form method="post" action="' . $e($url(['action' => 'delete', 'id' => $item->id])) . '"'

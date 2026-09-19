@@ -7,6 +7,7 @@ $items = (array) ($this->items ?? []);
 $flag    = isset($this->flag) && is_string($this->flag) ? $this->flag : null;
 $csrf    = (string) ($this->csrfHash ?? '');
 $reorderCsrf = (string) ($this->reorderCsrfHash ?? '');
+$activeCsrf = (string) ($this->activeCsrfHash ?? '');
 $e       = fn (mixed $v): string => $this->escapeHtml((string) $v);
 $url     = fn (array $params = []): string => $this->url('admin/categories', $params);
 
@@ -18,7 +19,19 @@ $flags = [
     'csrf'     => ['alert-danger', 'Token bảo mật không hợp lệ.'],
     'notfound' => ['alert-danger', 'Không tìm thấy danh mục.'],
     'reordered' => ['alert-success', 'Đã cập nhật thứ tự danh mục.'],
+    'active-updated' => ['alert-success', 'Đã cập nhật hiển thị danh mục.'],
 ];
+
+$activeSelect = static function (int $id, int $current) use ($url, $e, $activeCsrf): string {
+    $yes = $current === \Admin\Model\Category\CategoryConst::ACTIVE ? ' selected' : '';
+    $no  = $current === \Admin\Model\Category\CategoryConst::ACTIVE ? '' : ' selected';
+
+    return '<form class="inline-status-form" method="post" action="' . $e($url(['action' => 'active', 'id' => $id])) . '">'
+        . '<input type="hidden" name="csrf" value="' . $e($activeCsrf) . '">'
+        . '<select class="form-select status-select" name="isActive" onchange="this.form.submit()">'
+        . '<option value="1"' . $yes . '>Có</option>'
+        . '<option value="0"' . $no . '>Tắt</option></select></form>';
+};
 
 $html = '<div class="page-header"><div><h1>Danh mục</h1>'
     . '<p class="subtitle">Cây chuyên mục tổ chức bài viết (tối đa 2 cấp).</p></div>'
@@ -33,7 +46,7 @@ if ($flag !== null && isset($flags[$flag])) {
 
 $html .= '<div class="card"><div class="table-wrap"><table class="data-table"><thead><tr>'
     . '<th class="drag-col"></th><th>Tên</th><th>Slug</th><th>Thứ tự</th><th>Hiển thị</th><th class="action-col">Thao tác</th>'
-    . '</tr></thead><tbody class="js-sortable"'
+    . '</tr></thead><tbody class="js-sortable" data-tree="1"'
     . ' data-reorder-url="' . $e($url(['action' => 'reorder'])) . '" data-csrf="' . $e($reorderCsrf) . '">';
 
 $rowsHtml = '';
@@ -43,16 +56,16 @@ foreach ($items as $item) {
     $id       = $category->id;
     $pad      = $item['depth'] === 1 ? 'padding-left:2rem;' : '';
     $name     = $item['depth'] === 1 ? '└ ' : '';
-    $badge    = $category->isActive === \Admin\Model\Category\CategoryConst::ACTIVE
-        ? '<span class="status published">Có</span>'
-        : '<span class="status off">Tắt</span>';
+    $statusSelect = $activeSelect((int) $id, (int) $category->isActive);
+    // data-parent rỗng ở cấp 1, = id cha ở cấp 2 → JS kéo-thả giữ đúng cấu trúc cây.
+    $parentAttr = $category->parentId !== null ? (string) (int) $category->parentId : '';
 
-    $rowsHtml .= '<tr data-id="' . (int) $id . '">'
+    $rowsHtml .= '<tr data-id="' . (int) $id . '" data-parent="' . $e($parentAttr) . '">'
         . '<td class="drag-col"><span class="drag-handle" title="Kéo để đổi thứ tự">⠿</span></td>'
         . '<td style="' . $pad . '"><strong>' . $e($name . $category->name) . '</strong></td>'
         . '<td><span class="slug-text">' . $e($category->slug) . '</span></td>'
         . '<td class="muted sort-cell">' . $e($category->sortOrder) . '</td>'
-        . '<td>' . $badge . '</td>'
+        . '<td>' . $statusSelect . '</td>'
         . '<td><div class="actions">'
         . '<a class="btn sm btn-ghost" href="' . $url(['action' => 'edit', 'id' => $id]) . '">Sửa</a>'
         . '<form method="post" action="' . $url(['action' => 'delete', 'id' => $id]) . '"'

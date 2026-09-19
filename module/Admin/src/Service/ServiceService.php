@@ -7,6 +7,7 @@ namespace Admin\Service;
 use Admin\Exception\ConflictException;
 use Admin\Exception\NotFoundException;
 use Admin\Exception\ValidationException;
+use Admin\Filter\Active\ActiveStatusFilter;
 use Admin\Filter\Reorder\ReorderFilter;
 use Admin\Filter\Service\ServiceActionFilter;
 use Admin\Filter\Service\ServiceSaveFilter;
@@ -172,6 +173,39 @@ class ServiceService extends AppServiceFactory
     public function reorderCsrfHash(): string
     {
         return (new ReorderFilter())->csrfHash();
+    }
+
+    /** Hash CSRF cho select bật/tắt nhanh trên danh sách. */
+    public function activeFormCsrfHash(): string
+    {
+        return (new ActiveStatusFilter())->csrfHash();
+    }
+
+    /**
+     * Đổi nhanh cột isActive từ danh sách — chỉ chạm đúng cờ hiển thị.
+     *
+     * @param array<array-key, mixed> $raw id + isActive + csrf
+     */
+    public function activeForm(array $raw): string
+    {
+        $filter = new ActiveStatusFilter();
+        $filter->setData($raw);
+        if (! $filter->isValid()) {
+            $errors = $filter->fieldErrors();
+
+            return isset($errors['csrf']) ? 'csrf' : 'notfound';
+        }
+
+        try {
+            $id = $filter->idValue();
+            $this->findOrFail($id);
+            $this->serviceMapper()->update($id, ['isActive' => $filter->activeValue()]);
+            $this->invalidatePublicCaches();
+
+            return 'active-updated';
+        } catch (NotFoundException) {
+            return 'notfound';
+        }
     }
 
     /**

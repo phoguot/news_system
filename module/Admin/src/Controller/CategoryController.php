@@ -41,6 +41,7 @@ class CategoryController extends AbstractActionController
             'flag'            => $this->queryFlag(),
             'csrfHash'        => $this->categories->deleteFormCsrfHash(),
             'reorderCsrfHash' => $this->categories->reorderCsrfHash(),
+            'activeCsrfHash'  => $this->categories->activeFormCsrfHash(),
         ]);
     }
 
@@ -140,6 +141,35 @@ class CategoryController extends AbstractActionController
         $flag = $this->categories->deleteForm($raw);
 
         return $this->redirect()->toRoute('admin/categories', [], ['query' => ['flag' => $flag]]);
+    }
+
+    /**
+     * POST /admin/categories/active/:id — đổi nhanh cột Hiển thị từ danh sách.
+     *
+     * @return Response
+     * @psalm-suppress PossiblyUnusedMethod router dispatch gọi action động, không có lời gọi tĩnh.
+     */
+    public function activeAction()
+    {
+        $request = $this->getRequest();
+        if (! $request instanceof HttpRequest || ! $request->isPost()) {
+            return $this->redirect()->toRoute('admin/categories');
+        }
+
+        /** @var ParametersInterface $post */
+        $post = $request->getPost();
+        $raw  = $post->toArray();
+
+        $id = $this->intParam('id');
+        if ($id !== null) {
+            $raw['id'] = (string) $id;
+        }
+
+        return $this->redirect()->toRoute(
+            'admin/categories',
+            [],
+            ['query' => ['flag' => $this->categories->activeForm($raw)]]
+        );
     }
 
     /**

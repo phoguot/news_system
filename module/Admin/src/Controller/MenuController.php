@@ -35,9 +35,9 @@ class MenuController extends AbstractActionController
             'flag' => $this->queryFlag(),
             'deleteCsrfHash' => $this->menus->deleteFormCsrfHash(),
             'reorderCsrfHash' => $this->menus->reorderCsrfHash(),
+            'activeCsrfHash' => $this->menus->activeFormCsrfHash(),
         ]);
     }
-
     /**
      * @return ViewModel
      * @psalm-suppress PossiblyUnusedMethod router dispatch gọi action động.
@@ -123,6 +123,30 @@ class MenuController extends AbstractActionController
             [],
             ['query' => ['flag' => $this->menus->deleteForm($raw)]]
         );
+    }
+
+    /**
+     * POST /admin/menus/active/:id — đổi nhanh cột Hiển thị từ danh sách.
+     *
+     * @return Response
+     * @psalm-suppress PossiblyUnusedMethod router dispatch gọi action động.
+     */
+    public function activeAction()
+    {
+        $request = $this->getRequest();
+        if (! $request instanceof HttpRequest || ! $request->isPost()) {
+            return $this->redirect()->toRoute('admin/menus');
+        }
+
+        /** @var ParametersInterface $post */
+        $post = $request->getPost();
+        $raw = $post->toArray();
+        $id = $this->intParam('id');
+        if ($id !== null) {
+            $raw['id'] = (string) $id;
+        }
+
+        return $this->redirect()->toRoute('admin/menus', [], ['query' => ['flag' => $this->menus->activeForm($raw)]]);
     }
 
     /**

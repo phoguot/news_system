@@ -37,6 +37,28 @@ if (sidebar && menuToggle) {
     overlay.addEventListener('click', closeSidebar);
 }
 
+// ========== THU GỌN SIDEBAR (desktop) ==========
+// Nút #sidebarCollapse bật/tắt class `sidebar-collapsed` trên <html> (dạng
+// chỉ-icon), nhớ trạng thái qua localStorage. Áp sớm ở <head> để không nháy.
+const sidebarCollapse = document.getElementById('sidebarCollapse');
+if (sidebarCollapse) {
+    const syncCollapseLabel = () => {
+        const collapsed = document.documentElement.classList.contains('sidebar-collapsed');
+        const label = collapsed ? 'Mở rộng menu' : 'Thu gọn menu';
+        sidebarCollapse.setAttribute('aria-label', label);
+        sidebarCollapse.setAttribute('title', label);
+    };
+    syncCollapseLabel();
+
+    sidebarCollapse.addEventListener('click', () => {
+        const collapsed = document.documentElement.classList.toggle('sidebar-collapsed');
+        try {
+            localStorage.setItem('adminSidebar', collapsed ? 'collapsed' : 'expanded');
+        } catch (e) { /* localStorage bị chặn — vẫn đổi được trong phiên */ }
+        syncCollapseLabel();
+    });
+}
+
 // ========== BỘ LỌC THU GỌN (trang danh sách — 14/09) ==========
 // Nút ".js-filter-toggle" đóng/mở panel ".js-filter-panel" chứa điều kiện lọc
 // (hiện dùng ở trang Bài viết). Đóng khi click ra ngoài hoặc nhấn Escape.
@@ -475,6 +497,103 @@ document.querySelectorAll('.media-pick-clear').forEach((btn) => {
 
 document.querySelectorAll('textarea[data-wysiwyg]').forEach(rteInit);
 
+// ========== HOME SECTION CONFIG: form thân thiện -> JSON hidden ==========
+// Tầng Service vẫn validate `config` JSON như cũ; JS chỉ đóng gói các ô dễ hiểu
+// trên form thành object đúng shape theo type section.
+document.querySelectorAll('.js-home-config-form').forEach((form) => {
+    const typeField = form.querySelector('#f-type');
+    const jsonField = form.querySelector('.js-home-config-json');
+    const panels = Array.from(form.querySelectorAll('[data-home-config-panel]'));
+    if (!typeField || !jsonField || panels.length === 0) {
+        return;
+    }
+
+    const activePanel = () => {
+        const type = String(typeField.value || '');
+        return panels.find((panel) => panel.getAttribute('data-home-config-panel') === type) || null;
+    };
+
+    const coerceValue = (field) => {
+        const value = String(field.value || '').trim();
+        if (value === '') {
+            return null;
+        }
+        if (field.dataset.homeConfigType === 'int') {
+            const number = parseInt(value, 10);
+            return Number.isFinite(number) ? number : null;
+        }
+        if (field.dataset.homeConfigType === 'bool') {
+            return value === '1' || value === 'true';
+        }
+        return value;
+    };
+
+    const syncConfig = () => {
+        const panel = activePanel();
+        const config = {};
+        if (!panel) {
+            jsonField.value = '';
+            return;
+        }
+
+        panel.querySelectorAll('[data-home-config-key]').forEach((field) => {
+            const key = field.dataset.homeConfigKey;
+            const value = coerceValue(field);
+            if (key && value !== null) {
+                config[key] = value;
+            }
+        });
+
+        const stepRows = Array.from(panel.querySelectorAll('.home-step-row'));
+        if (stepRows.length) {
+            const steps = [];
+            stepRows.forEach((row) => {
+                const title = (row.querySelector('[data-home-config-step-title]')?.value || '').trim();
+                const desc = (row.querySelector('[data-home-config-step-desc]')?.value || '').trim();
+                if (title === '' && desc === '') {
+                    return;
+                }
+                const step = { title };
+                if (desc !== '') {
+                    step.desc = desc;
+                }
+                steps.push(step);
+            });
+            if (steps.length) {
+                config.steps = steps;
+            }
+        }
+
+        jsonField.value = Object.keys(config).length ? JSON.stringify(config) : '';
+    };
+
+    const refreshPanels = () => {
+        const current = String(typeField.value || '');
+        panels.forEach((panel) => {
+            const active = panel.getAttribute('data-home-config-panel') === current;
+            panel.hidden = !active;
+            panel.querySelectorAll('input, select, textarea').forEach((field) => {
+                field.disabled = !active;
+            });
+        });
+        syncConfig();
+    };
+
+    typeField.addEventListener('change', refreshPanels);
+    form.addEventListener('input', (event) => {
+        if (event.target && event.target.closest('[data-home-config-panel]')) {
+            syncConfig();
+        }
+    });
+    form.addEventListener('change', (event) => {
+        if (event.target && event.target.closest('[data-home-config-panel]')) {
+            syncConfig();
+        }
+    });
+    form.addEventListener('submit', syncConfig);
+    refreshPanels();
+});
+
 // ========== UPLOAD AREA: tên file + ảnh preview của file vừa chọn ==========
 document.querySelectorAll('.upload-area').forEach((area) => {
     const input = area.querySelector('input[type=file]');
@@ -611,7 +730,15 @@ document.querySelectorAll('.upload-area').forEach((area) => {
         const closeBtn = modal.querySelector('.rte-modal-close');
         const aEl = modal.querySelector('.rev-compare-a');
         const bEl = modal.querySelector('.rev-compare-b');
-        const dismiss = () => { modal.style.display = 'none'; };
+        // Thêm class .is-closing để chạy keyframe thoát (fade + hạ thẻ) rồi mới ẩn.
+        const dismiss = () => {
+            if (modal.style.display === 'none' || modal.classList.contains('is-closing')) return;
+            modal.classList.add('is-closing');
+            window.setTimeout(() => {
+                modal.style.display = 'none';
+                modal.classList.remove('is-closing');
+            }, 180);
+        };
         if (closeBtn) closeBtn.addEventListener('click', dismiss);
         modal.addEventListener('click', (ev) => { if (ev.target === modal) dismiss(); });
         document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') dismiss(); });
@@ -747,10 +874,65 @@ document.querySelectorAll('select.media-select').forEach((sel) => {
             return;
         }
 
+        // Cây 2 cấp (danh mục): tbody[data-tree] + mỗi <tr data-parent> (rỗng ở
+        // cấp 1, = id cha ở cấp 2). Ở chế độ cây, kéo cha mang theo cả khối con,
+        // kéo con chỉ đổi vị trí trong nhóm anh em cùng cha — đúng ràng buộc mà
+        // listOrdered()/applyReorder chỉ ghi sortOrder (không đổi cha) cần.
+        const tree = tbody.getAttribute('data-tree') === '1';
+
         const rowList = () => Array.from(tbody.querySelectorAll('tr[data-id]'));
         let savedIds = rowList().map((tr) => tr.getAttribute('data-id'));
         let dragged  = null;
         let pending  = false;
+
+        // Con của một dòng cha: id cha đang là dragged? → dòng nào có data-parent
+        // trùng data-id của cha (chỉ ở chế độ cây).
+        const isChild = (tr) => tree && (tr.getAttribute('data-parent') || '') !== '';
+
+        // Khối di chuyển cùng nhau: dòng con chỉ là chính nó; dòng cha kéo theo
+        // các dòng con đứng ngay sau nó (data-parent === id cha).
+        const blockOf = (tr) => {
+            if (!tree || isChild(tr)) {
+                return [tr];
+            }
+            const block = [tr];
+            let node = tr.nextElementSibling;
+            while (node && node.getAttribute('data-parent') === tr.getAttribute('data-id')) {
+                block.push(node);
+                node = node.nextElementSibling;
+            }
+            return block;
+        };
+
+        // FLIP: đo vị trí layout (offsetTop, không dính transform) trước khi đổi
+        // DOM, rồi trượt các dòng bị dịch từ chỗ cũ về chỗ mới cho mượt.
+        const animate = (mutate) => {
+            const before = new Map();
+            rowList().forEach((r) => before.set(r, r.offsetTop));
+            mutate();
+            rowList().forEach((r) => {
+                if (r === dragged || !before.has(r)) {
+                    return;
+                }
+                const dy = before.get(r) - r.offsetTop;
+                if (!dy) {
+                    return;
+                }
+                r.style.transition = 'none';
+                r.style.transform  = 'translateY(' + dy + 'px)';
+                requestAnimationFrame(() => {
+                    r.style.transition = 'transform 150ms ease';
+                    r.style.transform  = '';
+                });
+            });
+        };
+
+        const clearAnim = () => {
+            rowList().forEach((r) => {
+                r.style.transition = '';
+                r.style.transform  = '';
+            });
+        };
 
         // Chỉ cho kéo khi nắm cán ⠿ (mouse-down lên handle → draggable).
         tbody.addEventListener('mousedown', (ev) => {
@@ -781,13 +963,47 @@ document.querySelectorAll('select.media-select').forEach((sel) => {
                 return;
             }
             ev.preventDefault();
-            const target = ev.target.closest('tr[data-id]');
-            if (!target || target === dragged) {
+            const targetRow = ev.target.closest('tr[data-id]');
+            if (!targetRow || targetRow === dragged) {
                 return;
             }
-            const box    = target.getBoundingClientRect();
+
+            if (isChild(dragged)) {
+                // Con chỉ đổi chỗ trong cùng nhóm anh em (cùng data-parent).
+                if (targetRow.getAttribute('data-parent') !== dragged.getAttribute('data-parent')) {
+                    return;
+                }
+                const box    = targetRow.getBoundingClientRect();
+                const before = (ev.clientY - box.top) < box.height / 2;
+                const ref    = before ? targetRow : targetRow.nextElementSibling;
+                if (ref === dragged) {
+                    return;
+                }
+                animate(() => tbody.insertBefore(dragged, ref));
+                return;
+            }
+
+            // Kéo cha (hoặc bảng phẳng): xác định dòng cha gốc của target rồi di
+            // chuyển cả khối cha trước/sau khối đó.
+            const parentId = targetRow.getAttribute('data-parent') || '';
+            const anchor   = parentId !== ''
+                ? tbody.querySelector('tr[data-id="' + parentId + '"]')
+                : targetRow;
+            if (!anchor || anchor === dragged) {
+                return;
+            }
+            const box    = anchor.getBoundingClientRect();
             const before = (ev.clientY - box.top) < box.height / 2;
-            tbody.insertBefore(dragged, before ? target : target.nextSibling);
+            const block  = blockOf(anchor);
+            const ref    = before ? anchor : block[block.length - 1].nextElementSibling;
+            if (ref === dragged) {
+                return;
+            }
+            const moving = blockOf(dragged);
+            if (moving.indexOf(ref) !== -1) {
+                return;
+            }
+            animate(() => moving.forEach((node) => tbody.insertBefore(node, ref)));
         });
 
         tbody.addEventListener('drop', (ev) => {
@@ -801,6 +1017,7 @@ document.querySelectorAll('select.media-select').forEach((sel) => {
             dragged.classList.remove('dragging');
             dragged.draggable = false;
             dragged = null;
+            clearAnim();
             persist();
         });
 

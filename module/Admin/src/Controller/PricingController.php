@@ -37,6 +37,7 @@ class PricingController extends AbstractActionController
             'flag'                => $this->queryFlag(),
             'deleteCsrfHash'      => $this->pricingService->deleteFormCsrfHash(),
             'reorderCsrfHash'     => $this->pricingService->reorderCsrfHash(),
+            'activeCsrfHash'      => $this->pricingService->activeFormCsrfHash(),
         ]);
     }
 
@@ -133,6 +134,35 @@ class PricingController extends AbstractActionController
         $flag = $this->pricingService->deleteForm($rawArray);
 
         return $this->redirect()->toRoute('admin/pricing', [], ['query' => ['flag' => $flag]]);
+    }
+
+    /**
+     * POST /admin/pricing/active/:id — đổi nhanh cột Hiển thị từ danh sách.
+     *
+     * @return Response
+     * @psalm-suppress PossiblyUnusedMethod router dispatch gọi action động, không có lời gọi tĩnh.
+     */
+    public function activeAction()
+    {
+        $request = $this->getRequest();
+        if (! $request instanceof HttpRequest || ! $request->isPost()) {
+            return $this->redirect()->toRoute('admin/pricing');
+        }
+
+        /** @var ParametersInterface $post */
+        $post = $request->getPost();
+        $rawArray = $post->toArray();
+
+        $id = $this->intParam('id');
+        if ($id !== null) {
+            $rawArray['id'] = (string) $id;
+        }
+
+        return $this->redirect()->toRoute(
+            'admin/pricing',
+            [],
+            ['query' => ['flag' => $this->pricingService->activeForm($rawArray)]]
+        );
     }
 
     /**

@@ -6,6 +6,7 @@ namespace Admin\Service;
 
 use Admin\Exception\NotFoundException;
 use Admin\Exception\ValidationException;
+use Admin\Filter\Active\ActiveStatusFilter;
 use Admin\Filter\HomeSection\HomeSectionActionFilter;
 use Admin\Filter\HomeSection\HomeSectionItemsFilter;
 use Admin\Filter\HomeSection\HomeSectionSaveFilter;
@@ -175,6 +176,39 @@ class HomeSectionService extends AppServiceFactory
         return (new ReorderFilter())->csrfHash();
     }
 
+    /** Hash CSRF cho select bật/tắt nhanh trên danh sách. */
+    public function activeFormCsrfHash(): string
+    {
+        return (new ActiveStatusFilter())->csrfHash();
+    }
+
+    /**
+     * Đổi nhanh cột isActive từ danh sách — chỉ chạm đúng cờ hiển thị.
+     *
+     * @param array<array-key, mixed> $raw id + isActive + csrf
+     */
+    public function activeForm(array $raw): string
+    {
+        $filter = new ActiveStatusFilter();
+        $filter->setData($raw);
+        if (! $filter->isValid()) {
+            $errors = $filter->fieldErrors();
+
+            return isset($errors['csrf']) ? 'csrf' : 'notfound';
+        }
+
+        try {
+            $id = $filter->idValue();
+            $this->findOrFail($id);
+            $this->homeSectionMapper()->update($id, ['isActive' => $filter->activeValue()]);
+            $this->invalidateHome();
+
+            return 'active-updated';
+        } catch (NotFoundException) {
+            return 'notfound';
+        }
+    }
+
     /**
      * Kéo-thả thứ tự section trang chủ (FR-32 — phần section; mục `mode=manual`
      * vẫn xếp bằng nút lên/xuống của itemMove FR-33). Id nêu trong payload nhận
@@ -293,6 +327,22 @@ class HomeSectionService extends AppServiceFactory
             ContentConst::SECTION_ITEM_TEAM_MEMBER => $this->teamMemberMapper()->listOptions(),
             default => [],
         };
+    }
+
+    /**
+     * Danh mục cho dropdown `category_id` của section "Tin theo danh mục" —
+     * để người dùng chọn tên thay vì gõ ID vào JSON (FR-32, UX config).
+     *
+     * @return list<array{id: int, label: string}>
+     */
+    public function categoryOptions(): array
+    {
+        $options = [];
+        foreach ($this->categoryMapper()->listAll() as $category) {
+            $options[] = ['id' => $category->id, 'label' => $category->name];
+        }
+
+        return $options;
     }
 
     /** Hash CSRF cho các form quản mục (thêm/xoá/di chuyển dùng chung một filter). */
@@ -631,7 +681,8 @@ class HomeSectionService extends AppServiceFactory
                 && preg_match('#^(https?://|/)#', $value) === 1
                 && mb_strlen($value) <= HomeSectionConst::MAX_LENGTH_URL
                 ? null : HomeSectionConst::ERROR_BUTTON_URL,
-            'steps'    => is_array($value) && $this->isValidProcessSteps($value) ? null : HomeSectionConst::ERROR_PROCESS_STEPS,
+            'steps'    => is_array($value) && array_is_list($value) && $this->isValidProcessSteps($value)
+                ? null : HomeSectionConst::ERROR_PROCESS_STEPS,
             default => null,
         };
     }
@@ -653,7 +704,7 @@ class HomeSectionService extends AppServiceFactory
             if (isset($step['desc']) && ! is_string($step['desc'])) {
                 return false;
             }
-            if (isset($step['desc']) && is_string($step['desc']) && mb_strlen($step['desc']) > 300) {
+            if (isset($step['desc']) && mb_strlen($step['desc']) > 300) {
                 return false;
             }
         }

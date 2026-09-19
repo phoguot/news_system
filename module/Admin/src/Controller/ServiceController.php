@@ -41,6 +41,7 @@ class ServiceController extends AbstractActionController
             'flag'            => $this->queryFlag(),
             'csrfHash'        => $this->services->deleteFormCsrfHash(),
             'reorderCsrfHash' => $this->services->reorderCsrfHash(),
+            'activeCsrfHash'  => $this->services->activeFormCsrfHash(),
         ]);
     }
 
@@ -133,6 +134,35 @@ class ServiceController extends AbstractActionController
         $flag = $this->services->deleteForm($raw);
 
         return $this->redirect()->toRoute('admin/services', [], ['query' => ['flag' => $flag]]);
+    }
+
+    /**
+     * POST /admin/services/active/:id — đổi nhanh cột Hiển thị từ danh sách.
+     *
+     * @return Response
+     * @psalm-suppress PossiblyUnusedMethod router dispatch gọi action động, không có lời gọi tĩnh.
+     */
+    public function activeAction()
+    {
+        $request = $this->getRequest();
+        if (! $request instanceof HttpRequest || ! $request->isPost()) {
+            return $this->redirect()->toRoute('admin/services');
+        }
+
+        /** @var ParametersInterface $post */
+        $post = $request->getPost();
+        $raw  = $post->toArray();
+
+        $id = $this->intParam('id');
+        if ($id !== null) {
+            $raw['id'] = (string) $id;
+        }
+
+        return $this->redirect()->toRoute(
+            'admin/services',
+            [],
+            ['query' => ['flag' => $this->services->activeForm($raw)]]
+        );
     }
 
     /**

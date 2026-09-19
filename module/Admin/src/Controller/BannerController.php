@@ -41,6 +41,7 @@ class BannerController extends AbstractActionController
             'flag'            => $this->queryFlag(),
             'csrfHash'        => $this->banners->deleteFormCsrfHash(),
             'reorderCsrfHash' => $this->banners->reorderCsrfHash(),
+            'activeCsrfHash'  => $this->banners->activeFormCsrfHash(),
         ]);
     }
 
@@ -133,6 +134,35 @@ class BannerController extends AbstractActionController
         $flag = $this->banners->deleteForm($raw);
 
         return $this->redirect()->toRoute('admin/banners', [], ['query' => ['flag' => $flag]]);
+    }
+
+    /**
+     * POST /admin/banners/active/:id — đổi nhanh cột Hiển thị từ danh sách.
+     *
+     * @return Response
+     * @psalm-suppress PossiblyUnusedMethod router dispatch gọi action động, không có lời gọi tĩnh.
+     */
+    public function activeAction()
+    {
+        $request = $this->getRequest();
+        if (! $request instanceof HttpRequest || ! $request->isPost()) {
+            return $this->redirect()->toRoute('admin/banners');
+        }
+
+        /** @var ParametersInterface $post */
+        $post = $request->getPost();
+        $raw  = $post->toArray();
+
+        $id = $this->intParam('id');
+        if ($id !== null) {
+            $raw['id'] = (string) $id;
+        }
+
+        return $this->redirect()->toRoute(
+            'admin/banners',
+            [],
+            ['query' => ['flag' => $this->banners->activeForm($raw)]]
+        );
     }
 
     /**
