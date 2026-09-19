@@ -6,7 +6,7 @@
 |------|----------|------------------|
 | [`01-yeu-cau-chuc-nang.md`](01-yeu-cau-chuc-nang.md) | Danh sách yêu cầu chức năng FR-01…FR-nn theo module (frontend + admin) | docs §2, §3 |
 | [`02-yeu-cau-phi-chuc-nang.md`](02-yeu-cau-phi-chuc-nang.md) | SEO, hiệu năng, bảo mật, vận hành & sao lưu | docs §7 |
-| [`03-mo-hinh-du-lieu.md`](03-mo-hinh-du-lieu.md) | 16 bảng, mục đích, cột khoá, quan hệ (ERD rút gọn) | docs §4.2–§4.3 |
+| [`03-mo-hinh-du-lieu.md`](03-mo-hinh-du-lieu.md) | 18 bảng, mục đích, cột khoá, quan hệ (ERD rút gọn) | docs §4.2–§4.3 |
 | [`04-luong-nghiep-vu.md`](04-luong-nghiep-vu.md) | Luồng chính: đăng/hẹn giờ bài, liên hệ, upload media, tìm kiếm, tính view, xoá cứng, cắt revision | docs §3, §5 |
 | [`05-may-trang-thai.md`](05-may-trang-thai.md) | Máy trạng thái bài viết, banner (cửa sổ hiệu lực), liên hệ | docs §3.3, §3.9 |
 

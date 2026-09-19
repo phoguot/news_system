@@ -1,6 +1,6 @@
 # Mô hình dữ liệu
 
-> **16 bảng**, MySQL 8, InnoDB, `utf8mb4_0900_ai_ci`, cột `camelCase`. DDL đầy đủ: [`data/schema/schema.sql`](../../../data/schema/schema.sql) (KHÔNG lặp lại ở đây). Tóm tắt quan hệ theo [docs §4.2–§4.3](../../phan-tich-he-thong-website-tin-tuc.md).
+> **18 bảng**, MySQL 8, InnoDB, `utf8mb4_0900_ai_ci`, cột `camelCase`. DDL đầy đủ: [`data/schema/schema.sql`](../../../data/schema/schema.sql) (KHÔNG lặp lại ở đây). Tóm tắt quan hệ theo [docs §4.2–§4.3](../../phan-tich-he-thong-website-tin-tuc.md).
 > **Không có FOREIGN KEY** — quan hệ chỉ là cột `...Id` + index; suy diễn quan hệ do tầng Service chịu trách nhiệm (DB §6, docs §4.1).
 
 ## 1. Nhóm Hệ thống & Tài khoản
@@ -36,6 +36,8 @@
 | `banners` | Banner theo vị trí + thời hạn | `id`; `position`, `imageMediaId`, `mobileImageMediaId`, `isActive`, `startAt`, `endAt`, `sortOrder` | N→1 `media(×2)` |
 | `home_sections` | Khối trang chủ (bố cục) | `id`; `type`(1–7), `config`(JSON), `isActive`, `sortOrder` | 1→N `home_section_items` |
 | `home_section_items` | Mục **đa hình** chọn tay trong khối | `id`; `uq_...(sectionId,itemType,itemId)`; `itemType`,`itemId` | N→1 `home_sections`; `itemId` trỏ posts/services/team_members theo `itemType` (không FK) |
+| `pricing_items` | Bảng giá công khai | `id`; `uq_pricing_items_slug(slug)`; `groupCode`, `price`, `isActive`, `sortOrder` | Độc lập; Frontend sở hữu mapper, Admin ghi hộ |
+| `menu_items` | Menu header frontend | `id`; `label`, `url`, `target`, `isActive`, `sortOrder` | Độc lập; Frontend sở hữu mapper, Admin ghi hộ |
 
 ## 5. Nhóm Đội ngũ & Liên hệ
 

@@ -97,7 +97,7 @@ class PricingService extends AppServiceFactory
             return isset($errors['csrf']) ? 'csrf' : 'notfound';
         }
         try {
-            $this->delete((int) $filter->idValue());
+            $this->delete($filter->idValue());
 
             return PricingConst::FLAG_DELETED;
         } catch (NotFoundException) {
@@ -226,7 +226,8 @@ class PricingService extends AppServiceFactory
             : $slugs->slugify($name, PricingConst::MAX_LENGTH_SLUG);
 
         return [
-            'groupCode' => trim((string) ($data['groupCode'] ?? PricingConst::GROUP_GENERAL)) ?: PricingConst::GROUP_GENERAL,
+            'groupCode' => trim((string) ($data['groupCode'] ?? PricingConst::GROUP_GENERAL))
+                ?: PricingConst::GROUP_GENERAL,
             'name'      => $name,
             'slug'      => $slugs->unique(
                 $slug,

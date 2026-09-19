@@ -8,8 +8,8 @@ INSERT INTO settings (groupCode, settingKey, settingValue, valueType, label, sor
   ('contact', 'hotline',                  '1900 1234', 1, 'Hotline', 3),
   ('contact', 'email',                    'hello@vanlang.vn', 1, 'Email công khai', 4),
   ('contact', 'working_hours',            '08:00 - 17:30 (T2 - T7)', 1, 'Giờ làm việc', 5),
-  ('contact', 'map_embed_url',            NULL, 1, 'URL nhúng Google Maps (chỉ dùng khi không nhập địa chỉ)', 6),
-  ('contact', 'map_address',              NULL, 2, 'Địa chỉ riêng cho Google Maps (để trống sẽ dùng ô Địa chỉ)', 7),
+  ('contact', 'map_embed_url',            NULL, 1, 'URL nhúng Google Maps (legacy fallback)', 6),
+  ('contact', 'map_address',              NULL, 2, 'Địa chỉ Google Map', 7),
   ('contact', 'notify_emails',            NULL, 1, 'Mail cá nhân nhận thông báo liên hệ (phân tách bằng dấu phẩy)', 8),
   ('social',  'facebook_url',             NULL, 1, 'Facebook', 1),
   ('social',  'youtube_url',              NULL, 1, 'YouTube', 2),
@@ -19,6 +19,15 @@ INSERT INTO settings (groupCode, settingKey, settingValue, valueType, label, sor
   ('seo',     'default_meta_description', 'Trung tâm Chăm sóc Sức khỏe Vạn Lang - dịch vụ chăm sóc người lớn tuổi tận tâm, chuyên nghiệp.', 2,   'Meta description mặc định', 2),
   ('seo',     'default_og_image',         NULL, 7,  'Ảnh chia sẻ mặc định', 3),
   ('seo',     'ga_measurement_id',        NULL, 1, 'Google Analytics Measurement ID', 4);
+
+INSERT INTO menu_items (label, url, target, sortOrder, isActive) VALUES
+  ('Trang chủ',   '/',          '_self', 0, 1),
+  ('Giới thiệu',  '/gioi-thieu','_self', 1, 1),
+  ('Dịch vụ',     '/dich-vu',   '_self', 2, 1),
+  ('Bảng giá',    '/bang-gia',  '_self', 3, 1),
+  ('Tin tức',     '/tin-tuc',   '_self', 4, 1),
+  ('Đội ngũ',     '/doi-ngu',   '_self', 5, 1),
+  ('Liên hệ',     '/lien-he',   '_self', 6, 1);
 
 INSERT INTO home_sections (type, title, config, sortOrder) VALUES
   (1,               NULL,                    JSON_OBJECT('autoplay', true, 'interval_ms', 5000), 1),

@@ -13,15 +13,7 @@
 <header class="header">
   <div class="container header-inner">
     <a class="logo" href="<?= $this->url('home') ?>"><span class="logo-mark">❧</span><span><small>Trung tâm Chăm sóc Sức khỏe</small><b>VẠN LANG</b></span></a>
-    <nav class="nav">
-      <a href="<?= $this->url('home') ?>">Trang chủ</a>
-      <a href="<?= $this->url('about') ?>">Giới thiệu</a>
-      <a href="<?= $this->url('services') ?>">Dịch vụ</a>
-      <a href="<?= $this->url('pricing') ?>">Bảng giá</a>
-      <a href="<?= $this->url('news') ?>">Tin tức</a>
-      <a href="<?= $this->url('team') ?>">Đội ngũ</a>
-      <a href="<?= $this->url('contact') ?>">Liên hệ</a>
-    </nav>
+    <?= $this->frontendMenu('nav') ?>
     <div class="header-actions">
       <a class="hotline" href="tel:19001234">☎ 1900 1234</a>
       <a class="btn btn-teal" href="<?= $this->url('contact') ?>">Đăng ký dịch vụ</a>

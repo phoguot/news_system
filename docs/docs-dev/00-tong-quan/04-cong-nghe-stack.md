@@ -76,7 +76,7 @@ Toàn bộ phiên bản lấy trực tiếp từ `composer.json` (constraint Com
 
 - **Dev:** `composer serve` (PHP built-in, cổng 8080) hoặc Apache document root `public/`. Bật `composer development-enable` để nạp `config/development.config.php` + `autoload/development.local.php`.
 - **Config:** `config/autoload/global.php` (DB/session/cache/mail/app — commit); secrets (DB/SMTP/captcha) đặt ở `config/autoload/local.php` (gitignore, copy từ `local.php.dist`). Xong chạy `composer clear-config-cache` để áp dụng.
-- **Schema/Seed:** `data/schema/schema.sql` (16 bảng) → `data/schema/seed.sql` (settings + home_sections mặc định) → `php bin/create-admin.php` tạo tài khoản admin duy nhất. Không có công cụ migration version tự động; thay đổi schema theo quy trình ở [05-van-hanh/02-migration-db.md](../05-van-hanh/02-migration-db.md).
+- **Schema/Seed:** `data/schema/schema.sql` (18 bảng) → `data/schema/seed.sql` (settings + home_sections/menu mặc định) → `php bin/create-admin.php` tạo tài khoản admin duy nhất. Không có công cụ migration version tự động; thay đổi schema theo quy trình ở [05-van-hanh/02-migration-db.md](../05-van-hanh/02-migration-db.md).
 
 ## Điểm chưa khớp (cần xác nhận)
 

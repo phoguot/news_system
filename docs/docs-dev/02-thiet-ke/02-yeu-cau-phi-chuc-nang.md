@@ -42,7 +42,7 @@
 | NFR-SEC-9 | Upload: kiểm MIME thật (`finfo`), chặn SVG, giới hạn 5MB, đổi tên ngẫu nhiên; **cấm thực thi script trong `public/uploads/`** ở web server | §3.10, §7.3; `global.php` `app.allowed_mimes/upload_max_mb` |
 | NFR-SEC-10 | Xác thực phiên ở **mọi** API quản trị (`/api/admin/*`), không tin vào việc ẩn nút UI | §7.3 |
 | NFR-SEC-11 | Cấu hình nhạy cảm (SMTP, khoá captcha, S3) nằm ở env/`local.php` — **không** lưu vào `settings` | §3.12, §4.4.7 |
-| NFR-SEC-12 | Bản đồ lưu **địa chỉ hoặc URL nhúng**, không lưu `<iframe>` admin dán (chống XSS); FE ưu tiên địa chỉ để đổi địa chỉ là đổi map | §3.12; `map_address`, `address`, `map_embed_url` |
+| NFR-SEC-12 | Bản đồ admin dùng **một ô địa chỉ Google Map** (`map_address`), không lưu `<iframe>` admin dán (chống XSS); FE ưu tiên địa chỉ để đổi địa chỉ là đổi map, `map_embed_url` chỉ là fallback legacy bị ẩn khỏi form | §3.14; `map_address`, `address`, `map_embed_url` |
 | NFR-SEC-13 | Dữ liệu cá nhân liên hệ: checkbox consent (`consentAt`), trang chính sách, thời hạn lưu (ẩn danh/xoá sau ~24 tháng, thủ công) | §3.9 |
 
 ## 4. Vận hành & sao lưu (docs §7.4)

@@ -89,6 +89,8 @@ foreach ($groups as $groupCode => $settings) {
         $err   = isset($errors[$input]) ? '<div class="field-error">' . $e($errors[$input]) . '</div>' : '';
         if ($s->settingKey === \Frontend\Model\Setting\SettingConst::KEY_NOTIFY_EMAILS) {
             $help = '<div class="field-hint">Mail cá nhân của bạn để nhận thông báo khi có liên hệ mới — nhập 1 hoặc nhiều email, phân tách bằng dấu phẩy (,). Ví dụ: ban@vanlang.vn, sep@vanlang.vn — để trống = không gửi mail.</div>';
+        } elseif ($s->settingKey === \Frontend\Model\Setting\SettingConst::KEY_MAP_ADDRESS) {
+            $help = '<div class="field-hint">Nhập một địa chỉ duy nhất cho Google Map. Để trống thì bản đồ dùng ô Địa chỉ phía trên.</div>';
         } elseif ($s->valueType === \Frontend\Model\Setting\SettingConst::VALUE_TYPE_MEDIA) {
             $help = '<div class="field-hint">Bấm vào khung để chọn ảnh từ thư viện Media — để trống = không có ảnh.</div>';
         } else {

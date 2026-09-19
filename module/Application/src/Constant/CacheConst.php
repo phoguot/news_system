@@ -46,4 +46,7 @@ final class CacheConst
 
     /** Bảng giá công khai — Frontend\Service\PricingViewService, TTL 60s như home. */
     public const KEY_PRICING = 'pricing-v1';
+
+    /** Menu điều hướng công khai — Frontend\Service\MenuService. */
+    public const KEY_MENU = 'menu-v1';
 }

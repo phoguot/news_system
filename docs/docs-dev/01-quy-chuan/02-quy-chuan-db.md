@@ -1,6 +1,6 @@
 # Quy chuẩn DB
 
-> Nguồn sự thật cấu trúc: [`data/schema/schema.sql`](../../../data/schema/schema.sql) (16 bảng) đối chiếu [§4 phân tích](../../phan-tich-he-thong-website-tin-tuc.md). Khi hai bên lệch nhau, **schema.sql thắng**. Bổ sung cho [`01-quy-uoc-dat-ten.md`](01-quy-uoc-dat-ten.md) — file đó nói *tên*, file này nói *chuẩn kỹ thuật DB*.
+> Nguồn sự thật cấu trúc: [`data/schema/schema.sql`](../../../data/schema/schema.sql) (18 bảng) đối chiếu [§4 phân tích](../../phan-tich-he-thong-website-tin-tuc.md). Khi hai bên lệch nhau, **schema.sql thắng**. Bổ sung cho [`01-quy-uoc-dat-ten.md`](01-quy-uoc-dat-ten.md) — file đó nói *tên*, file này nói *chuẩn kỹ thuật DB*.
 
 ## 1. Nền tảng bắt buộc
 
@@ -79,7 +79,7 @@
 
 | Chuẩn dự án | Chi tiết |
 |---|---|
-| Một file DDL gộp | `data/schema/schema.sql` — `CREATE TABLE IF NOT EXISTS` đầy đủ 16 bảng |
+| Một file DDL gộp | `data/schema/schema.sql` — `CREATE TABLE IF NOT EXISTS` đầy đủ 18 bảng |
 | Seed | `data/schema/seed.sql` — `settings` + `home_sections` mặc định |
 | Incremental (khi cần) | file `data/schema/YYYY-MM-DD-mo-ta.sql` chứa `ALTER`/`CREATE` mới; chạy tuần tự |
 | Thêm cột | nếu cột tham chiếu bảng khác → kèm `KEY` ngay trong câu `ALTER` |

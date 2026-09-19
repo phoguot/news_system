@@ -155,6 +155,16 @@ return [
                             ],
                         ],
                     ],
+                    'menus' => [
+                        'type'    => Segment::class,
+                        'options' => [
+                            'route'    => '/menus[/:action[/:id]]',
+                            'defaults' => [
+                                'controller' => Controller\MenuController::class,
+                                'action'     => 'index',
+                            ],
+                        ],
+                    ],
                     'settings' => [
                         'type'    => Segment::class,
                         'options' => [
@@ -286,8 +296,19 @@ return [
                     $c->get(\Application\Service\DbService::class)->getAdapter()
                 );
             },
-            \Frontend\Model\Pricing\PricingMapper::class => static function (ContainerInterface $c): \Frontend\Model\Pricing\PricingMapper {
-                return new \Frontend\Model\Pricing\PricingMapper($c->get(\Application\Service\DbService::class)->getAdapter());
+            \Frontend\Model\Pricing\PricingMapper::class => static function (
+                ContainerInterface $c
+            ): \Frontend\Model\Pricing\PricingMapper {
+                return new \Frontend\Model\Pricing\PricingMapper(
+                    $c->get(\Application\Service\DbService::class)->getAdapter()
+                );
+            },
+            \Frontend\Model\Menu\MenuMapper::class => static function (
+                ContainerInterface $c
+            ): \Frontend\Model\Menu\MenuMapper {
+                return new \Frontend\Model\Menu\MenuMapper(
+                    $c->get(\Application\Service\DbService::class)->getAdapter()
+                );
             },
             Model\Media\MediaMapper::class => static function (ContainerInterface $c): Model\Media\MediaMapper {
                 return new Model\Media\MediaMapper($c->get(\Application\Service\DbService::class)->getAdapter());
@@ -319,6 +340,7 @@ return [
             // (1 bảng 1 Mapper, không JOIN chéo; docs §3.1)
             Service\DashboardService::class => AppInvokableFactory::class,
             Service\PricingService::class => AppInvokableFactory::class,
+            Service\MenuService::class => AppInvokableFactory::class,
         ],
     ],
     'controllers' => [
@@ -400,8 +422,13 @@ return [
             ): Controller\PasswordResetController {
                 return new Controller\PasswordResetController($c->get(Service\PasswordResetService::class));
             },
-            Controller\PricingController::class => static function (ContainerInterface $c): Controller\PricingController {
+            Controller\PricingController::class => static function (
+                ContainerInterface $c
+            ): Controller\PricingController {
                 return new Controller\PricingController($c->get(Service\PricingService::class));
+            },
+            Controller\MenuController::class => static function (ContainerInterface $c): Controller\MenuController {
+                return new Controller\MenuController($c->get(Service\MenuService::class));
             },
             Controller\DashboardController::class => static function (
                 ContainerInterface $c

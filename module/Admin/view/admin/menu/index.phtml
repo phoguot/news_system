@@ -1,0 +1,63 @@
+<?php
+
+/** @var \Laminas\View\Renderer\PhpRenderer $this */
+/** @var list<\Frontend\Model\Menu\MenuModel> $items */
+$items = (array) ($this->items ?? []);
+$flag = isset($this->flag) && is_string($this->flag) ? $this->flag : null;
+$csrf = (string) ($this->deleteCsrfHash ?? '');
+$reorderCsrf = (string) ($this->reorderCsrfHash ?? '');
+$e = fn (mixed $v): string => $this->escapeHtml((string) $v);
+$url = fn (array $params = []): string => $this->url('admin/menus', $params);
+
+$flags = [
+    'created' => ['alert-success', 'Đã tạo menu.'],
+    'updated' => ['alert-success', 'Đã cập nhật menu.'],
+    'deleted' => ['alert-success', 'Đã xoá menu.'],
+    'csrf' => ['alert-danger', 'Token bảo mật không hợp lệ.'],
+    'notfound' => ['alert-danger', 'Không tìm thấy menu.'],
+    'reordered' => ['alert-success', 'Đã cập nhật thứ tự menu.'],
+];
+
+$html = '<div class="page-header"><div><h1>Menu website</h1>'
+    . '<p class="subtitle">Tạo menu hiển thị ngoài frontend và kéo-thả để đổi vị trí.</p></div>'
+    . '<a class="btn btn-primary" href="' . $e($url(['action' => 'create'])) . '">Thêm menu</a></div>';
+
+if ($flag !== null && isset($flags[$flag])) {
+    [$cls, $msg] = $flags[$flag];
+    $html .= '<div class="alert ' . $cls . '">' . $e($msg) . '</div>';
+}
+
+$rows = '';
+foreach ($items as $item) {
+    /** @var \Frontend\Model\Menu\MenuModel $item */
+    $badge = $item->isActive === \Frontend\Model\Menu\MenuConst::ACTIVE
+        ? '<span class="status published">Có</span>'
+        : '<span class="status off">Tắt</span>';
+    $target = \Frontend\Model\Menu\MenuConst::TARGET_LABELS[$item->target] ?? $item->target;
+    $rows .= '<tr data-id="' . (int) $item->id . '">'
+        . '<td class="drag-col"><span class="drag-handle" title="Kéo để đổi thứ tự">⠿</span></td>'
+        . '<td><strong>' . $e($item->label) . '</strong></td>'
+        . '<td><span class="slug-text">' . $e($item->url) . '</span></td>'
+        . '<td>' . $e($target) . '</td>'
+        . '<td class="muted sort-cell">' . $e($item->sortOrder) . '</td>'
+        . '<td>' . $badge . '</td>'
+        . '<td><div class="actions">'
+        . '<a class="btn sm btn-ghost" href="' . $e($url(['action' => 'edit', 'id' => $item->id])) . '">Sửa</a>'
+        . '<form method="post" action="' . $e($url(['action' => 'delete', 'id' => $item->id])) . '"'
+        . ' onsubmit="return confirm(\'Xoá menu này?\');">'
+        . '<input type="hidden" name="csrf" value="' . $e($csrf) . '">'
+        . '<button class="btn sm btn-ghost danger" type="submit">Xoá</button></form>'
+        . '</div></td></tr>';
+}
+
+if ($items === []) {
+    $rows = '<tr><td colspan="7" class="muted">Chưa có menu nào.</td></tr>';
+}
+
+$html .= '<div class="card"><div class="table-wrap"><table class="data-table"><thead><tr>'
+    . '<th class="drag-col"></th><th>Tên menu</th><th>URL</th><th>Cách mở</th><th>Thứ tự</th><th>Hiển thị</th><th class="action-col">Thao tác</th>'
+    . '</tr></thead><tbody class="js-sortable"'
+    . ' data-reorder-url="' . $e($url(['action' => 'reorder'])) . '" data-csrf="' . $e($reorderCsrf) . '">'
+    . $rows . '</tbody></table></div></div>';
+
+echo $html;

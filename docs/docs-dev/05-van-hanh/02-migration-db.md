@@ -6,7 +6,7 @@
 |---|---|
 | `composer.json` → `require` / `require-dev` | **Không** có `doctrine/migrations`, không có `doctrine/dbal`, không có `robmorgan/phinx` (đã grep `composer.json` + `composer.lock` = 0 kết quả) |
 | Script composer | Không có lệnh `migrate` / `migrations:diff` — chỉ có `clear-config-cache`, `cs-check`, `cs-fix`, `test`, `static-analysis`, `serve`, `development-*` |
-| Cổng deploy | Không có bảng `migrations`/`migration_versions` trong `data/schema/schema.sql` (đủ 16 bảng, xem docs §4.2) |
+| Cổng deploy | Không có bảng `migrations`/`migration_versions` trong `data/schema/schema.sql` (đủ 18 bảng, xem docs §4.2) |
 
 → **Toàn bộ versioning cấu trúc nằm trong file SQL + quy trình tay.** Không có "tool migrate của dự án" như template cũ giả định.
 
@@ -14,8 +14,8 @@
 
 | File | Vai trò | Lưu ý |
 |---|---|---|
-| `data/schema/schema.sql` | **DDL đầy đủ 16 bảng** — nguồn sự thật cấu trúc | `CREATE TABLE IF NOT EXISTS`; `SET NAMES utf8mb4;` + `SET time_zone = '+00:00';` ở đầu file; mọi bảng `ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci`; **không INSERT dữ liệu** |
-| `data/schema/seed.sql` | Dữ liệu nền: 19 dòng `settings` + 6 `home_sections` | Chỉ dùng cho DB mới; **không** chứa tài khoản/mật khẩu (docs §4.5) |
+| `data/schema/schema.sql` | **DDL đầy đủ 18 bảng** — nguồn sự thật cấu trúc | `CREATE TABLE IF NOT EXISTS`; `SET NAMES utf8mb4;` + `SET time_zone = '+00:00';` ở đầu file; mọi bảng `ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci`; **không INSERT dữ liệu** |
+| `data/schema/seed.sql` | Dữ liệu nền: 19 dòng `settings` + 6 `home_sections` + menu mặc định | Chỉ dùng cho DB mới; **không** chứa tài khoản/mật khẩu (docs §4.5) |
 | `data/schema/README.md` | Hướng dẫn tạo DB + lưu ý `innodb_ft_min_token_size = 2` | Đọc trước khi import |
 | `bin/create-admin.php` | "Seed" tài khoản admin duy nhất bằng CLI, nhập mật khẩu tương tác | Từ chối khi `users` đã có ≥ 1 dòng |
 | `data/schema/YYYY-MM-DD-mo-ta.sql` (đề xuất) | **File incremental** cho DB đã có | **Quy ước này chưa tồn tại file nào trong repo** — từ nay đặt tên như vậy, để cạnh `schema.sql` |

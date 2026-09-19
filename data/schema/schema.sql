@@ -1,6 +1,6 @@
 -- Van Lang — News CMS — MySQL 8.0.19+ — utf8mb4_0900_ai_ci
 -- Convention: tables snake_case, columns camelCase, no FK, no deletedAt
--- 16 tables per docs/phan-tich-he-thong-website-tin-tuc.md v1.5
+-- 18 tables per docs/phan-tich-he-thong-website-tin-tuc.md v1.5 + batches 16/09-17/09
 SET NAMES utf8mb4;
 SET time_zone = '+00:00';
 
@@ -281,6 +281,20 @@ CREATE TABLE IF NOT EXISTS pricing_items (
   UNIQUE KEY uq_pricing_items_slug (slug),
   KEY idx_pricing_items_group_sort (groupCode, sortOrder),
   KEY idx_pricing_items_active_sort (isActive, sortOrder)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE IF NOT EXISTS menu_items (
+  id         INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  label      VARCHAR(120) NOT NULL,
+  url        VARCHAR(255) NOT NULL,
+  target     VARCHAR(20)  NOT NULL DEFAULT '_self',
+  sortOrder  INT          NOT NULL DEFAULT 0,
+  isActive   TINYINT(1)   NOT NULL DEFAULT 1,
+  createdAt  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updatedAt  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_menu_items_active_sort (isActive, sortOrder),
+  KEY idx_menu_items_sort (sortOrder)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 CREATE TABLE IF NOT EXISTS settings (

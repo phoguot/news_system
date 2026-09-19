@@ -98,7 +98,8 @@ Liên hệ                   /lien-he
 │   └── Dịch vụ
 ├── Giao diện
 │   ├── Banner
-│   └── Bố cục trang chủ
+│   ├── Bố cục trang chủ
+│   └── Menu
 ├── Đội ngũ (Nhân sự)
 ├── Liên hệ (hộp thư)
 ├── Thư viện media
@@ -300,7 +301,18 @@ Bảng giá Medlatec-style hiển thị tại `/bang-gia` (filter `?nhom=<groupC
 | Ghi chú | | |
 | Thứ tự, Hiển thị | | Kéo thả |
 
-### 3.10 Liên hệ
+### 3.10 Menu (17/09)
+
+Menu header ngoài frontend được quản lý tại `/admin/menus`. Quản trị viên tạo/sửa/xoá mục menu, bật/tắt hiển thị và kéo thả đổi thứ tự; layout frontend render qua `FrontendMenu` helper, cache một key `menu-v1` TTL 60 giây và tự fallback menu mặc định khi DB chưa migrate.
+
+| Trường | Bắt buộc | Ghi chú |
+|---|:-:|---|
+| Nhãn | ✅ | ≤ 120 ký tự |
+| URL | ✅ | Cho phép đường dẫn nội bộ `/...`, `http(s)://...`, `mailto:...`, `tel:...` |
+| Mở liên kết | ✅ | `_self` hoặc `_blank` |
+| Thứ tự, Hiển thị | | Kéo thả ngoài admin; frontend chỉ đọc mục đang bật |
+
+### 3.11 Liên hệ
 
 **Form ngoài website** (16/09 — form đã bỏ ở Frontend, chỉ hiện SĐT/Zalo/địa chỉ/bản đồ; Service Contact giữ để Admin xem inbox cũ)
 
@@ -350,7 +362,7 @@ sequenceDiagram
 
 > **Dữ liệu cá nhân:** form thu thập họ tên, email, SĐT nên cần checkbox đồng ý, trang chính sách bảo mật và thời hạn lưu trữ rõ ràng (VD: tự xoá/ẩn danh liên hệ sau 24 tháng). Nên rà soát với bộ phận pháp chế theo quy định bảo vệ dữ liệu cá nhân hiện hành của Việt Nam.
 
-### 3.11 Thư viện media
+### 3.12 Thư viện media
 
 - Upload kéo thả nhiều file; định dạng cho phép: JPG, PNG, WebP, GIF; dung lượng ≤ 5 MB/file.
 - **Không cho upload SVG** (có thể chứa script) trừ khi có bước làm sạch.
@@ -362,7 +374,7 @@ sequenceDiagram
 - Khi xoá: **kiểm tra nơi sử dụng trước (xem 5.14) và chặn xoá** nếu file đang được dùng (banner bài viết, banner trang chủ, dịch vụ, nhân sự, cài đặt, hoặc chèn trong nội dung bài) — vì xoá là vĩnh viễn, cảnh báo suông không đủ. Chỉ cho phép xoá khi danh sách sử dụng rỗng, hoặc khi quản trị viên xác nhận ghi đè cảnh báo cho trường hợp file chỉ được chèn trong nội dung bài.
 - Xoá bản ghi `media` đồng thời xoá **file gốc và toàn bộ biến thể** trên đĩa; nếu xoá file vật lý lỗi thì rollback transaction để tránh bản ghi mồ côi.
 
-### 3.12 Tài khoản quản trị
+### 3.13 Tài khoản quản trị
 
 Hệ thống chỉ có **1 tài khoản quản trị duy nhất** — không có màn hình quản lý danh sách người dùng, không có vai trò hay quyền hạn để cấu hình.
 
@@ -376,16 +388,16 @@ Hệ thống chỉ có **1 tài khoản quản trị duy nhất** — không có
 - Quên mật khẩu: gửi link chứa token ngẫu nhiên, **chỉ lưu hash của token**, hết hạn sau 60 phút, dùng 1 lần.
 - Tuỳ chọn mở rộng: xác thực 2 lớp (TOTP).
 
-### 3.13 Cài đặt chung
+### 3.14 Cài đặt chung
 
 | Nhóm | Khoá cài đặt |
 |---|---|
 | `general` | `site_name`, `site_logo`, `site_favicon`, `footer_text` |
-| `contact` | `company_name`, `address`, `hotline`, `email`, `working_hours`, `map_embed_url`, `map_address` (16/09 — địa chỉ text, fallback dựng embed URL), `notify_emails` |
+| `contact` | `company_name`, `address`, `hotline`, `email`, `working_hours`, `map_address` (một ô chung trong Admin để dựng bản đồ), `map_embed_url` (legacy fallback, không hiển thị ở form), `notify_emails` |
 | `social` | `facebook_url`, `youtube_url`, `zalo_url`, `linkedin_url` |
 | `seo` | `default_meta_title`, `default_meta_description`, `default_og_image`, `ga_measurement_id` |
 
-- Bản đồ FE ưu tiên **địa chỉ text** (`map_address`; nếu trống thì dùng `address`) để khi đổi địa chỉ trong Admin thì Google Map đổi theo; `map_embed_url` chỉ là fallback thủ công khi chưa có địa chỉ nào. Không lưu nguyên thẻ `<iframe>` do admin dán vào (tránh XSS).
+- Bản đồ FE ưu tiên **địa chỉ text** (`map_address`; nếu trống thì dùng `address`) để khi đổi địa chỉ trong Admin thì Google Map đổi theo. Admin chỉ hiển thị **một ô "Địa chỉ Google Map"**; `map_embed_url` chỉ là fallback legacy cho dữ liệu cũ khi chưa có địa chỉ nào. Không lưu nguyên thẻ `<iframe>` do admin dán vào (tránh XSS).
 - **Cấu hình nhạy cảm** (SMTP, khoá API captcha, thông tin S3) để trong file cấu hình/biến môi trường, **không lưu trong DB**.
 - Cache toàn bộ settings; xoá cache khi lưu.
 
@@ -430,7 +442,8 @@ Hệ thống chỉ có **1 tài khoản quản trị duy nhất** — không có
 | 14 | `team_members` | Đội ngũ | Nhân sự |
 | 15 | `contact_submissions` | Liên hệ | Liên hệ từ khách |
 | 16 | `pricing_items` | Bảng giá | Bảng giá (16/09) |
-| 17 | `settings` | Hệ thống | Cài đặt chung |
+| 17 | `menu_items` | Giao diện | Menu frontend (17/09) |
+| 18 | `settings` | Hệ thống | Cài đặt chung |
 
 ### 4.3 Sơ đồ quan hệ (ERD)
 
@@ -786,6 +799,31 @@ CREATE TABLE pricing_items (
 | `price` | NULL = “Liên hệ” |
 | `slug` | Duy nhất toàn bảng |
 
+```sql
+CREATE TABLE menu_items (
+  id        INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  label     VARCHAR(120) NOT NULL,
+  url       VARCHAR(500) NOT NULL,
+  target    VARCHAR(20)  NOT NULL DEFAULT '_self',
+  sortOrder INT          NOT NULL DEFAULT 0,
+  isActive  TINYINT(1)   NOT NULL DEFAULT 1,
+  createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_menu_items_active_sort (isActive, sortOrder),
+  KEY idx_menu_items_sort (sortOrder)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+```
+
+**Chú giải `menu_items` (17/09)**
+
+| Cột | Ý nghĩa |
+|---|---|
+| `label` | Chữ hiển thị trên menu frontend |
+| `url` | Đường dẫn nội bộ hoặc URL ngoài đã validate ở tầng Admin |
+| `target` | `_self` hoặc `_blank` |
+| `sortOrder` | Thứ tự hiển thị; kéo thả admin ghi lại 0..n-1 |
+
 > Xoá dịch vụ là **xoá cứng**. Các liên hệ cũ có `contact_submissions.serviceId` trỏ tới dịch vụ đã xoá sẽ thành tham chiếu mồ côi — khi hiển thị chi tiết liên hệ phải `LEFT JOIN` và ghi "(dịch vụ đã xoá)" thay vì để lỗi. Nếu muốn giữ lịch sử nguyên vẹn thì **tắt `isActive` thay vì xoá**; giao diện nên nhắc điều này khi dịch vụ đang có liên hệ gắn kèm.
 > Xoá banner và section trang chủ cũng là xoá cứng; xoá `home_sections` phải xoá kèm `home_section_items` của nó (xem 4.6).
 
@@ -916,8 +954,8 @@ INSERT INTO settings (groupCode, settingKey, settingValue, valueType, label, sor
   ('contact', 'hotline',                  NULL, 1, 'Hotline', 3),
   ('contact', 'email',                    NULL, 1, 'Email công khai', 4),
   ('contact', 'working_hours',            NULL, 1, 'Giờ làm việc', 5),
-  ('contact', 'map_embed_url',            NULL, 1, 'URL nhúng Google Maps', 6),
-  ('contact', 'map_address',                NULL, 2,   'Địa chỉ hiển thị trên bản đồ', 7),
+  ('contact', 'map_embed_url',            NULL, 1, 'URL nhúng Google Maps (legacy fallback)', 6),
+  ('contact', 'map_address',              NULL, 2, 'Địa chỉ Google Map', 7),
   ('contact', 'notify_emails',            NULL, 1, 'Email nhận thông báo liên hệ (phân tách bằng dấu phẩy)', 8),
   ('social',  'facebook_url',             NULL, 1, 'Facebook', 1),
   ('social',  'youtube_url',              NULL, 1, 'YouTube', 2),
@@ -1352,7 +1390,7 @@ COMMIT;
 |---|---|
 | **1 – MVP** | Đăng nhập (tài khoản quản trị duy nhất); thư viện media; danh mục; bài viết (nháp / xuất bản trực tiếp, ảnh banner, SEO cơ bản); dịch vụ; banner; trang chủ theo `home_sections`; đội ngũ; liên hệ + email thông báo; cài đặt chung; sitemap |
 | **2 – Hoàn thiện biên tập** | Hẹn giờ xuất bản; tag; lịch sử phiên bản & autosave; thống kê lượt xem + dashboard; tìm kiếm; thao tác hàng loạt |
-| **3 – Mở rộng** | Đa ngôn ngữ; menu header/footer quản trị được; trang tĩnh (Giới thiệu, Chính sách); tìm kiếm Meilisearch; đăng ký nhận bản tin; xác thực 2 lớp |
+| **3 – Mở rộng** | Đa ngôn ngữ; menu footer nâng cao; trang tĩnh (Giới thiệu, Chính sách); tìm kiếm Meilisearch; đăng ký nhận bản tin; xác thực 2 lớp |
 
 **Hướng mở rộng đa ngôn ngữ (tham khảo):** giữ bảng gốc cho dữ liệu không phụ thuộc ngôn ngữ (ảnh, trạng thái, thứ tự) và tách phần văn bản sang bảng `*_translations`, VD `post_translations (postId, locale, title, slug, excerpt, content, metaTitle, metaDescription)` với `UNIQUE (locale, slug)`. Nên chốt sớm vì chuyển đổi sau khi đã có dữ liệu tốn công hơn nhiều.
 
@@ -1366,7 +1404,7 @@ COMMIT;
 | 2 | Bài viết thuộc 1 hay nhiều danh mục? | Nếu nhiều: thêm bảng `post_categories`, giữ `categoryId` làm danh mục chính |
 | 3 | Website có cần đa ngôn ngữ không? | Cấu trúc toàn bộ bảng nội dung (xem mục 8) |
 | 4 | Có cần các trang tĩnh (Giới thiệu, Tuyển dụng, Chính sách bảo mật)? | Thêm module Trang (`pages`) |
-| 5 | Menu header/footer cố định hay cho quản trị viên tự cấu hình? | Thêm bảng `menus`, `menu_items` |
+| 5 | Menu footer có cần quản trị riêng như header không? | Hiện đã có `menu_items` cho header; footer nếu cần có thể mở rộng thêm nhóm/vị trí |
 | 6 | Có bình luận, chia sẻ mạng xã hội, đăng ký nhận tin? | Module bổ sung, kiểm duyệt nội dung |
 | 7 | Số bài dự kiến mỗi tháng và lượng truy cập? | Lựa chọn giải pháp cache, tìm kiếm, lưu trữ ảnh |
 | 8 | Liên hệ có cần đồng bộ sang CRM / gửi Zalo, Telegram cho sales? | Thêm webhook / tích hợp sau khi lưu liên hệ |

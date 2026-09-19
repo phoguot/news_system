@@ -69,9 +69,9 @@ class SettingService extends AppServiceFactory
     }
 
     /**
-     * URL nhúng Google Maps: ưu tiên địa chỉ (`map_address`, rồi `address`) để
-     * khi Admin đổi địa chỉ thì bản đồ FE đổi theo. `map_embed_url` chỉ là
-     * fallback thủ công khi chưa có địa chỉ nào.
+     * URL nhúng Google Maps: Admin chỉ nhập một ô địa chỉ Google Map
+     * (`map_address`); nếu trống thì dùng địa chỉ liên hệ chung. `map_embed_url`
+     * chỉ giữ tương thích dữ liệu cũ khi cả hai địa chỉ đều trống.
      */
     public function mapEmbedUrl(): ?string
     {

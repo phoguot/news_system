@@ -6,7 +6,7 @@
 
 - [ ] MySQL **8.0.19+**, `SELECT VERSION();` đạt.
 - [ ] DB tạo đúng collation: `SELECT @@character_set_database, @@collation_database;` → `utf8mb4` / **`utf8mb4_0900_ai_ci`** (lệnh tạo ở [`../04-huong-dan/01-cai-dat-moi-truong.md`](../04-huong-dan/01-cai-dat-moi-truong.md)).
-- [ ] `SHOW TABLES;` = **đủ 16 bảng** theo docs §4.2.
+- [ ] `SHOW TABLES;` = **đủ 18 bảng** theo docs §4.2.
 - [ ] `SELECT COUNT(*) FROM settings;` = 19 và `SELECT COUNT(*) FROM home_sections;` = 6 (`data/schema/seed.sql`).
 - [ ] **Không** có `FOREIGN KEY`: `SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA='news_system' AND CONSTRAINT_TYPE='FOREIGN KEY';` → **0**.
 - [ ] **Không** có cột `deletedAt` ở bất kỳ bảng nào (docs v1.5 bỏ xoá mềm).

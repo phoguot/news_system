@@ -7,6 +7,7 @@ namespace Application;
 use Laminas\Router\Http\Literal;
 use Laminas\Router\Http\Segment;
 use Laminas\ServiceManager\Factory\InvokableFactory;
+use Psr\Container\ContainerInterface;
 
 return [
     'router' => [
@@ -49,11 +50,17 @@ return [
                 => new View\Helper\SelectField(),
             View\Helper\MediaPicker::class => static fn (): View\Helper\MediaPicker
                 => new View\Helper\MediaPicker(),
+            View\Helper\FrontendMenu::class => static function (
+                ContainerInterface $c
+            ): View\Helper\FrontendMenu {
+                return new View\Helper\FrontendMenu($c->get(\Frontend\Service\MenuService::class));
+            },
         ],
         'aliases' => [
             'mediaUrl'    => View\Helper\MediaUrl::class,
             'selectField' => View\Helper\SelectField::class,
             'mediaPicker' => View\Helper\MediaPicker::class,
+            'frontendMenu' => View\Helper\FrontendMenu::class,
         ],
     ],
     'view_manager' => [

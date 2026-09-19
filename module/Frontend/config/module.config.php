@@ -170,6 +170,9 @@ return [
             Model\Pricing\PricingMapper::class => static function (ContainerInterface $c): Model\Pricing\PricingMapper {
                 return new Model\Pricing\PricingMapper($c->get(\Application\Service\DbService::class)->getAdapter());
             },
+            Model\Menu\MenuMapper::class => static function (ContainerInterface $c): Model\Menu\MenuMapper {
+                return new Model\Menu\MenuMapper($c->get(\Application\Service\DbService::class)->getAdapter());
+            },
             Model\Setting\SettingMapper::class => static function (ContainerInterface $c): Model\Setting\SettingMapper {
                 return new Model\Setting\SettingMapper($c->get(\Application\Service\DbService::class)->getAdapter());
             },
@@ -223,6 +226,7 @@ return [
             // PostService/CategoryService/ServiceService (Admin) forget key sau mọi ghi chạm nguồn.
             Service\SitemapService::class => AppInvokableFactory::class,
             Service\PricingViewService::class => AppInvokableFactory::class,
+            Service\MenuService::class => AppInvokableFactory::class,
             // PostViewService = FR-41 ghi lượt xem (post_view_daily upsert + posts.viewCount),
             // dedup cookie/session 30', bỏ bot UA, transaction.
             Service\PostViewService::class => AppInvokableFactory::class,
@@ -284,10 +288,14 @@ return [
                     $c->get(Service\SettingService::class)
                 );
             },
-            Controller\AboutController::class    => static function (ContainerInterface $c): Controller\AboutController {
+            Controller\AboutController::class    => static function (
+                ContainerInterface $c
+            ): Controller\AboutController {
                 return new Controller\AboutController($c->get(Service\SettingService::class));
             },
-            Controller\PricingController::class  => static function (ContainerInterface $c): Controller\PricingController {
+            Controller\PricingController::class  => static function (
+                ContainerInterface $c
+            ): Controller\PricingController {
                 return new Controller\PricingController($c->get(Service\PricingViewService::class));
             },
             Controller\SitemapController::class  => static function (

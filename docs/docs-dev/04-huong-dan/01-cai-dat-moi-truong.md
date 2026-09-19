@@ -26,7 +26,7 @@ cp config/autoload/local.php.dist config/autoload/local.php
 #   mail.from, recaptcha.site_key + recaptcha.secret_key
 #   local.php bị ignore bởi config/autoload/.gitignore (`local.php`, `*.local.php`) — không bao giờ commit
 
-# 3. Tạo CSDL + import schema (16 bảng) + seed (settings + home_sections mặc định)
+# 3. Tạo CSDL + import schema (18 bảng) + seed (settings + home_sections/menu mặc định)
 mysql -u root -p -e "CREATE DATABASE news_system CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;"
 mysql -u root -p news_system < data/schema/schema.sql
 mysql -u root -p news_system < data/schema/seed.sql
@@ -66,7 +66,7 @@ Config đã merge + cache → chạy `composer clear-config-cache` (hoặc `php 
 
 - [ ] `composer install` không lỗi, có thư mục `vendor/` (đã bao gồm `vendor/laminas/laminas-mail`, `vendor/intervention/image`, `vendor/ezyang/htmlpurifier`).
 - [ ] `config/autoload/local.php` tồn tại và **không** xuất hiện trong `git status`.
-- [ ] `mysql -u root -p news_system -e "SHOW TABLES;"` trả **đúng 16 bảng** (`users`, `password_reset_tokens`, `media`, `categories`, `tags`, `posts`, `post_tags`, `post_revisions`, `post_view_daily`, `services`, `banners`, `home_sections`, `home_section_items`, `team_members`, `contact_submissions`, `settings`).
+- [ ] `mysql -u root -p news_system -e "SHOW TABLES;"` trả **đúng 18 bảng** (`users`, `password_reset_tokens`, `media`, `categories`, `tags`, `posts`, `post_tags`, `post_revisions`, `post_view_daily`, `services`, `banners`, `home_sections`, `home_section_items`, `team_members`, `contact_submissions`, `pricing_items`, `menu_items`, `settings`).
 - [ ] `SELECT COUNT(*) FROM settings;` > 0 và `SELECT COUNT(*) FROM home_sections;` = 6 (từ `data/schema/seed.sql`).
 - [ ] `php bin/create-admin.php ...` in `Admin created: <email> (id 1)`; chạy lần 2 bị **từ chối** (`Refusing: users table already has 1 row(s)`).
 - [ ] `vendor/bin/phpunit` → `OK (4 tests, 7 assertions)` (suite skeleton, xem [`03-huong-dan-test.md`](03-huong-dan-test.md)).

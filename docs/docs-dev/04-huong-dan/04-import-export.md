@@ -6,8 +6,8 @@
 
 | Luồng | Chiều | Cách chạy | Nguồn trong repo |
 |---|---|---|---|
-| Tạo cấu trúc DB (16 bảng) | **Import** | `mysql -u root -p news_system < data/schema/schema.sql` | `data/schema/schema.sql` (`CREATE TABLE IF NOT EXISTS`, `SET NAMES utf8mb4`, `SET time_zone='+00:00'`) |
-| Dữ liệu nền (settings + 6 home_sections) | **Import** | `mysql -u root -p news_system < data/schema/seed.sql` | `data/schema/seed.sql` |
+| Tạo cấu trúc DB (18 bảng) | **Import** | `mysql -u root -p news_system < data/schema/schema.sql` | `data/schema/schema.sql` (`CREATE TABLE IF NOT EXISTS`, `SET NAMES utf8mb4`, `SET time_zone='+00:00'`) |
+| Dữ liệu nền (settings + 6 home_sections + menu mặc định) | **Import** | `mysql -u root -p news_system < data/schema/seed.sql` | `data/schema/seed.sql` |
 | Tài khoản admin duy nhất | **Import** (1 dòng vào `users`) | `php bin/create-admin.php --email=... --name=... [--phone=...]` + nhập mật khẩu tương tác | `bin/create-admin.php` — `password_hash(..., PASSWORD_DEFAULT)`; từ chối nếu `users` đã có bản ghi |
 | Sao lưu / phục hồi toàn bộ DB | **Export/Import** | `mysqldump` / `mysql < file.sql` (xem dưới) | docs §7.4 — bắt buộc hằng ngày, giữ 30 bản |
 | Ảnh/media trên đĩa | **Copy** | thư mục `public/uploads/` (theo `YYYY/MM/` + biến thể) | docs §3.10; helper `Application\View\Helper\MediaUrl` (trước 13/09 là `Core\`) |

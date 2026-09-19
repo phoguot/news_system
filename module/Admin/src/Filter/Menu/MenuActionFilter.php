@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Admin\Filter\Pricing;
+namespace Admin\Filter\Menu;
 
 use Application\Filter\AppInputFilter;
 
 /**
- * Validate xoá mục bảng giá (id + CSRF) — form danh sách PRG.
+ * Validate form xoá menu (id + CSRF).
  */
-final class PricingActionFilter extends AppInputFilter
+final class MenuActionFilter extends AppInputFilter
 {
     public function __construct(bool $withCsrf = true)
     {

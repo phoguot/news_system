@@ -67,6 +67,12 @@ class SettingService extends AppServiceFactory
     {
         $grouped = [];
         foreach ($this->settingMapper()->listAll() as $setting) {
+            if ($setting->settingKey === SettingConst::KEY_MAP_EMBED_URL) {
+                continue;
+            }
+            if ($setting->settingKey === SettingConst::KEY_MAP_ADDRESS) {
+                $setting->label = 'Địa chỉ Google Map';
+            }
             $grouped[$setting->groupCode][] = $setting;
         }
 

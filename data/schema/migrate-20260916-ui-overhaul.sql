@@ -28,13 +28,13 @@ CREATE TABLE IF NOT EXISTS pricing_items (
   KEY idx_pricing_items_active_sort (isActive, sortOrder)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
--- 3) settings: map_address + map_embed_url đã có — chỉ thêm map_address nếu thiếu
+-- 3) settings: map_address là ô Google Map chung; map_embed_url chỉ còn legacy fallback
 INSERT IGNORE INTO settings (groupCode, settingKey, settingValue, valueType, label, sortOrder)
-VALUES ('contact', 'map_address', NULL, 2, 'Địa chỉ riêng cho Google Maps (để trống sẽ dùng ô Địa chỉ)', 7);
+VALUES ('contact', 'map_address', NULL, 2, 'Địa chỉ Google Map', 7);
 
 -- Đồng bộ nhãn để Admin hiểu địa chỉ là nguồn ưu tiên của bản đồ FE.
-UPDATE settings SET label = 'URL nhúng Google Maps (chỉ dùng khi không nhập địa chỉ)' WHERE settingKey = 'map_embed_url';
-UPDATE settings SET label = 'Địa chỉ riêng cho Google Maps (để trống sẽ dùng ô Địa chỉ)' WHERE settingKey = 'map_address';
+UPDATE settings SET label = 'URL nhúng Google Maps (legacy fallback)' WHERE settingKey = 'map_embed_url';
+UPDATE settings SET label = 'Địa chỉ Google Map' WHERE settingKey = 'map_address';
 
 -- Đẩy notify_emails xuống sortOrder 8 nếu đang 7 (để map_address chiếm 7)
 UPDATE settings SET sortOrder = 8 WHERE settingKey = 'notify_emails' AND sortOrder = 7;

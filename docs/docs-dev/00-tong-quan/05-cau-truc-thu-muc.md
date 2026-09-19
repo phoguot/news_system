@@ -22,9 +22,10 @@ News/
 ├── data/
 │   ├── cache/                  Config cache + `page/` (TTL 60s) — runtime, gitignore
 │   └── schema/
-│       ├── schema.sql          ⚙️  17 bảng (không FK, không deletedAt) — 16 gốc + `pricing_items` (16/09)
-│       ├── seed.sql            settings (+ `map_address` 16/09) + home_sections (+ type 8 process) + services cha-con + pricing mẫu
-│       └── migrate-20260916-ui-overhaul.sql  idempotent: services.parentId + pricing_items + map_address + seed 2 cha 7 con + 12 pricing + section process
+│       ├── schema.sql          ⚙️  18 bảng (không FK, không deletedAt) — 16 gốc + `pricing_items` (16/09) + `menu_items` (17/09)
+│       ├── seed.sql            settings (`map_address` là ô Google Map chung, `map_embed_url` legacy) + home_sections (+ type 8 process) + services cha-con + pricing mẫu + menu mặc định
+│       ├── migrate-20260916-ui-overhaul.sql  idempotent: services.parentId + pricing_items + map_address + seed 2 cha 7 con + 12 pricing + section process
+│       └── migrate-20260917-menu-items.sql   idempotent: menu_items + seed menu mặc định + ẩn fallback map_embed_url khỏi form Admin
 ├── module/                    ✏️  3 module Laminas — cấu trúc chuẩn xem §2 (từ 13/09 gộp Core về Application)
 ├── public/                    Document root
 │   ├── index.php               Điểm vào duy nhất
@@ -86,7 +87,7 @@ module/
 │       ├── Constant/ContentConst.php · CacheConst.php ✅  hằng dùng chung 2 module
 │       │          (posts.status, section item type; CacheConst 13/09 batch 8 FR-39:
 │       │          tên service 'page_cache' + key 'settings-v1'; batch 9 13/09 dùng tiếp
-│       │          KEY_HOME 'home-v1' — cache payload dữ liệu trang chủ)
+│       │          KEY_HOME 'home-v1' — cache payload dữ liệu trang chủ; 17/09 thêm KEY_MENU 'menu-v1')
 │       ├── Session/SessionBootstrap.php
 │       └── View/Helper/MediaUrl.php · SelectField.php ✅ 13/09 — select box mọi
 │           field "chọn bản ghi" thay ô nhập ID, chuẩn 07 §9 (alias `selectField`)
@@ -178,6 +179,7 @@ module/
 │   │   │          {path,lastmod} KHÔNG gắn host → cache nguyên khối `remember('sitemap-v1')`
 │   │   │          TTL 60s; hook forget ở Admin Post/Category/Service service)
 │   │   │        · PricingViewService ✅ (16/09 — cache một key pricing-v1 TTL 60s; 17/09 list(?group,?q,?page) filter + phân trang 20 dòng/trang, price null→"Liên hệ")
+│   │   │        · MenuService ✅ (17/09 — `publicItems()` đọc `menu_items` active, cache `menu-v1`; layout helper fallback menu mặc định nếu DB chưa migrate)
 │   │   ├── Constant/FrontendConst.php ✅ (13/09 batch 10 — hằng KỸ THUẬT module:
 │   │   │          NEWS_PAGE_SIZE 12 · SERVICE_PAGE_SIZE 12 · PRICING_PAGE_SIZE 20 · PAGER_WINDOW 3; hằng entity không ở đây — 06 §)
 │   │   │        (+ các Service khác khi triển khai)
@@ -187,6 +189,7 @@ module/
 │   │   │   ├── Service/{ServiceMapper,ServiceConst,ServiceModel}.php ✅ (từ Table/ServiceTable;
 │   │   │   │        từ 12/09 batch 2 mapper này CẢ GHI HỘ Admin — xem §4; 16/09 thêm parentId + helpers cha-con)
 │   │   │   ├── Pricing/{PricingMapper,PricingConst,PricingModel}.php ✅ (16/09 — bảng `pricing_items`: groupCode/name/slug/price/unit/note, Frontend sở hữu, Admin reuse; `listActive(?group,?q)` Where equalTo/like)
+│   │   │   ├── Menu/{MenuMapper,MenuConst,MenuModel}.php ✅ (17/09 — bảng `menu_items`: label/url/target/sortOrder/isActive, Frontend sở hữu, Admin reuse)
 │   │   │   └── Setting/{SettingMapper,SettingConst,SettingModel}.php ✅ (từ Table/SettingTable;
 │   │   │            từ 13/09 batch 3 listAll/updateValue ghi hộ trang /admin/settings — xem §4;
 │   │   │            batch 8 FR-39: đọc giá trị qua Frontend\SettingService (cache),
@@ -349,12 +352,12 @@ Toàn bộ các dòng "code cũ" đã chuyển xong 12/09/2026 (trừ CLAUDE.md 
 
 | Đường dẫn | Vai trò | Route riêng? | Sở hữu bảng (Mapper)? |
 |---|---|:-:|---|
-| `module/Frontend/` | Hiển thị nội dung công khai | ✅ `/`, `/tin-tuc`… | `Setting`, `Service`, `Contact` (ba mapper này ĐỌC hộ khách + **ghi hộ CRUD admin** từ batch 12–13/09 — hộp thư, /admin/settings, dropdown dịch vụ; xem 05-cau-truc §4). **Chiều ngược từ batch 9 (13/09):** `HomeService` đọc các mapper **Admin sở hữu** (`Post`/`Banner`/`TeamMember`/`HomeSection`/`HomeSectionItem`/`Category`/`Media`) qua container gộp — chỉ SELECT, không tạo mapper thứ hai |
-| `module/Admin/` | CRUD nội dung + API JSON | ✅ `/admin/*`, `/api/admin/*` | `User`, `Category`, `Tag`, `Post`, `PostTag`, `PostRevision`, `PostViewDaily`, `HomeSection`, `HomeSectionItem`, `Banner`, `TeamMember`, `Media` (+ mọi bảng khi triển khai tiếp) — `Contact`/`Service`/`Setting` thuộc Frontend sở hữu Mapper; Admin dùng lại qua container gộp, KHÔNG tạo mapper thứ hai; 13/09 thêm các method quét usages `findIdsByMedia`/`findKeysByMedia`/`countByMedia` vào đúng mapper chủ bảng tham chiếu media — vẫn giữ luật 1 bảng 1 Mapper |
+| `module/Frontend/` | Hiển thị nội dung công khai | ✅ `/`, `/tin-tuc`… | `Setting`, `Service`, `Contact`, `Pricing`, `Menu` (mapper Frontend sở hữu; Admin ghi hộ CRUD qua container gộp với `PricingService`/`MenuService`). **Chiều ngược từ batch 9 (13/09):** `HomeService` đọc các mapper **Admin sở hữu** (`Post`/`Banner`/`TeamMember`/`HomeSection`/`HomeSectionItem`/`Category`/`Media`) qua container gộp — chỉ SELECT, không tạo mapper thứ hai |
+| `module/Admin/` | CRUD nội dung + API JSON | ✅ `/admin/*`, `/api/admin/*` | `User`, `Category`, `Tag`, `Post`, `PostTag`, `PostRevision`, `PostViewDaily`, `HomeSection`, `HomeSectionItem`, `Banner`, `TeamMember`, `Media` (+ mọi bảng khi triển khai tiếp) — `Contact`/`Service`/`Setting`/`Pricing`/`Menu` thuộc Frontend sở hữu Mapper; Admin dùng lại qua container gộp, KHÔNG tạo mapper thứ hai; 13/09 thêm các method quét usages `findIdsByMedia`/`findKeysByMedia`/`countByMedia` vào đúng mapper chủ bảng tham chiếu media — vẫn giữ luật 1 bảng 1 Mapper |
 | `module/Core/` | — (đã gộp về Application từ 13/09/2026) | — | — |
 | `module/Application/` | Skeleton + dịch vụ dùng chung (từ 13/09 gộp Core) | (fallback) | — (không Model/, cấp `DbAdapter` qua `DbService`) |
 | `config/` | Nạp module, DB/session/cache/mail/app | ❌ | — |
-| `data/schema/` | DDL + seed 16 bảng | ❌ | Nguồn định nghĩa schema |
+| `data/schema/` | DDL + seed 18 bảng | ❌ | Nguồn định nghĩa schema |
 | `public/uploads/` | File media + biến thể | ❌ | File ứng với bảng `media` |
 | `bin/` | CLI tạo admin, xoá config cache | ❌ | `create-admin.php` dùng PDO thô — không phụ thuộc tầng Mapper |
 

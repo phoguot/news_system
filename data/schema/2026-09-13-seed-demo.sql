@@ -1,7 +1,7 @@
 -- ============================================================================
 -- 2026-09-13 — SEED DEMO — Van Lang News CMS (MySQL 8.0.19+, utf8mb4_0900_ai_ci)
 -- ----------------------------------------------------------------------------
--- Mục đích : kho dữ liệu demo cho MỌI bảng (16/16 theo schema.sql) để xem thử
+-- Mục đích : kho dữ liệu demo cũ cho 16/18 bảng; pricing_items/menu_items nằm ở seed/migration 16-17/09
 --            trang chủ, danh sách tin, chi tiết, hộp thư, media, team, settings.
 -- Chạy     : mysql -u root -p news_system < data/schema/2026-09-13-seed-demo.sql
 --            (file TỰ CHỨ: không cần chạy seed.sql trước — settings +
@@ -370,7 +370,7 @@ INSERT INTO settings (id, groupCode, settingKey, settingValue, valueType, label,
   (7,  'contact', 'hotline',                  '1900 1234', 1, 'Hotline', 3, 1),
   (8,  'contact', 'email',                    'hello@vanlang.vn', 1, 'Email công khai', 4, 1),
   (9,  'contact', 'working_hours',            '08:00 - 17:30 (T2 - T7)', 1, 'Giờ làm việc', 5, 1),
-  (10, 'contact', 'map_embed_url',            'https://www.google.com/maps/embed?pb=!4d-demo-van-lang', 1, 'URL nhúng Google Maps', 6, NULL),
+  (10, 'contact', 'map_embed_url',            NULL, 1, 'URL nhúng Google Maps (legacy fallback)', 6, NULL),
   (11, 'contact', 'notify_emails',            'admin@vanlang.vn', 1, 'Email nhận thông báo liên hệ (phân tách bằng dấu phẩy)', 7, 1),
   (12, 'social',  'facebook_url',             'https://facebook.com/vanlang.care', 1, 'Facebook', 1, 1),
   (13, 'social',  'youtube_url',              'https://youtube.com/@vanlangcare', 1, 'YouTube', 2, NULL),
