@@ -51,6 +51,28 @@ class PricingMapper
         return $this->models($sql, $select);
     }
 
+    /**
+     * Lấy danh sách mục bảng giá active cho trang chủ (có giới hạn).
+     *
+     * @return list<PricingModel>
+     */
+    public function listActiveForHome(string $groupCode, int $limit): array
+    {
+        $sql    = new Sql($this->db);
+        $select = $sql->select(self::TABLE_NAME)
+            ->order(['sortOrder' => 'ASC', 'id' => 'ASC']);
+        $select->columns(['*']);
+        $where = new Where();
+        $where->equalTo('isActive', PricingConst::ACTIVE);
+        if ($groupCode !== '') {
+            $where->equalTo('groupCode', $groupCode);
+        }
+        $select->where($where);
+        $select->limit($limit);
+
+        return $this->models($sql, $select);
+    }
+
     public function findById(int $id): ?PricingModel
     {
         $sql    = new Sql($this->db);

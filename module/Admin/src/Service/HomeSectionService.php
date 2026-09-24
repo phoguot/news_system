@@ -24,6 +24,7 @@ use Application\Constant\ContentConst;
 use Application\Factory\AppServiceFactory;
 use Application\Service\DbService;
 use Application\Service\PageCacheService;
+use Frontend\Model\Pricing\PricingConst;
 use Frontend\Model\Service\ServiceMapper;
 
 /**
@@ -625,6 +626,7 @@ class HomeSectionService extends AppServiceFactory
             HomeSectionConst::TYPE_TEAM           => ['mode' => 'mode', 'limit' => 'limit'],
             HomeSectionConst::TYPE_CONTACT_CTA    => ['button_text' => 'text', 'button_url' => 'url'],
             HomeSectionConst::TYPE_PROCESS        => ['steps' => 'steps'],
+            HomeSectionConst::TYPE_PRICING        => ['group_code' => 'pricing_group', 'limit' => 'pricing_limit'],
             default => [],
         };
         $config ??= [];
@@ -683,8 +685,25 @@ class HomeSectionService extends AppServiceFactory
                 ? null : HomeSectionConst::ERROR_BUTTON_URL,
             'steps'    => is_array($value) && array_is_list($value) && $this->isValidProcessSteps($value)
                 ? null : HomeSectionConst::ERROR_PROCESS_STEPS,
+            'pricing_group' => is_string($value) && ($this->isValidPricingGroup($value))
+                ? null : HomeSectionConst::ERROR_PRICING_GROUP,
+            'pricing_limit' => is_int($value)
+                && $value >= HomeSectionConst::PRICING_LIMIT_MIN
+                && $value <= HomeSectionConst::PRICING_LIMIT_MAX
+                ? null : HomeSectionConst::ERROR_PRICING_LIMIT,
             default => null,
         };
+    }
+
+    /** Kiểm tra group_code hợp lệ cho section pricing */
+    private function isValidPricingGroup(string $value): bool
+    {
+        if ($value === '') {
+            return true;
+        }
+        $groups = [PricingConst::GROUP_GENERAL, PricingConst::GROUP_HOSPITAL, PricingConst::GROUP_HOME];
+
+        return in_array($value, $groups, true);
     }
 
     /** @param list<mixed> $steps */

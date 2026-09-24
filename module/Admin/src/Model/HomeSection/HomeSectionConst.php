@@ -22,6 +22,7 @@ final class HomeSectionConst
     public const TYPE_TEAM           = 6;
     public const TYPE_CONTACT_CTA    = 7;
     public const TYPE_PROCESS        = 8;
+    public const TYPE_PRICING        = 9;
 
     /** @var array<int, string> type => nhãn hiển thị */
     public const TYPE_LABELS = [
@@ -33,6 +34,7 @@ final class HomeSectionConst
         self::TYPE_TEAM           => 'Đội ngũ',
         self::TYPE_CONTACT_CTA    => 'CTA liên hệ',
         self::TYPE_PROCESS        => 'Quy trình',
+        self::TYPE_PRICING        => 'Bảng giá',
     ];
 
     /** Giá trị `mode` trong config các section danh sách. */
@@ -48,6 +50,11 @@ final class HomeSectionConst
     public const LIMIT_MAX  = 50;
     public const INTERVAL_MS_MIN = 1000;
     public const INTERVAL_MS_MAX = 60000;
+
+    /** Giới hạn số mục hiển thị bảng giá trên trang chủ */
+    public const PRICING_LIMIT_MIN = 3;
+    public const PRICING_LIMIT_MAX = 20;
+    public const PRICING_DEFAULT_LIMIT = 10;
 
     /** Độ dài tối đa theo VARCHAR trong schema.sql. */
     public const MAX_LENGTH_TITLE    = 255;
@@ -95,4 +102,6 @@ final class HomeSectionConst
     public const ERROR_BUTTON_URL = 'button_url phải bắt đầu bằng http://, https:// hoặc /.';
     public const ERROR_UNKNOWN_KEY = 'Config chứa khóa không hợp lệ với loại section.';
     public const ERROR_PROCESS_STEPS = 'Quy trình cần mảng steps gồm 3-6 bước, mỗi bước có title (2-80 ký tự).';
+    public const ERROR_PRICING_GROUP = 'group_code phải là general, hospital, home hoặc để trống (tất cả).';
+    public const ERROR_PRICING_LIMIT = 'limit phải là số nguyên từ 3 đến 20.';
 }

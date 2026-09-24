@@ -159,6 +159,28 @@ foreach ($sections as $section) {
         $blocks[] = '<section class="section"><div class="container">'
             . '<div class="sec-head">' . $head . '</div>'
             . '<div class="team-grid">' . $cards . '</div></div></section>';
+        continue;
+    }
+
+    if ($kind === 'pricing') {
+        foreach ($items as $i => $item) {
+            $num = (int) ($i + 1);
+            $price = $item['price'] === null
+                ? 'Liên hệ'
+                : number_format((int) $item['price'], 0, ',', '.') . ' K';
+            $cards .= '<a class="pricing-card" href="' . $e($item['href'] ?? '#') . '">'
+                . '<div class="pricing-card-hd">'
+                . '<span class="pricing-num">' . $e($num) . '</span>'
+                . '<span class="pricing-name">' . $e($item['title'] ?? '') . '</span>'
+                . '</div>'
+                . '<div class="pricing-card-bd">'
+                . '<span class="pricing-amount">' . $e($price) . '</span>'
+                . '</div></a>';
+        }
+        $blocks[] = '<section class="section section-alt"><div class="container">'
+            . '<div class="sec-head">' . $head . '</div>'
+            . '<div class="pricing-grid">' . $cards . '</div></div></section>';
+        continue;
     }
 }
 

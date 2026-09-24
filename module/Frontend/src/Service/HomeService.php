@@ -21,6 +21,8 @@ use Application\Factory\AppServiceFactory;
 use Application\Service\PageCacheService;
 use DateTimeImmutable;
 use DateTimeZone;
+use Frontend\Model\Pricing\PricingMapper;
+use Frontend\Model\Pricing\PricingModel;
 use Frontend\Model\Service\ServiceMapper;
 use Frontend\Model\Service\ServiceModel;
 
@@ -119,6 +121,12 @@ class HomeService extends AppServiceFactory
         return $this->getContainerEntry(MediaMapper::class);
     }
 
+    private function pricing(): PricingMapper
+    {
+        /** @var PricingMapper */
+        return $this->getContainerEntry(PricingMapper::class);
+    }
+
     private function pageCache(): ?PageCacheService
     {
         $entry = $this->getContainerEntry(PageCacheService::class);
@@ -178,6 +186,7 @@ class HomeService extends AppServiceFactory
             HomeSectionConst::TYPE_TEAM           => $this->teamBlock($section, $config, $mediaIds),
             HomeSectionConst::TYPE_CONTACT_CTA    => $this->ctaBlock($section, $config),
             HomeSectionConst::TYPE_PROCESS        => $this->processBlock($section, $config),
+            HomeSectionConst::TYPE_PRICING        => $this->pricingBlock($section, $config),
             default                              => null,
         };
     }
@@ -592,6 +601,49 @@ class HomeService extends AppServiceFactory
                 $mediaIds[] = $id;
             }
         }
+    }
+
+    /**
+     * @param array<string, mixed> $config
+     *
+     * @return array<string, mixed>|null
+     */
+    private function pricingBlock(HomeSectionModel $section, array $config): ?array
+    {
+        $groupCode = isset($config['group_code']) && is_string($config['group_code'])
+            ? trim($config['group_code'])
+            : '';
+        $limit = (int) ($config['limit'] ?? HomeSectionConst::PRICING_DEFAULT_LIMIT);
+        $limit = max(HomeSectionConst::PRICING_LIMIT_MIN, min(HomeSectionConst::PRICING_LIMIT_MAX, $limit));
+
+        // Lấy mục theo nhóm (nếu có) hoặc tất cả
+        $rows = $this->pricing()->listActiveForHome($groupCode, $limit);
+
+        if ($rows === []) {
+            return null;
+        }
+
+        $items = [];
+        foreach ($rows as $item) {
+            $items[] = [
+                'kind'     => 'pricing',
+                'title'    => $item->name,
+                'href'     => $item->slug !== '' ? '/bang-gia?nhom=' . $item->groupCode : '/bang-gia',
+                'price'    => $item->price,
+                'priceText' => $item->price !== null
+                    ? number_format($item->price, 0, ',', '.') . ' đ'
+                    : 'Liên hệ',
+                'unit'     => $item->unit ?? '',
+                'note'     => $item->note ?? '',
+            ];
+        }
+
+        return [
+            'kind'       => 'pricing',
+            'title'      => $section->title ?? '',
+            'subtitle'   => $section->subtitle ?? '',
+            'items'      => $items,
+        ];
     }
 
     /**
