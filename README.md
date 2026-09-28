@@ -52,7 +52,7 @@ module/
   Frontend/             Home, Post, Category, Tag, Search, Service, Team, Contact, Sitemap
   Admin/                Auth, Dashboard, Post, Category, Tag, Service, Banner, HomeSection, Team, Contact, Media, Setting, Account, Api
 public/
-  assets/css/style.css  CSS Vạn Lang (từ assets/ gốc)
+  assets/css/style.css  CSS Văn Lang (từ assets/ gốc)
   uploads/              Upload media (theo năm/tháng, variants thumb/medium/large)
 bin/create-admin.php    CLI tạo admin duy nhất (1 dòng trong users)
 ```

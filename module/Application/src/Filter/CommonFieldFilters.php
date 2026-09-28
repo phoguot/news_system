@@ -24,37 +24,37 @@ use Laminas\Validator\NotEmpty;
  */
 final class CommonFieldFilters
 {
-    public const string TYPE_TEXT = 'text';
+    public const TYPE_TEXT = 'text';
 
-    public const string TYPE_INT = 'int';
+    public const TYPE_INT = 'int';
 
-    public const string TYPE_FLOAT = 'float';
+    public const TYPE_FLOAT = 'float';
 
-    public const string TYPE_ENUM = 'enum';
+    public const TYPE_ENUM = 'enum';
 
     /** Meta Title (SEO): tối đa ~70 ký tự */
-    public const int LEN_META_TITLE = 70;
+    public const LEN_META_TITLE = 70;
 
     /** Meta Description (SEO): tối đa ~160 ký tự */
-    public const int LEN_META_DESCRIPTION = 160;
+    public const LEN_META_DESCRIPTION = 160;
 
     /** Meta Keywords (SEO): tối đa ~320 ký tự */
-    public const int LEN_META_KEYWORDS = 320;
+    public const LEN_META_KEYWORDS = 320;
 
     /** Title ngắn / tên chương trình: tối đa 120 ký tự */
-    public const int LEN_TITLE = 120;
+    public const LEN_TITLE = 120;
 
     /** Description ngắn / ghi chú: tối đa 255 ký tự */
-    public const int LEN_DESCRIPTION = 255;
+    public const LEN_DESCRIPTION = 255;
 
     /** Mã code / slug ngắn: tối đa 50 ký tự */
-    public const int LEN_CODE = 50;
+    public const LEN_CODE = 50;
 
     /** Nội dung dài (content/body) tối đa */
-    public const int LEN_CONTENT = 5000;
+    public const LEN_CONTENT = 5000;
 
     /** Giới hạn mặc định cho chuỗi JSON raw: 2MB (tính theo byte) */
-    public const int MAX_JSON_BYTES = 2097152;
+    public const MAX_JSON_BYTES = 2097152;
 
     /**
      * Tạo cấu hình Filter + Validator cho field dạng text/meta/title/description.

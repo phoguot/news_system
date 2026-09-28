@@ -85,7 +85,7 @@ final class PasswordResetService extends AppServiceFactory
         $baseUrl = rtrim($baseUrl, '/');
         $resetPath = '/admin/reset-password?token=' . urlencode($token);
         $resetUrl = $baseUrl !== '' ? $baseUrl . $resetPath : $resetPath;
-        $subject = '[Vạn Lang] Đặt lại mật khẩu';
+        $subject = '[Văn Lang] Đặt lại mật khẩu';
         $body = "Bạn đã yêu cầu đặt lại mật khẩu.\n\n"
             . "Liên kết đặt lại (hết hạn sau 60 phút, chỉ dùng 1 lần):\n"
             . $resetUrl . "\n\n"

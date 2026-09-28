@@ -115,6 +115,16 @@ return [
                             ],
                         ],
                     ],
+                    'reviews' => [
+                        'type'    => Segment::class,
+                        'options' => [
+                            'route'    => '/reviews[/:action[/:id]]',
+                            'defaults' => [
+                                'controller' => Controller\ReviewController::class,
+                                'action'     => 'index',
+                            ],
+                        ],
+                    ],
                     'team' => [
                         'type'    => Segment::class,
                         'options' => [
@@ -311,9 +321,13 @@ return [
                 );
             },
             Model\Media\MediaMapper::class => static function (ContainerInterface $c): Model\Media\MediaMapper {
+
                 return new Model\Media\MediaMapper($c->get(\Application\Service\DbService::class)->getAdapter());
             },
+            Model\Review\ReviewMapper::class => static function (ContainerInterface $c): Model\Review\ReviewMapper {
 
+                return new Model\Review\ReviewMapper($c->get(\Application\Service\DbService::class)->getAdapter());
+            },
             // ---- Service ----
             Service\PasswordResetService::class => AppInvokableFactory::class,
             Service\CategoryService::class => AppInvokableFactory::class,
@@ -341,6 +355,7 @@ return [
             Service\DashboardService::class => AppInvokableFactory::class,
             Service\PricingService::class => AppInvokableFactory::class,
             Service\MenuService::class => AppInvokableFactory::class,
+            Service\ReviewService::class => AppInvokableFactory::class,
         ],
     ],
     'controllers' => [
@@ -428,7 +443,12 @@ return [
                 return new Controller\PricingController($c->get(Service\PricingService::class));
             },
             Controller\MenuController::class => static function (ContainerInterface $c): Controller\MenuController {
+
                 return new Controller\MenuController($c->get(Service\MenuService::class));
+            },
+            Controller\ReviewController::class => static function (ContainerInterface $c): Controller\ReviewController {
+
+                return new Controller\ReviewController($c->get(Service\ReviewService::class));
             },
             Controller\DashboardController::class => static function (
                 ContainerInterface $c

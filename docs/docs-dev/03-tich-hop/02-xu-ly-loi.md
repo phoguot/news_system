@@ -12,7 +12,7 @@
 | Mất kết nối DB (CLI) | `bin/create-admin.php` | `fwrite(STDERR, "DB connect failed: ...")` + `exit(1)` | Exception được `catch (Throwable)` chủ đích ở CLI |
 | Mất kết nối DB (web) | PDO/Laminas\Db | Trang `error/index` (500) | Chưa có retry/fallback riêng |
 
-**Lưu ý khi dùng 2 trang lỗi này:** chúng **nguyên văn từ skeleton Laminas** — text tiếng Anh ("A 404 error occurred", "Additional information"). Từ 14/09/2026 (`view_manager.layout => 'layout/frontend'` trong config Frontend) chúng đã render **trong layout frontend** (header/footer Vạn Lang), không còn layout skeleton. Việc còn lại: dịch sang tiếng Việt (checklist [`../01-quy-chuan/04-checklist-review.md`](../01-quy-chuan/04-checklist-review.md)).
+**Lưu ý khi dùng 2 trang lỗi này:** chúng **nguyên văn từ skeleton Laminas** — text tiếng Anh ("A 404 error occurred", "Additional information"). Từ 14/09/2026 (`view_manager.layout => 'layout/frontend'` trong config Frontend) chúng đã render **trong layout frontend** (header/footer Văn Lang), không còn layout skeleton. Việc còn lại: dịch sang tiếng Việt (checklist [`../01-quy-chuan/04-checklist-review.md`](../01-quy-chuan/04-checklist-review.md)).
 
 **Ví dụ lỗi đo được thực tế (12/09/2026, `php -S`, dev mode đang bật):**
 

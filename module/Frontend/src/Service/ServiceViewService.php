@@ -7,12 +7,14 @@ namespace Frontend\Service;
 use Admin\Model\Media\MediaMapper;
 use Application\Factory\AppServiceFactory;
 use Frontend\Constant\FrontendConst;
+use Frontend\Model\Service\ServiceConst;
 use Frontend\Model\Service\ServiceMapper;
 use Frontend\Model\Service\ServiceModel;
 
 /**
  * Tầng đọc dịch vụ công khai (FR-08, docs §2.1 / §3.5):
- * - paginate(page): lưới phẳng phân trang isActive=1, sortOrder ASC, id ASC, 12/trang, kẹp ?page=.
+ * - paginate(parentSlug, page): chỉ phân trang dịch vụ CON active thuộc cha
+ *   active; cha là bộ lọc, không render như card đồng cấp.
  * - list(): wrapper toàn bộ active (giữ cho grouped fallback + home-section).
  * - detail(slug): chi tiết dịch vụ active theo slug; lạ hoặc tắt → null (404).
  *
@@ -75,7 +77,18 @@ class ServiceViewService extends AppServiceFactory
         if ($out === []) {
             $flat = $this->list();
             if ($flat['services'] !== []) {
-                $out[] = ['parent' => ['name' => 'Dịch vụ', 'slug' => '', 'href' => '', 'shortDescription' => '', 'content' => '', 'icon' => null, 'image' => null], 'children' => $flat['services']];
+                $out[] = [
+                    'parent' => [
+                        'name' => 'Dịch vụ',
+                        'slug' => '',
+                        'href' => '',
+                        'shortDescription' => '',
+                        'content' => '',
+                        'icon' => null,
+                        'image' => null,
+                    ],
+                    'children' => $flat['services'],
+                ];
             }
         }
 
@@ -83,34 +96,57 @@ class ServiceViewService extends AppServiceFactory
     }
 
     /**
-     * Payload phân trang cho /dich-vu (FR-08 — lưới phẳng, 12/trang, kẹp ?page=).
+     * Payload phân trang cho /dich-vu: chỉ card dịch vụ con; dịch vụ cha active
+     * là bộ lọc. Slug lọc sai/tắt → bỏ lọc như trang /tin-tuc.
      *
      * @return array{
      *     services: list<array<string, mixed>>,
      *     total: int,
      *     page: int,
-     *     pages: int
+     *     pages: int,
+     *     parentFilters: list<array{id: int, name: string, slug: string}>,
+     *     selectedParent: ?array{id: int, name: string, slug: string}
      * }
      */
-    public function paginate(int $requestedPage): array
+    public function paginate(?string $parentSlug, int $requestedPage): array
     {
-        $total = $this->services()->countActive();
+        $parents       = $this->services()->listActiveParents();
+        $parentFilters = [];
+        $selected      = null;
+        $normalized    = trim((string) $parentSlug);
+        foreach ($parents as $parent) {
+            $filter = [
+                'id'   => $parent->id,
+                'name' => $parent->name,
+                'slug' => $parent->slug,
+            ];
+            $parentFilters[] = $filter;
+            if ($normalized !== '' && $parent->slug === $normalized) {
+                $selected = $filter;
+            }
+        }
+
+        $parentIds = $selected !== null
+            ? [(int) $selected['id']]
+            : array_map(static fn (ServiceModel $parent): int => $parent->id, $parents);
+        $total = $this->services()->countActiveChildren($parentIds);
         $pages = (int) ceil($total / FrontendConst::SERVICE_PAGE_SIZE);
         $page  = min(max(1, $requestedPage), max(1, $pages));
-
         $models = $total === 0
             ? []
-            : $this->services()->listActivePage(
+            : $this->services()->listActiveChildrenPage(
+                $parentIds,
                 FrontendConst::SERVICE_PAGE_SIZE,
                 ($page - 1) * FrontendConst::SERVICE_PAGE_SIZE
             );
-
         if ($models === []) {
             return [
                 'services' => [],
                 'total'    => $total,
                 'page'     => $page,
                 'pages'    => $pages,
+                'parentFilters' => $parentFilters,
+                'selectedParent' => $selected,
             ];
         }
 
@@ -149,6 +185,8 @@ class ServiceViewService extends AppServiceFactory
             'total'    => $total,
             'page'     => $page,
             'pages'    => $pages,
+            'parentFilters' => $parentFilters,
+            'selectedParent' => $selected,
         ];
     }
 
@@ -166,8 +204,8 @@ class ServiceViewService extends AppServiceFactory
         $models = $this->services()->listActiveAll();
         if ($models === []) {
             return [
-                'services' => [],
-                'total'    => 0,
+            'services' => [],
+            'total'    => 0,
             ];
         }
 
@@ -182,8 +220,8 @@ class ServiceViewService extends AppServiceFactory
         }
 
         $mediaMap = $mediaIds === []
-            ? []
-            : $this->media()->mapCardsByIds(array_values(array_unique($mediaIds)));
+        ? []
+        : $this->media()->mapCardsByIds(array_values(array_unique($mediaIds)));
 
         $items = [];
         foreach ($models as $service) {
@@ -191,19 +229,19 @@ class ServiceViewService extends AppServiceFactory
             $image = $service->imageMediaId !== null ? ($mediaMap[$service->imageMediaId] ?? null) : null;
 
             $items[] = [
-                'id'               => $service->id,
-                'name'             => $service->name,
-                'slug'             => $service->slug,
-                'href'             => '/dich-vu/' . $service->slug,
-                'shortDescription' => $service->shortDescription ?? '',
-                'icon'             => $icon,
-                'image'            => $image,
+            'id'               => $service->id,
+            'name'             => $service->name,
+            'slug'             => $service->slug,
+            'href'             => '/dich-vu/' . $service->slug,
+            'shortDescription' => $service->shortDescription ?? '',
+            'icon'             => $icon,
+            'image'            => $image,
             ];
         }
 
         return [
-            'services' => $items,
-            'total'    => count($items),
+        'services' => $items,
+        'total'    => count($items),
         ];
     }
 
@@ -237,6 +275,12 @@ class ServiceViewService extends AppServiceFactory
             return null;
         }
 
+        if ($service->parentId !== null) {
+            $parent = $this->services()->findById($service->parentId);
+            if ($parent === null || $parent->isActive !== ServiceConst::ACTIVE) {
+                return null;
+            }
+        }
         $mediaIds = [];
         if ($service->iconMediaId !== null) {
             $mediaIds[] = $service->iconMediaId;
@@ -246,32 +290,32 @@ class ServiceViewService extends AppServiceFactory
         }
 
         $mediaMap = $mediaIds === []
-            ? []
-            : $this->media()->mapCardsByIds(array_values(array_unique($mediaIds)));
+        ? []
+        : $this->media()->mapCardsByIds(array_values(array_unique($mediaIds)));
 
         $icon  = $service->iconMediaId !== null ? ($mediaMap[$service->iconMediaId] ?? null) : null;
         $image = $service->imageMediaId !== null ? ($mediaMap[$service->imageMediaId] ?? null) : null;
 
         $metaTitle = $service->metaTitle !== null && $service->metaTitle !== ''
-            ? $service->metaTitle
-            : $service->name;
+        ? $service->metaTitle
+        : $service->name;
 
         $metaDescription = $service->metaDescription !== null && $service->metaDescription !== ''
-            ? $service->metaDescription
-            : ($service->shortDescription ?? '');
+        ? $service->metaDescription
+        : ($service->shortDescription ?? '');
 
         return [
-            'service' => [
-                'id'               => $service->id,
-                'name'             => $service->name,
-                'slug'             => $service->slug,
-                'shortDescription' => $service->shortDescription ?? '',
-                'content'          => $service->content ?? '',
-                'icon'             => $icon,
-                'image'            => $image,
-                'metaTitle'        => $metaTitle,
-                'metaDescription'  => $metaDescription,
-            ],
+        'service' => [
+            'id'               => $service->id,
+            'name'             => $service->name,
+            'slug'             => $service->slug,
+            'shortDescription' => $service->shortDescription ?? '',
+            'content'          => $service->content ?? '',
+            'icon'             => $icon,
+            'image'            => $image,
+            'metaTitle'        => $metaTitle,
+            'metaDescription'  => $metaDescription,
+        ],
         ];
     }
 

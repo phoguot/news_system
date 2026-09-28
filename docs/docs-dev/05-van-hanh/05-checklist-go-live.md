@@ -87,7 +87,7 @@
 - [ ] `/sitemap.xml` trên môi trường thật: liệt kê bài đã xuất bản (`status=1 AND publishedAt <= NOW()`), danh mục, dịch vụ; **không** có nháp/archived/bài hẹn giờ tương lai/trang `tim-kiem`. *(FR-11 đã code 13/09 batch 18 — smoke dev khớp DB 29 URL; riêng `composer serve` vẫn 404 đuôi `.xml` ở tầng web server → mục này kiểm sau rewrite nginx/Apache)*
 - [ ] Sitemap cache đã có cơ chế: `sitemap-v1` TTL 60s + Admin forget ngay khi sửa bài/danh mục/dịch vụ (batch 18) — xác nhận prod `data/cache/page` ghi được và key hết hạn đúng; **không** cần tắt config cache.
 - [ ] Có `public/robots.txt` (route này **chưa tồn tại** — docs §6.1 liệt kê, thực tế `curl /robots.txt` → 404): trỏ `Sitemap: https://<host>/sitemap.xml`, `Disallow: /tim-kiem`, `Disallow: /admin`.
-- [ ] `<title>` trang không còn là **"Laminas MVC Skeleton"** — *(14/09/2026: đã bật `view_manager.layout => 'layout/frontend'` trong config Frontend, trang công khai render bằng `layout/frontend.phtml`)*. Còn lại: `headTitle` đang hard-code "Vạn Lang" trong layout, chưa đọc theo `settings.site_name` — chốt trước go-live.
+- [ ] `<title>` trang không còn là **"Laminas MVC Skeleton"** — *(14/09/2026: đã bật `view_manager.layout => 'layout/frontend'` trong config Frontend, trang công khai render bằng `layout/frontend.phtml`)*. Còn lại: `headTitle` đang hard-code "Văn Lang" trong layout, chưa đọc theo `settings.site_name` — chốt trước go-live.
 - [ ] `<title>` + meta description + canonical cho trang chủ/bài/danh mục/dịch vụ; OG & Twitter Card dùng `bannerMediaId` làm `og:image`; JSON-LD `NewsArticle`/`Organization`/`BreadcrumbList` (docs §7.1).
 - [ ] Trang `tim-kiem` và trang preview gắn `noindex`.
 - [ ] Google Fonts tự host **hoặc** chấp nhận phụ thuộc CDN; đo LCP mobile < 2,5s (docs §7.2).

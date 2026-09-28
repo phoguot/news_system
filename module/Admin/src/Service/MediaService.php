@@ -16,6 +16,7 @@ use Admin\Model\Media\MediaConst;
 use Admin\Model\Media\MediaMapper;
 use Admin\Model\Media\MediaModel;
 use Admin\Model\Post\PostMapper;
+use Admin\Model\Review\ReviewMapper;
 use Admin\Model\TeamMember\TeamMemberMapper;
 use Admin\Model\User\UserMapper;
 use Application\Factory\AppServiceFactory;
@@ -81,6 +82,11 @@ class MediaService extends AppServiceFactory
         return $this->getContainerEntry(BannerMapper::class);
     }
 
+    private function reviewsMapper(): ?ReviewMapper
+    {
+        $entry = $this->getContainerEntry(ReviewMapper::class);
+        return $entry instanceof ReviewMapper ? $entry : null;
+    }
     private function teamMembersMapper(): TeamMemberMapper
     {
         /** @var TeamMemberMapper */
@@ -277,7 +283,7 @@ class MediaService extends AppServiceFactory
      * Mọi nơi đang tham chiếu một media (docs §5.14) — trang /admin/media/usages.
      *
      * @return array{posts: list<int>, categories: list<int>, banners: list<int>,
-     *               services: list<int>, teamMembers: list<int>, users: int, settings: list<string>}
+     *               services: list<int>, teamMembers: list<int>, reviews: list<int>, users: int, settings: list<string>}
      */
     public function usages(int $mediaId): array
     {
@@ -304,7 +310,7 @@ class MediaService extends AppServiceFactory
 
     /**
      * @return array{posts: list<int>, categories: list<int>, banners: list<int>,
-     *               services: list<int>, teamMembers: list<int>, users: int, settings: list<string>}
+     *               services: list<int>, teamMembers: list<int>, reviews: list<int>, users: int, settings: list<string>}
      */
     private function collectUsages(MediaModel $model): array
     {
@@ -320,6 +326,7 @@ class MediaService extends AppServiceFactory
             'banners'     => $this->bannersMapper()->findIdsByMedia($model->id),
             'services'    => $this->servicesMapper()->findIdsByMedia($model->id),
             'teamMembers' => $this->teamMembersMapper()->findIdsByMedia($model->id),
+            'reviews'     => $this->reviewsMapper()?->findIdsByMedia($model->id) ?? [],
             'users'       => $this->usersMapper()->countByMedia($model->id),
             'settings'    => $this->settingsMapper()->findKeysByMedia($model->id),
         ];
@@ -327,7 +334,7 @@ class MediaService extends AppServiceFactory
 
     /**
      * @param array{posts: list<int>, categories: list<int>, banners: list<int>,
-     *              services: list<int>, teamMembers: list<int>, users: int, settings: list<string>} $usages
+     *              services: list<int>, teamMembers: list<int>, reviews: list<int>, users: int, settings: list<string>} $usages
      */
     private function hasUsages(array $usages): bool
     {
@@ -336,6 +343,7 @@ class MediaService extends AppServiceFactory
             || $usages['banners'] !== []
             || $usages['services'] !== []
             || $usages['teamMembers'] !== []
+            || $usages['reviews'] !== []
             || $usages['users'] > 0
             || $usages['settings'] !== [];
     }
@@ -343,6 +351,7 @@ class MediaService extends AppServiceFactory
     /**
      * Chuyển `getFiles()` (dạng cột: name[]/tmp_name[]/…) thành danh sách mục
      * upload còn hiệu lực; bỏ mục lỗi PHP upload hoặc tên/tmp rỗng.
+     * Hỗ trợ cả mảng thô $_FILES và mảng chuẩn hoá của Laminas.
      *
      * @param array<array-key, mixed> $files
      *
@@ -352,33 +361,61 @@ class MediaService extends AppServiceFactory
     {
         /** @var mixed $set */
         $set = $files['files'] ?? null;
-        if (! is_array($set) || ! isset($set['name'])) {
+        if (! is_array($set)) {
             return [];
         }
 
-        $names    = (array) $set['name'];
-        $tmpNames = (array) ($set['tmp_name'] ?? []);
-        $errors   = (array) ($set['error'] ?? []);
-        $sizes    = (array) ($set['size'] ?? []);
-
         $items = [];
-        foreach (array_keys($names) as $offset) {
-            $name    = $names[$offset] ?? null;
-            $tmpName = $tmpNames[$offset] ?? null;
-            $error   = (int) ($errors[$offset] ?? UPLOAD_ERR_NO_FILE);
-            if (! is_string($name) || $name === '' || ! is_string($tmpName) || $tmpName === '') {
-                continue;
-            }
 
-            if ($error !== UPLOAD_ERR_OK) {
-                continue;
-            }
+        if (isset($set['name']) && is_array($set['name'])) {
+            $names    = (array) $set['name'];
+            $tmpNames = (array) ($set['tmp_name'] ?? []);
+            $errors   = (array) ($set['error'] ?? []);
+            $sizes    = (array) ($set['size'] ?? []);
 
-            $items[] = [
-                'name'     => basename($name),
-                'tmp_name' => $tmpName,
-                'size'     => (int) ($sizes[$offset] ?? 0),
-            ];
+            foreach (array_keys($names) as $offset) {
+                $name    = $names[$offset] ?? null;
+                $tmpName = $tmpNames[$offset] ?? null;
+                $error   = (int) ($errors[$offset] ?? UPLOAD_ERR_NO_FILE);
+                if (! is_string($name) || $name === '' || ! is_string($tmpName) || $tmpName === '') {
+                    continue;
+                }
+
+                if ($error !== UPLOAD_ERR_OK) {
+                    continue;
+                }
+
+                $items[] = [
+                    'name'     => basename($name),
+                    'tmp_name' => $tmpName,
+                    'size'     => (int) ($sizes[$offset] ?? 0),
+                ];
+            }
+        } else {
+            foreach ($set as $fileInfo) {
+                if (! is_array($fileInfo)) {
+                    continue;
+                }
+
+                $name    = $fileInfo['name'] ?? null;
+                $tmpName = $fileInfo['tmp_name'] ?? null;
+                $error   = (int) ($fileInfo['error'] ?? UPLOAD_ERR_NO_FILE);
+                $size    = (int) ($fileInfo['size'] ?? 0);
+
+                if (! is_string($name) || $name === '' || ! is_string($tmpName) || $tmpName === '') {
+                    continue;
+                }
+
+                if ($error !== UPLOAD_ERR_OK) {
+                    continue;
+                }
+
+                $items[] = [
+                    'name'     => basename($name),
+                    'tmp_name' => $tmpName,
+                    'size'     => $size,
+                ];
+            }
         }
 
         return $items;

@@ -162,6 +162,18 @@ final class ServiceServiceTest extends TestCase
         self::assertSame(ServiceConst::FLAG_DELETE_BLOCKED, $flag);
     }
 
+    public function testDeleteFormBlockedWhenServiceHasChildren(): void
+    {
+        $this->services->method('findById')->willReturn(ServiceModel::fromRow(['id' => 4, 'name' => 'A']));
+        $this->services->method('hasChildren')->with(4)->willReturn(true);
+        $this->contacts->expects(self::once())->method('countByServiceId')->with(4)->willReturn(0);
+        $this->services->expects(self::never())->method('delete');
+
+        $flag = $this->service->deleteForm(['id' => '4', 'csrf' => $this->service->deleteFormCsrfHash()]);
+
+        self::assertSame(ServiceConst::FLAG_DELETE_BLOCKED, $flag);
+    }
+
     public function testDeleteFormMissingRowReturnsNotfound(): void
     {
         $this->services->method('findById')->willReturn(null);
@@ -170,6 +182,55 @@ final class ServiceServiceTest extends TestCase
         $flag = $this->service->deleteForm(['id' => '99', 'csrf' => $this->service->deleteFormCsrfHash()]);
 
         self::assertSame('notfound', $flag);
+    }
+
+    public function testListOrderedPlacesChildrenImmediatelyAfterTheirParent(): void
+    {
+        $this->services->method('listAll')->willReturn([
+            ServiceModel::fromRow(['id' => 2, 'parentId' => 1, 'name' => 'Con A']),
+            ServiceModel::fromRow(['id' => 1, 'parentId' => null, 'name' => 'Cha']),
+            ServiceModel::fromRow(['id' => 5, 'parentId' => 99, 'name' => 'Mồ côi']),
+            ServiceModel::fromRow(['id' => 3, 'parentId' => 1, 'name' => 'Con B']),
+        ]);
+
+        $ordered = $this->service->listOrdered();
+
+        self::assertSame([1, 2, 3, 5], array_map(static fn (array $item): int => $item['service']->id, $ordered));
+        self::assertSame([0, 1, 1, 1], array_column($ordered, 'depth'));
+    }
+
+    public function testCreateRejectsChildServiceAsParent(): void
+    {
+        $this->services->method('findById')->with(7)->willReturn(ServiceModel::fromRow([
+            'id' => 7,
+            'parentId' => 3,
+        ]));
+
+        try {
+            $this->service->create(['name' => 'Cấp ba', 'parentId' => 7]);
+            self::fail('Expected ValidationException');
+        } catch (ValidationException $e) {
+            self::assertSame(['parentId' => ServiceConst::ERROR_PARENT_DEPTH], $e->getErrors());
+        }
+    }
+
+    public function testUpdateRejectsMovingParentThatStillHasChildren(): void
+    {
+        $this->services->method('findById')->willReturnCallback(
+            static fn (int $id): ?ServiceModel => ServiceModel::fromRow([
+                'id' => $id,
+                'parentId' => null,
+            ])
+        );
+        $this->services->method('hasChildren')->with(8)->willReturn(true);
+        $this->services->expects(self::never())->method('update');
+
+        try {
+            $this->service->update(8, ['name' => 'Cha', 'parentId' => 9]);
+            self::fail('Expected ValidationException');
+        } catch (ValidationException $e) {
+            self::assertSame(['parentId' => ServiceConst::ERROR_PARENT_HAS_CHILD], $e->getErrors());
+        }
     }
 
     /** FR-32/FR-11: create/update/delete dịch vụ đều forget 'home-v1' + 'sitemap-v1'. */

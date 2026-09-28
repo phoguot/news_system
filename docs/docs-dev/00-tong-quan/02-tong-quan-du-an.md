@@ -1,6 +1,6 @@
 # Tổng quan dự án
 
-Website tin tức doanh nghiệp **Vạn Lang** trên Laminas MVC: một CMS nhỏ để một quản trị viên duy nhất tự quản toàn bộ nội dung (bài viết, danh mục, tag, dịch vụ, banner, bố cục trang chủ, đội ngũ, liên hệ, media, cài đặt) mà không cần can thiệp code. Chi tiết nghiệp vụ & CSDL xem [phân tích hệ thống](../../phan-tich-he-thong-website-tin-tuc.md) (v1.5).
+Website tin tức doanh nghiệp **Văn Lang** trên Laminas MVC: một CMS nhỏ để một quản trị viên duy nhất tự quản toàn bộ nội dung (bài viết, danh mục, tag, dịch vụ, banner, bố cục trang chủ, đội ngũ, liên hệ, media, cài đặt) mà không cần can thiệp code. Chi tiết nghiệp vụ & CSDL xem [phân tích hệ thống](../../phan-tich-he-thong-website-tin-tuc.md) (v1.5).
 
 ## Mục tiêu
 

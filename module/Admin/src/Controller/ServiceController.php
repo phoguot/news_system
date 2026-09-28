@@ -37,7 +37,7 @@ class ServiceController extends AbstractActionController
     public function indexAction()
     {
         return new ViewModel([
-            'items'           => $this->services->listAll(),
+            'items'           => $this->services->listOrdered(),
             'flag'            => $this->queryFlag(),
             'csrfHash'        => $this->services->deleteFormCsrfHash(),
             'reorderCsrfHash' => $this->services->reorderCsrfHash(),

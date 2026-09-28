@@ -22,7 +22,7 @@ News/
 ├── data/
 │   ├── cache/                  Config cache + `page/` (TTL 60s) — runtime, gitignore
 │   └── schema/
-│       ├── schema.sql          ⚙️  18 bảng (không FK, không deletedAt) — 16 gốc + `pricing_items` (16/09) + `menu_items` (17/09)
+│       ├── schema.sql          ⚙️  19 bảng (không FK, không deletedAt) — thêm `reviews` (26/09)
 │       ├── seed.sql            settings (`map_address` là ô Google Map chung, `map_embed_url` legacy) + home_sections (+ type 8 process) + services cha-con + pricing mẫu + menu mặc định
 │       ├── migrate-20260916-ui-overhaul.sql  idempotent: services.parentId + pricing_items + map_address + seed 2 cha 7 con + 12 pricing + section process
 │       └── migrate-20260917-menu-items.sql   idempotent: menu_items + seed menu mặc định + ẩn fallback map_embed_url khỏi form Admin
@@ -30,7 +30,7 @@ News/
 ├── public/                    Document root
 │   ├── index.php               Điểm vào duy nhất
 │   ├── web.config              Rules IIS (uploads chặn thực thi)
-│   ├── assets/css/style.css    CSS Vạn Lang (bản dùng cho Laminas)
+│   ├── assets/css/style.css    CSS Văn Lang (bản dùng cho Laminas)
 │   ├── uploads/                Media theo YYYY/MM (runtime)
 │   └── css/ · js/ · img/       Asset thừa của Laminas skeleton
 ├── assets/                    Prototype tĩnh (đối chiếu, không phục vụ)
@@ -238,7 +238,7 @@ module/
 └── Admin/                     CMS (một quản trị viên) — module GHI mọi bảng qua Mapper của nó
     ├── config/module.config.php  ✏️  Route /admin/* + /api/admin/:resource + DI closure ✅
     ├── src/
-    │   ├── Controller/  Auth · Dashboard · Post · Category · Tag · Service · Banner · HomeSection
+    │   ├── Controller/  Auth · Dashboard · Post · Category · Tag · Service · Banner · HomeSection · Review
     │   │                · Team · Contact · Media · Setting · Account · Api   (KHÔNG có Factory/ ✅)
     │   │                   Post/Category/Tag/Api = code thật (CRUD + dispatcher API);
     │   │                   Service/Banner/Team/Contact/Setting/HomeSection/Media = code thật theo
@@ -296,6 +296,7 @@ module/
 │   │   ├── TeamMember/{TeamMemberMapper,TeamMemberConst,TeamMemberModel}.php ✅ (batch 12/09;
 │   │   │        batch 9 + listFeaturedActive/listActiveByIds cho khối team trang chủ)
 │   │   ├── HomeSection/{HomeSectionMapper,HomeSectionConst,HomeSectionModel}.php ✅ (batch 13/09;
+│   │   ├── Review/{ReviewMapper,ReviewConst,ReviewModel}.php ✅ (26/09 — bảng `reviews`, ảnh chụp bình luận)
 │   │   │        batch 9 + listActiveOrdered (isActive=1, sortOrder,id) cho HomeService)
 │   │   ├── Media/{MediaMapper,MediaConst,MediaModel}.php ✅ (batch 13/09;
 │   │   │        batch 9 + mapCardsByIds — 1 query IN, id => {path, alt, thumb=variants.thumb ?? path})
@@ -305,6 +306,7 @@ module/
     │   │                                                    deleteByIdAndSection/updateSortOrder — mục manual)
     │   ├── Filter/
     │   │   ├── Pricing/{PricingSaveFilter,PricingActionFilter}.php ✅ (16/09 extends AppInputFilter)
+    │   │   ├── Review/{ReviewSaveFilter,ReviewActionFilter}.php ✅ (26/09 extends AppInputFilter)
     │   │   ├── Auth/LoginFilter.php                         ✅ (từ Form/LoginForm)
     │   │   ├── Category/CategorySaveFilter.php · Tag/TagSaveFilter.php                       ✅
     │   │   ├── Post/{PostSaveFilter,PostListFilter}.php                                      ✅
@@ -353,11 +355,11 @@ Toàn bộ các dòng "code cũ" đã chuyển xong 12/09/2026 (trừ CLAUDE.md 
 | Đường dẫn | Vai trò | Route riêng? | Sở hữu bảng (Mapper)? |
 |---|---|:-:|---|
 | `module/Frontend/` | Hiển thị nội dung công khai | ✅ `/`, `/tin-tuc`… | `Setting`, `Service`, `Contact`, `Pricing`, `Menu` (mapper Frontend sở hữu; Admin ghi hộ CRUD qua container gộp với `PricingService`/`MenuService`). **Chiều ngược từ batch 9 (13/09):** `HomeService` đọc các mapper **Admin sở hữu** (`Post`/`Banner`/`TeamMember`/`HomeSection`/`HomeSectionItem`/`Category`/`Media`) qua container gộp — chỉ SELECT, không tạo mapper thứ hai |
-| `module/Admin/` | CRUD nội dung + API JSON | ✅ `/admin/*`, `/api/admin/*` | `User`, `Category`, `Tag`, `Post`, `PostTag`, `PostRevision`, `PostViewDaily`, `HomeSection`, `HomeSectionItem`, `Banner`, `TeamMember`, `Media` (+ mọi bảng khi triển khai tiếp) — `Contact`/`Service`/`Setting`/`Pricing`/`Menu` thuộc Frontend sở hữu Mapper; Admin dùng lại qua container gộp, KHÔNG tạo mapper thứ hai; 13/09 thêm các method quét usages `findIdsByMedia`/`findKeysByMedia`/`countByMedia` vào đúng mapper chủ bảng tham chiếu media — vẫn giữ luật 1 bảng 1 Mapper |
+| `module/Admin/` | CRUD nội dung + API JSON | ✅ `/admin/*`, `/api/admin/*` | `User`, `Category`, `Tag`, `Post`, `PostTag`, `PostRevision`, `PostViewDaily`, `HomeSection`, `HomeSectionItem`, `Banner`, `TeamMember`, `Media`, `Review` — `Contact`/`Service`/`Setting`/`Pricing`/`Menu` thuộc Frontend sở hữu Mapper; Admin dùng lại qua container gộp, KHÔNG tạo mapper thứ hai; method quét usages media nằm ở đúng mapper chủ bảng — vẫn giữ luật 1 bảng 1 Mapper |
 | `module/Core/` | — (đã gộp về Application từ 13/09/2026) | — | — |
 | `module/Application/` | Skeleton + dịch vụ dùng chung (từ 13/09 gộp Core) | (fallback) | — (không Model/, cấp `DbAdapter` qua `DbService`) |
 | `config/` | Nạp module, DB/session/cache/mail/app | ❌ | — |
-| `data/schema/` | DDL + seed 18 bảng | ❌ | Nguồn định nghĩa schema |
+| `data/schema/` | DDL + seed 19 bảng | ❌ | Nguồn định nghĩa schema |
 | `public/uploads/` | File media + biến thể | ❌ | File ứng với bảng `media` |
 | `bin/` | CLI tạo admin, xoá config cache | ❌ | `create-admin.php` dùng PDO thô — không phụ thuộc tầng Mapper |
 

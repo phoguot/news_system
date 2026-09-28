@@ -1,5 +1,9 @@
 # docs-dev — Khung tài liệu chung cho mọi dự án
 
+> **Mốc 27/09/2026 (phân vai dịch vụ cha–con ngoài frontend):** khối dịch vụ trang chủ chỉ hiển thị dịch vụ cha active; `/dich-vu` chỉ render dịch vụ con active thành card, dịch vụ cha active làm bộ lọc `?nhom=slug` và “Tất cả nhóm dịch vụ”; cha tắt làm con vắng khỏi danh sách và chi tiết công khai. Admin vẫn quản lý cây hai cấp và trạng thái từng dòng.
+
+> **Mốc 26/09/2026 (khối đánh giá trang chủ):** thêm `home_sections.type=10` với config điểm trung bình, tổng lượt, phân bố 1–5 sao và giới hạn ảnh; bảng `reviews` lưu ảnh chụp bình luận qua `imageMediaId`; CRUD `/admin/reviews` thêm/sửa/xóa ảnh bằng MediaPicker, có kiểm tham chiếu khi xóa media và invalidate `home-v1`. Frontend render thẻ tổng quan theo mẫu và gallery 3 ảnh mỗi hàng (mobile 1 cột). Migration: `data/schema/2026-09-26-review-block.sql`.
+
 > Mục tiêu: dự án sau chỉ cần copy thư mục này sang là dùng ngay — không phụ thuộc dự án cụ thể.
 > Mỗi file là **mẫu (template)** có sẵn tiêu đề + gợi ý điền. Điền vào, không cần tạo mới.
 

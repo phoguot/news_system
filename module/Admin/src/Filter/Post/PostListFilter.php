@@ -21,11 +21,11 @@ use Laminas\Validator\InArray;
  */
 final class PostListFilter extends AppInputFilter
 {
-    public const int PER_PAGE_DEFAULT = 20;
-    public const int PER_PAGE_MAX     = 100;
+    public const PER_PAGE_DEFAULT = 20;
+    public const PER_PAGE_MAX     = 100;
 
     /** status kiểu API (int) => tab quản trị. */
-    private const array STATUS_TO_TAB = [
+    private const STATUS_TO_TAB = [
         0 => PostConst::TAB_DRAFT,
         1 => PostConst::TAB_PUBLISHED,
         2 => PostConst::TAB_ARCHIVED,

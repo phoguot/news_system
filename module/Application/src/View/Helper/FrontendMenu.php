@@ -27,13 +27,31 @@ final class FrontendMenu
             $items = $this->fallback();
         }
 
+        $currentPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
+
         $html = '<nav class="' . $this->e($class) . '">';
         foreach ($items as $item) {
             $label = $item['label'];
             $url = $item['url'];
             $target = $item['target'];
             $blank = $target === '_blank';
+
+            $isActive = false;
+            if ($url === '/') {
+                $isActive = ($currentPath === '/');
+            } else {
+                $isActive = str_starts_with($currentPath, $url);
+            }
+
+            $classes = [];
+            if ($isActive) {
+                $classes[] = 'active';
+            }
+
+            $classAttr = $classes !== [] ? ' class="' . implode(' ', $classes) . '"' : '';
+
             $html .= '<a href="' . $this->e($url) . '"'
+                . $classAttr
                 . ($blank ? ' target="_blank" rel="noopener"' : '')
                 . '>' . $this->e($label) . '</a>';
         }

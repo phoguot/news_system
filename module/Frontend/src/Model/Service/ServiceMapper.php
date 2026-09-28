@@ -79,6 +79,31 @@ class ServiceMapper
         return $this->models($sql, $select);
     }
 
+    /**
+     * Dịch vụ cha đang bật cho khối dịch vụ trang chủ và bộ lọc /dich-vu.
+     *
+     * @return list<ServiceModel>
+     */
+    public function listActiveParents(?int $limit = null): array
+    {
+        $sql = new Sql($this->db);
+
+        return $this->models($sql, $this->activeParentsSelect($limit));
+    }
+
+    /** Select cha active — tách public cho SQL regression test. */
+    public function activeParentsSelect(?int $limit = null): Select
+    {
+        $select = new Select(self::TABLE_NAME);
+        $select->where(['isActive' => ServiceConst::ACTIVE]);
+        $select->where->isNull('parentId');
+        $select->order(['sortOrder' => 'ASC', 'id' => 'ASC']);
+        if ($limit !== null) {
+            $select->limit(max(1, $limit));
+        }
+
+        return $select;
+    }
     /** @return list<ServiceModel> */
     public function listChildren(int $parentId): array
     {
@@ -243,6 +268,78 @@ class ServiceMapper
     {
         $select = new Select(self::TABLE_NAME);
         $select->where(['isActive' => ServiceConst::ACTIVE])
+            ->order(['sortOrder' => 'ASC', 'id' => 'ASC'])
+            ->limit($limit)
+            ->offset($offset);
+
+        return $select;
+    }
+
+    /**
+     * Đếm dịch vụ con đang bật thuộc các dịch vụ cha đang được phép công khai.
+     *
+     * @param list<int> $parentIds
+     */
+    public function countActiveChildren(array $parentIds): int
+    {
+        if ($parentIds === []) {
+            return 0;
+        }
+
+        $sql = new Sql($this->db);
+
+        /** @var array<array-key, mixed>|bool|null $row */
+        $row = $sql->prepareStatementForSqlObject(
+            $this->countActiveChildrenSelect($parentIds)
+        )->execute()->current();
+
+        return is_array($row) ? (int) ($row['total'] ?? 0) : 0;
+    }
+
+    /**
+     * @param non-empty-list<int> $parentIds
+     */
+    public function countActiveChildrenSelect(array $parentIds): Select
+    {
+        $where = new Where();
+        $where->equalTo('isActive', ServiceConst::ACTIVE);
+        $where->in('parentId', $parentIds);
+
+        $select = new Select(self::TABLE_NAME);
+        $select->columns(['total' => new Expression('COUNT(*)')])->where($where);
+
+        return $select;
+    }
+
+    /**
+     * Một trang dịch vụ con active thuộc tập cha active.
+     *
+     * @param list<int> $parentIds
+     *
+     * @return list<ServiceModel>
+     */
+    public function listActiveChildrenPage(array $parentIds, int $limit, int $offset): array
+    {
+        if ($parentIds === []) {
+            return [];
+        }
+
+        $sql = new Sql($this->db);
+
+        return $this->models($sql, $this->activeChildrenPageSelect($parentIds, $limit, $offset));
+    }
+
+    /**
+     * @param non-empty-list<int> $parentIds
+     */
+    public function activeChildrenPageSelect(array $parentIds, int $limit, int $offset): Select
+    {
+        $where = new Where();
+        $where->equalTo('isActive', ServiceConst::ACTIVE);
+        $where->in('parentId', $parentIds);
+
+        $select = new Select(self::TABLE_NAME);
+        $select->where($where)
             ->order(['sortOrder' => 'ASC', 'id' => 'ASC'])
             ->limit($limit)
             ->offset($offset);

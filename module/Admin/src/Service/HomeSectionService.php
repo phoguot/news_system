@@ -627,6 +627,16 @@ class HomeSectionService extends AppServiceFactory
             HomeSectionConst::TYPE_CONTACT_CTA    => ['button_text' => 'text', 'button_url' => 'url'],
             HomeSectionConst::TYPE_PROCESS        => ['steps' => 'steps'],
             HomeSectionConst::TYPE_PRICING        => ['group_code' => 'pricing_group', 'limit' => 'pricing_limit'],
+            HomeSectionConst::TYPE_REVIEWS        => [
+                'average_rating' => 'review_rating',
+                'total_reviews' => 'review_count',
+                'star_5' => 'review_count',
+                'star_4' => 'review_count',
+                'star_3' => 'review_count',
+                'star_2' => 'review_count',
+                'star_1' => 'review_count',
+                'limit' => 'limit',
+            ],
             default => [],
         };
         $config ??= [];
@@ -691,6 +701,9 @@ class HomeSectionService extends AppServiceFactory
                 && $value >= HomeSectionConst::PRICING_LIMIT_MIN
                 && $value <= HomeSectionConst::PRICING_LIMIT_MAX
                 ? null : HomeSectionConst::ERROR_PRICING_LIMIT,
+            'review_rating' => (is_float($value) || is_int($value))
+                && $value >= 0 && $value <= 5 ? null : HomeSectionConst::ERROR_REVIEW_RATING,
+            'review_count' => is_int($value) && $value >= 0 ? null : HomeSectionConst::ERROR_REVIEW_COUNT,
             default => null,
         };
     }

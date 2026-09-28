@@ -55,12 +55,18 @@ return [
             ): View\Helper\FrontendMenu {
                 return new View\Helper\FrontendMenu($c->get(\Frontend\Service\MenuService::class));
             },
+            View\Helper\ContactBubbles::class => static function (
+                ContainerInterface $c
+            ): View\Helper\ContactBubbles {
+                return new View\Helper\ContactBubbles($c->get(\Frontend\Service\SettingService::class));
+            },
         ],
         'aliases' => [
             'mediaUrl'    => View\Helper\MediaUrl::class,
             'selectField' => View\Helper\SelectField::class,
             'mediaPicker' => View\Helper\MediaPicker::class,
             'frontendMenu' => View\Helper\FrontendMenu::class,
+            'contactBubbles' => View\Helper\ContactBubbles::class,
         ],
     ],
     'view_manager' => [

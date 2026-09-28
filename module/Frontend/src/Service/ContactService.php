@@ -189,7 +189,7 @@ class ContactService extends AppServiceFactory
 
         $nowUtc = DateService::nowUtc();
         $lines = [];
-        $lines[] = 'Bạn có liên hệ mới trên website Vạn Lang.';
+        $lines[] = 'Bạn có liên hệ mới trên website Văn Lang.';
         $lines[] = 'Thời gian: ' . $nowUtc . ' UTC';
         $lines[] = '';
         $lines[] = 'Người gửi: ' . $fullName . ' <' . $email . '>';

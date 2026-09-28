@@ -12,7 +12,8 @@ use Laminas\View\Model\ViewModel;
 
 /**
  * Trang dịch vụ công khai (FR-08, docs §2.1 / §3.5):
- * - listAction(): /dich-vu — lưới phẳng phân trang 12/trang, ?page= kẹp trang cuối.
+ * - listAction(): /dich-vu — card dịch vụ con, lọc theo cha qua ?nhom=slug,
+ *   phân trang 12/trang và kẹp ?page= về trang cuối.
  * - detailAction(): /dich-vu/:slug — chi tiết dịch vụ active theo slug;
  *   slug lạ hoặc tắt → notFoundAction() + setTemplate('error/404').
  *
@@ -34,9 +35,9 @@ class ServiceController extends AbstractActionController
     /** @psalm-suppress PossiblyUnusedMethod router dispatch gọi action động, không có lời gọi tĩnh. */
     public function listAction(): ViewModel
     {
-        $page = (int) $this->params()->fromQuery('page', 1);
-        $payload = $this->serviceViewService->paginate($page);
-
+        $page       = (int) $this->params()->fromQuery('page', 1);
+        $parentSlug = trim((string) $this->params()->fromQuery('nhom', ''));
+        $payload    = $this->serviceViewService->paginate($parentSlug === '' ? null : $parentSlug, $page);
         $pricing = $this->pricingViewService->list(null, null);
         $pricing['items'] = array_slice($pricing['items'], 0, 10);
         $mapUrl = $this->settingService->mapEmbedUrl();

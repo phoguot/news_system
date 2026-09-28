@@ -1,0 +1,51 @@
+<?php
+
+/** @var \Laminas\View\Renderer\PhpRenderer $this */
+$items = (array) ($this->items ?? []);
+$mediaOptions = (array) ($this->mediaOptions ?? []);
+$flag = is_string($this->flag ?? null) ? $this->flag : null;
+$csrf = (string) ($this->deleteCsrfHash ?? '');
+$e = fn (mixed $value): string => $this->escapeHtml((string) $value);
+$url = fn (array $params = []): string => $this->url('admin/reviews', $params);
+$media = [];
+foreach ($mediaOptions as $option) {
+    if (is_array($option) && isset($option['id'])) {
+        $media[(int) $option['id']] = $option;
+    }
+}
+$messages = [
+    'created' => ['alert-success', 'Đã thêm ảnh đánh giá.'],
+    'updated' => ['alert-success', 'Đã cập nhật ảnh đánh giá.'],
+    'deleted' => ['alert-success', 'Đã xoá ảnh đánh giá.'],
+    'csrf' => ['alert-danger', 'Token bảo mật không hợp lệ.'],
+    'notfound' => ['alert-danger', 'Không tìm thấy ảnh đánh giá.'],
+];
+$html = '<div class="page-header"><div><h1>Ảnh đánh giá</h1>'
+    . '<p class="subtitle">Quản lý ảnh chụp bình luận hiển thị trong khối đánh giá trang chủ.</p></div>'
+    . '<a class="btn btn-primary" href="' . $e($url(['action' => 'create'])) . '">+ Thêm ảnh đánh giá</a></div>';
+if ($flag !== null && isset($messages[$flag])) {
+    $html .= '<div class="alert ' . $messages[$flag][0] . '">' . $messages[$flag][1] . '</div>';
+}
+$rows = '';
+foreach ($items as $item) {
+    if (! $item instanceof \Admin\Model\Review\ReviewModel) {
+        continue;
+    }
+    $option = $media[$item->imageMediaId] ?? null;
+    $thumb = is_array($option) && (string) ($option['path'] ?? '') !== ''
+        ? '<img class="review-admin-thumb" src="' . $e($this->mediaUrl((string) $option['path'])) . '" alt="' . $e($item->altText ?? '') . '">'
+        : '<span class="muted">Ảnh #' . $item->imageMediaId . ' không tồn tại</span>';
+    $rows .= '<tr><td>' . $thumb . '</td><td>' . $e($item->altText ?? 'Ảnh đánh giá') . '</td>'
+        . '<td>' . $item->sortOrder . '</td><td>' . ($item->isActive === 1 ? 'Có' : 'Tắt') . '</td>'
+        . '<td><div class="actions"><a class="btn sm btn-ghost" href="' . $e($url(['action' => 'edit', 'id' => $item->id])) . '">Sửa</a>'
+        . '<form method="post" action="' . $e($url(['action' => 'delete', 'id' => $item->id])) . '" onsubmit="return confirm(\'Xoá ảnh đánh giá này?\');">'
+        . '<input type="hidden" name="csrf" value="' . $e($csrf) . '"><button class="btn sm btn-ghost danger" type="submit">Xoá</button></form>'
+        . '</div></td></tr>';
+}
+if ($rows === '') {
+    $rows = '<tr><td colspan="5" class="muted">Chưa có ảnh đánh giá nào.</td></tr>';
+}
+$html .= '<div class="card"><div class="table-wrap"><table class="data-table"><thead><tr>'
+    . '<th>Ảnh</th><th>Mô tả</th><th>Thứ tự</th><th>Hiển thị</th><th>Thao tác</th>'
+    . '</tr></thead><tbody>' . $rows . '</tbody></table></div></div>';
+echo $html;

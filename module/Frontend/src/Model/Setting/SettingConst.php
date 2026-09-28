@@ -17,6 +17,11 @@ class SettingConst
     public const KEY_MAP_EMBED_URL = 'map_embed_url';
     public const KEY_MAP_ADDRESS   = 'map_address';
 
+    /** Key liên hệ nhanh — bubble góc phải layout frontend (ContactBubbles) */
+    public const KEY_HOTLINE      = 'hotline';
+    public const KEY_FACEBOOK_URL = 'facebook_url';
+    public const KEY_ZALO_URL     = 'zalo_url';
+
     /** Key meta description mặc định (SEO) — render input 1 dòng, không textarea */
     public const KEY_DEFAULT_META_DESCRIPTION = 'default_meta_description';
 

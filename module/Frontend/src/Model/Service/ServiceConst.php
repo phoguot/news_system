@@ -28,8 +28,11 @@ final class ServiceConst
     public const FLAG_DELETE_BLOCKED = 'blocked';
 
     /** Thông báo lỗi nghiệp vụ. */
-    public const ERROR_NOT_FOUND       = 'Không tìm thấy dịch vụ.';
-    public const ERROR_DELETE_CONTACTS = 'Dịch vụ còn lượt liên hệ tham chiếu — không thể xoá.';
-    public const ERROR_PARENT_INVALID  = 'Dịch vụ cha không hợp lệ.';
-    public const ERROR_PARENT_SELF     = 'Dịch vụ không thể là cha của chính nó.';
+    public const ERROR_NOT_FOUND        = 'Không tìm thấy dịch vụ.';
+    public const ERROR_DELETE_CONTACTS  = 'Dịch vụ còn lượt liên hệ tham chiếu — không thể xoá.';
+    public const ERROR_DELETE_CHILDREN  = 'Dịch vụ còn dịch vụ con — không thể xoá.';
+    public const ERROR_PARENT_INVALID   = 'Dịch vụ cha không hợp lệ.';
+    public const ERROR_PARENT_SELF      = 'Dịch vụ không thể là cha của chính nó.';
+    public const ERROR_PARENT_DEPTH     = 'Chỉ được chọn dịch vụ cấp 1 làm dịch vụ cha.';
+    public const ERROR_PARENT_HAS_CHILD = 'Dịch vụ đang có dịch vụ con nên không thể chuyển thành dịch vụ con.';
 }

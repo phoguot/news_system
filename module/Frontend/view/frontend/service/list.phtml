@@ -3,9 +3,9 @@
 declare(strict_types=1);
 
 /**
- * Trang dịch vụ /dich-vu — lưới phẳng phân trang (FR-08):
- * Box1 banner + Box danh sách phân trang 12/trang ?page= + Box bảng giá rút gọn + Box CTA.
- * Phân trang ?page= kẹp trang cuối (service paginate), pager ± PAGER_WINDOW, ellipsis.
+ * Trang dịch vụ /dich-vu — cha làm bộ lọc, con làm card (FR-08):
+ * Box1 banner + lọc ?nhom=<slug-cha> + danh sách con phân trang 12/trang
+ * + Box bảng giá rút gọn + Box CTA.
  * Chuẩn .phtml chuỗi-based (AGENTS §2 / 07 §8): không control structure trong body, dựng bằng chuỗi.
  *
  * @var \Laminas\View\Renderer\PhpRenderer $this
@@ -13,6 +13,8 @@ declare(strict_types=1);
  * @var int $total
  * @var int $page
  * @var int $pages
+ * @var list<array{id: int, name: string, slug: string}> $parentFilters
+ * @var array{id: int, name: string, slug: string}|null $selectedParent
  * @var array{items: list<array<string,mixed>>, total: int} $pricing
  * @var string|null $mapUrl
  * @var array<string, string|null> $settings
@@ -22,12 +24,14 @@ $services = is_array($this->services ?? null) ? $this->services : [];
 $total    = (int) ($this->total ?? 0);
 $page     = max(1, (int) ($this->page ?? 1));
 $pages    = max(0, (int) ($this->pages ?? 0));
+$parentFilters = is_array($this->parentFilters ?? null) ? $this->parentFilters : [];
+$selectedParent = is_array($this->selectedParent ?? null) ? $this->selectedParent : null;
 $pricingData = is_array($this->pricing ?? null) ? $this->pricing : [];
 $pricingItems = is_array($pricingData['items'] ?? null) ? $pricingData['items'] : [];
 $mapUrl   = is_string($this->mapUrl ?? null) ? $this->mapUrl : null;
 $settings = is_array($this->settings ?? null) ? $this->settings : [];
 
-$this->headTitle('Dịch vụ · Vạn Lang');
+$this->headTitle('Dịch vụ · Văn Lang');
 
 $view = $this;
 $e    = static fn (mixed $v): string => $view->escapeHtml((string) $v);
@@ -51,7 +55,19 @@ $banner = '<section class="page-banner"><div class="container" style="position:r
     . '<p class="contact-intro" style="margin-top:10px;max-width:560px">Dịch vụ chăm sóc sức khỏe toàn diện — tại viện và tại nhà, chuẩn y khoa, tận tâm từng giờ.</p>'
     . '</div><div class="banner-img"><img src="https://images.unsplash.com/photo-1576765607924-3f7b8410a787?w=900&q=80" alt=""></div></section>';
 
-/* ---- Lưới dịch vụ phẳng + phân trang ---- */
+/* ---- Bộ lọc dịch vụ cha + lưới dịch vụ con ---- */
+$selectedSlug = (string) ($selectedParent['slug'] ?? '');
+$filterOptions = '<option value="">Tất cả nhóm dịch vụ</option>';
+foreach ($parentFilters as $parent) {
+    $slug = (string) ($parent['slug'] ?? '');
+    $selected = $slug !== '' && $slug === $selectedSlug ? ' selected' : '';
+    $filterOptions .= '<option value="' . $ea($slug) . '"' . $selected . '>'
+        . $e($parent['name'] ?? '') . '</option>';
+}
+$toolbar = '<form class="news-filter" method="get" action="/dich-vu">'
+    . '<label class="news-filter-label" for="nhom-dich-vu">Nhóm dịch vụ:</label>'
+    . '<select id="nhom-dich-vu" name="nhom" onchange="this.form.submit()">'
+    . $filterOptions . '</select><button class="btn btn-white" type="submit">Lọc</button></form>';
 $cards = '';
 foreach ($services as $card) {
     $desc = (string) ($card['shortDescription'] ?? '');
@@ -69,12 +85,16 @@ $body = $cards === ''
     ? '<p class="news-empty">Hiện tại chưa có dịch vụ nào được công khai.</p>'
     : '<div class="services-grid services-page-grid">' . $cards . '</div>';
 
-$summary = $total > 0
-    ? '<p class="news-count">' . $e($total) . ' dịch vụ · trang ' . $e($page) . '/' . $e(max(1, $pages)) . '</p>'
-    : '';
+$summary = $total > 0 ? '<p class="news-count">' . $e($total) . ' dịch vụ con · trang ' . $e($page) . '/' . $e(max(1, $pages)) . '</p>' : '';
+$pageUrl = static function (int $p) use ($selectedSlug): string {
 
-$pageUrl = static fn (int $p): string => '/dich-vu?page=' . $p;
+    $query = ['page' => $p];
+    if ($selectedSlug !== '') {
+        $query['nhom'] = $selectedSlug;
+    }
 
+    return '/dich-vu?' . http_build_query($query);
+};
 $pager = '';
 if ($pages > 1) {
     $window = \Frontend\Constant\FrontendConst::PAGER_WINDOW;
@@ -114,17 +134,23 @@ if ($pages > 1) {
 
 $servicesBlock = '<section class="section"><div class="container">'
     . '<div class="sec-label"><span class="arr">→</span> Dịch vụ <span class="arr">←</span></div>'
-    . $summary . $body . $pager
+    . $toolbar . $summary . $body . $pager
     . '</div></section>';
 
 /* Box bảng giá rút gọn */
 $priceRows = '';
 foreach ($pricingItems as $row) {
+    $name      = (string) ($row['name'] ?? '');
+    $unit      = (string) ($row['unit'] ?? '');
+    $note      = (string) ($row['note'] ?? '');
+    $price     = (string) ($row['priceText'] ?? 'Liên hệ');
+    $priceCls  = $price === 'Liên hệ' ? 'pricing-price pricing-contact' : 'pricing-price';
+
     $priceRows .= '<tr>'
-        . '<td class="pricing-name">' . $e($row['name'] ?? '') . '</td>'
-        . '<td class="pricing-unit">' . $e($row['unit'] ?? '') . '</td>'
-        . '<td class="pricing-price">' . $e($row['priceText'] ?? 'Liên hệ') . '</td>'
-        . '<td class="pricing-note">' . $e($row['note'] ?? '') . '</td>'
+        . '<td class="pricing-name"><strong>' . $e($name) . '</strong></td>'
+        . '<td class="pricing-unit">' . $e($unit) . '</td>'
+        . '<td class="' . $priceCls . '">' . $e($price) . '</td>'
+        . '<td class="pricing-note">' . $e($note) . '</td>'
         . '</tr>';
 }
 if ($priceRows === '') {
@@ -132,7 +158,7 @@ if ($priceRows === '') {
 }
 $pricingBlock = '<section class="section section-alt"><div class="container">'
     . '<div class="sec-label"><span class="arr">→</span> Bảng giá tham khảo <span class="arr">←</span></div>'
-    . '<div class="card" style="margin-top:14px"><div class="table-wrap"><table class="data-table pricing-table"><thead><tr><th>Tên dịch vụ</th><th>Đơn vị</th><th>Giá</th><th>Ghi chú</th></tr></thead><tbody>' . $priceRows . '</tbody></table></div></div>'
+    . '<div class="pricing-card" style="margin-top:14px"><div class="table-wrap"><table class="data-table pricing-table pricing-table-public pricing-table-home"><thead><tr><th>Tên dịch vụ</th><th>Đơn vị</th><th>Giá tham khảo</th><th>Ghi chú</th></tr></thead><tbody>' . $priceRows . '</tbody></table></div></div>'
     . '<div style="text-align:center;margin-top:14px"><a class="btn btn-teal" href="/bang-gia">Xem bảng giá đầy đủ →</a></div>'
     . '</div></section>';
 

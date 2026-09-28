@@ -63,8 +63,7 @@ class MediaController extends AbstractActionController
         $raw      = $post->toArray();
         $identity = $this->auth->getIdentity();
         /** @var array<array-key, mixed> $files */
-        $files = $request->getFiles();
-
+        $files = $request->getFiles()->toArray();
         try {
             $result = $this->media->uploadForm($raw, $files, $identity['id'] ?? null);
         } catch (ValidationException $e) {
@@ -218,7 +217,7 @@ class MediaController extends AbstractActionController
      */
     private function renderIndexWithErrors(array $errors, int $uploadedCount = 0): ViewModel
     {
-        return new ViewModel([
+        $view = new ViewModel([
             'items'          => $this->media->listAll(),
             'flag'           => null,
             'uploadErrors'   => $errors,
@@ -226,6 +225,9 @@ class MediaController extends AbstractActionController
             'uploadCsrfHash' => $this->media->uploadFormCsrfHash(),
             'csrfHash'       => $this->media->deleteFormCsrfHash(),
         ]);
+        $view->setTemplate('admin/media/index');
+
+        return $view;
     }
 
     /**

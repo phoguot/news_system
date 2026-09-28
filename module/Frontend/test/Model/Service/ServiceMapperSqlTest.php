@@ -47,6 +47,23 @@ final class ServiceMapperSqlTest extends TestCase
         self::assertStringContainsString('ORDER BY `sortOrder` ASC, `id` ASC', $rendered);
     }
 
+    public function testActiveParentsSelectRequiresActiveAndNullParent(): void
+    {
+        $rendered = $this->render($this->mapper()->activeParentsSelect(6));
+        self::assertStringContainsString("`isActive` = '1'", $rendered);
+        self::assertStringContainsString('`parentId` IS NULL', $rendered);
+        self::assertStringContainsString('ORDER BY `sortOrder` ASC, `id` ASC', $rendered);
+        self::assertStringContainsString('LIMIT 6', $rendered);
+    }
+
+    public function testActiveChildrenPageSelectScopesToParentIds(): void
+    {
+        $rendered = $this->render($this->mapper()->activeChildrenPageSelect([4, 8], 12, 0));
+        self::assertStringContainsString("`isActive` = '1'", $rendered);
+        self::assertStringContainsString("`parentId` IN ('4', '8')", $rendered);
+        self::assertStringContainsString('ORDER BY `sortOrder` ASC, `id` ASC', $rendered);
+        self::assertStringContainsString('LIMIT 12 OFFSET 0', $rendered);
+    }
     public function testActiveBySlugRendersSlugAndActiveAndLimit(): void
     {
         $rendered = $this->render($this->mapper()->activeBySlugSelect('kham-tong-quat'));

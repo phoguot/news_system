@@ -13,6 +13,7 @@ use Admin\Model\HomeSectionItem\HomeSectionItemMapper;
 use Admin\Model\Media\MediaMapper;
 use Admin\Model\Post\PostMapper;
 use Admin\Model\Post\PostModel;
+use Admin\Model\Review\ReviewMapper;
 use Admin\Model\TeamMember\TeamMemberMapper;
 use Admin\Model\TeamMember\TeamMemberModel;
 use Application\Constant\CacheConst;
@@ -109,6 +110,12 @@ class HomeService extends AppServiceFactory
         return $this->getContainerEntry(TeamMemberMapper::class);
     }
 
+    private function pricing(): PricingMapper
+    {
+        /** @var PricingMapper */
+        return $this->getContainerEntry(PricingMapper::class);
+    }
+
     private function categories(): CategoryMapper
     {
         /** @var CategoryMapper */
@@ -121,12 +128,11 @@ class HomeService extends AppServiceFactory
         return $this->getContainerEntry(MediaMapper::class);
     }
 
-    private function pricing(): PricingMapper
+    private function reviews(): ReviewMapper
     {
-        /** @var PricingMapper */
-        return $this->getContainerEntry(PricingMapper::class);
+        /** @var ReviewMapper */
+        return $this->getContainerEntry(ReviewMapper::class);
     }
-
     private function pageCache(): ?PageCacheService
     {
         $entry = $this->getContainerEntry(PageCacheService::class);
@@ -187,10 +193,44 @@ class HomeService extends AppServiceFactory
             HomeSectionConst::TYPE_CONTACT_CTA    => $this->ctaBlock($section, $config),
             HomeSectionConst::TYPE_PROCESS        => $this->processBlock($section, $config),
             HomeSectionConst::TYPE_PRICING        => $this->pricingBlock($section, $config),
+            HomeSectionConst::TYPE_REVIEWS        => $this->reviewsBlock($section, $config, $mediaIds),
             default                              => null,
         };
     }
 
+    /**
+     * @param array<string, mixed> $config
+     * @param list<int> $mediaIds
+     * @return array<string, mixed>|null
+     */
+    private function reviewsBlock(HomeSectionModel $section, array $config, array &$mediaIds): ?array
+    {
+        $limit = max(1, min(50, (int) ($config['limit'] ?? 6)));
+        $rows = $this->reviews()->listActive($limit);
+        $items = [];
+        foreach ($rows as $review) {
+            $this->collectMedia($mediaIds, $review->imageMediaId);
+            $items[] = [
+                'kind' => 'review-image',
+                'imageId' => $review->imageMediaId,
+                'alt' => $review->altText ?? 'Đánh giá của khách hàng',
+            ];
+        }
+        $counts = [];
+        foreach ([5, 4, 3, 2, 1] as $star) {
+            $counts[$star] = max(0, (int) ($config['star_' . $star] ?? 0));
+        }
+        $total = max(0, (int) ($config['total_reviews'] ?? array_sum($counts)));
+        return [
+            'kind' => 'reviews',
+            'title' => $section->title ?? 'Bình luận & đánh giá của khách hàng',
+            'subtitle' => $section->subtitle ?? '',
+            'averageRating' => max(0.0, min(5.0, (float) ($config['average_rating'] ?? 5))),
+            'totalReviews' => $total,
+            'starCounts' => $counts,
+            'items' => $items,
+        ];
+    }
     /**
      * @param array<string, mixed> $config
      * @param list<int>            $mediaIds
@@ -325,12 +365,12 @@ class HomeService extends AppServiceFactory
             : null;
         /** @var list<ServiceModel> $rows */
         $rows = $ids === null
-            ? $this->services()->listActive($this->limitFor($section->type, $config))
-            : $this->orderedByIds(
+            ? $this->services()->listActiveParents($this->limitFor($section->type, $config))
+            : array_values(array_filter($this->orderedByIds(
                 $this->services()->listActiveByIds($ids),
                 $ids,
                 static fn (ServiceModel $s): int => $s->id
-            );
+            ), static fn (ServiceModel $s): bool => $s->parentId === null));
 
         if ($rows === []) {
             return null;
@@ -550,7 +590,7 @@ class HomeService extends AppServiceFactory
             /** @var list<array<string, mixed>> $items */
             $items = $section['items'] ?? [];
             foreach ($items as &$item) {
-                $image = $this->imageOf($map, $item['imageId'] ?? null);
+                $image = $this->imageOf($map, $item['imageId'] ?? null, ($item['kind'] ?? '') === 'review-image');
                 if ($image !== null) {
                     $item['image'] = $image;
                 }
@@ -561,6 +601,9 @@ class HomeService extends AppServiceFactory
                 $icon = $this->imageOf($map, $item['iconId'] ?? null);
                 if ($icon !== null) {
                     $item['icon'] = $icon;
+                }
+                if (isset($item['alt']) && isset($item['image']) && is_array($item['image'])) {
+                    $item['image']['alt'] = (string) $item['alt'];
                 }
             }
             unset($item);
@@ -577,7 +620,7 @@ class HomeService extends AppServiceFactory
      *
      * @return array{path: string, alt: string}|null
      */
-    private function imageOf(array $map, mixed $mediaId): ?array
+    private function imageOf(array $map, mixed $mediaId, bool $large = false): ?array
     {
         if (! is_int($mediaId) || $mediaId <= 0) {
             return null;
@@ -588,7 +631,7 @@ class HomeService extends AppServiceFactory
             return null;
         }
 
-        return ['path' => $entry['thumb'], 'alt' => $entry['alt']];
+        return ['path' => $large ? $entry['large'] : $entry['thumb'], 'alt' => $entry['alt']];
     }
 
     /**

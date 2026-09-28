@@ -1,7 +1,7 @@
 <?php
 
 /** @var \Laminas\View\Renderer\PhpRenderer $this */
-/** @var list<\Frontend\Model\Service\ServiceModel> $items */
+/** @var list<array{service: \Frontend\Model\Service\ServiceModel, depth: int}> $items */
 $items = (array) ($this->items ?? []);
 /** @var string|null $flag */
 $flag    = isset($this->flag) && is_string($this->flag) ? $this->flag : null;
@@ -15,7 +15,7 @@ $flags = [
     'created'  => ['alert-success', 'Đã tạo dịch vụ.'],
     'updated'  => ['alert-success', 'Đã cập nhật dịch vụ.'],
     'deleted'  => ['alert-success', 'Đã xoá dịch vụ.'],
-    'blocked'  => ['alert-warning', 'Không thể xoá: còn lượt liên hệ tham chiếu dịch vụ này.'],
+    'blocked'  => ['alert-warning', 'Không thể xoá: dịch vụ còn dịch vụ con hoặc lượt liên hệ tham chiếu.'],
     'csrf'     => ['alert-danger', 'Token bảo mật không hợp lệ.'],
     'notfound' => ['alert-danger', 'Không tìm thấy dịch vụ.'],
     'reordered' => ['alert-success', 'Đã cập nhật thứ tự dịch vụ.'],
@@ -45,14 +45,19 @@ if ($flag !== null && isset($flags[$flag])) {
 }
 
 $rowsHtml = '';
-foreach ($items as $service) {
+foreach ($items as $item) {
     /** @var \Frontend\Model\Service\ServiceModel $service */
-    $id    = $service->id;
+    $service      = $item['service'];
+    $id           = $service->id;
+    $pad          = $item['depth'] === 1 ? 'padding-left:2rem;' : '';
+    $name         = $item['depth'] === 1 ? '└ ' : '';
+    $parentAttr   = $service->parentId !== null ? (string) $service->parentId : '';
     $statusSelect = $activeSelect((int) $id, (int) $service->isActive);
 
-    $rowsHtml .= '<tr data-id="' . (int) $id . '">'
+    $rowsHtml .= '<tr data-id="' . (int) $id . '" data-parent="' . $e($parentAttr) . '">'
         . '<td class="drag-col"><span class="drag-handle" title="Kéo để đổi thứ tự">⠿</span></td>'
-        . '<td><div class="service-cell"><span><strong>' . $e($service->name) . '</strong></span></div></td>'
+        . '<td style="' . $pad . '"><div class="service-cell"><span><strong>'
+        . $e($name . $service->name) . '</strong></span></div></td>'
         . '<td><span class="slug-text">' . $e($service->slug) . '</span></td>'
         . '<td class="muted sort-cell">' . $e($service->sortOrder) . '</td>'
         . '<td>' . $statusSelect . '</td>'
@@ -71,7 +76,7 @@ if ($items === []) {
 
 $html .= '<div class="card"><div class="table-wrap"><table class="data-table"><thead><tr>'
     . '<th class="drag-col"></th><th>Tên</th><th>Slug</th><th>Thứ tự</th><th>Hiển thị</th><th class="action-col">Thao tác</th>'
-    . '</tr></thead><tbody class="js-sortable"'
+    . '</tr></thead><tbody class="js-sortable" data-tree="1"'
     . ' data-reorder-url="' . $e($url(['action' => 'reorder'])) . '" data-csrf="' . $e($reorderCsrf) . '">'
     . $rowsHtml . '</tbody></table></div></div>';
 

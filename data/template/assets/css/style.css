@@ -1,5 +1,5 @@
 /* =========================================
-   VẠN LANG — Responsive — Home / About / Contact
+   VĂN LANG — Responsive — Home / About / Contact
    Khớp ảnh mẫu: hero beige + teal #0f5d5a
    ========================================= */
 :root{
@@ -42,7 +42,7 @@ h1,h2,h3,h4,p{margin:0}
 .header{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.96);backdrop-filter:saturate(180%) blur(8px);border-bottom:1px solid var(--line2)}
 .header-inner{display:flex;align-items:center;gap:16px;padding:10px 0}
 .logo{display:flex;align-items:center;gap:10px;line-height:1.1;flex-shrink:0}
-.logo-mark{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:var(--teal-pale);border:1px solid var(--line);font-size:18px}
+.logo-mark{width:60px;height:50px;border-radius:50%;display:grid;place-items:center;background:var(--teal-pale);border:1px solid var(--line);font-size:18px}
 .logo small{display:block;font-size:9px;letter-spacing:.11em;color:var(--muted);font-weight:700;text-transform:uppercase}
 .logo b{font-size:15px;letter-spacing:.04em;color:var(--teal)}
 .nav{margin-left:20px;display:flex;align-items:center;gap:2px}

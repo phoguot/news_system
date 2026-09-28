@@ -75,7 +75,7 @@ return [
         'base_url' => '',
     ],
     'app' => [
-        'site_name'      => 'Vạn Lang',
+        'site_name'      => 'Văn Lang',
         'site_url'       => '', // FR-13 fallback: dùng khi mail.base_url trống
         'upload_dir'     => 'public/uploads',
         'upload_max_mb'  => 5,

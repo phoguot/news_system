@@ -522,6 +522,10 @@ document.querySelectorAll('.js-home-config-form').forEach((form) => {
             const number = parseInt(value, 10);
             return Number.isFinite(number) ? number : null;
         }
+        if (field.dataset.homeConfigType === 'float') {
+            const number = parseFloat(value);
+            return Number.isFinite(number) ? number : null;
+        }
         if (field.dataset.homeConfigType === 'bool') {
             return value === '1' || value === 'true';
         }

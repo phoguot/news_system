@@ -1,0 +1,30 @@
+<?php
+
+/** @var \Laminas\View\Renderer\PhpRenderer $this */
+$id = isset($this->id) ? (int) $this->id : null;
+$values = (array) ($this->values ?? []);
+$errors = (array) ($this->errors ?? []);
+$mediaOptions = (array) ($this->mediaOptions ?? []);
+$csrf = (string) ($this->csrfHash ?? '');
+$e = fn (mixed $value): string => $this->escapeHtml((string) $value);
+$val = static fn (string $key, mixed $default = ''): string => (string) ($values[$key] ?? $default);
+$action = $this->url('admin/reviews', array_merge(['action' => 'save'], $id !== null ? ['id' => $id] : []));
+$field = static function (string $name, string $label, string $control, string $hint = '') use ($errors, $e): string {
+    $error = isset($errors[$name]) ? '<div class="field-error">' . $e($errors[$name]) . '</div>' : '';
+    $hintHtml = $hint !== '' ? '<div class="field-hint">' . $e($hint) . '</div>' : '';
+    return '<div class="form-group"><label>' . $e($label) . '</label>' . $control . $hintHtml . $error . '</div>';
+};
+$active = ! in_array($val('isActive', 1), [0, '0', false], true);
+$html = '<div class="page-header"><div><h1>' . ($id === null ? 'Thêm' : 'Sửa') . ' ảnh đánh giá</h1>'
+    . '<p class="subtitle">Ảnh nên là ảnh chụp trọn vẹn nội dung bình luận của khách hàng.</p></div></div>'
+    . '<div class="entry-form-shell"><form method="post" action="' . $e($action) . '">'
+    . '<input type="hidden" name="csrf" value="' . $e($csrf) . '"><div class="entry-form-grid"><div class="entry-main">'
+    . '<section class="form-panel"><div class="form-panel-head"><div><h2>Ảnh review</h2><p>Chọn ảnh từ thư viện media.</p></div></div>'
+    . $field('imageMediaId', 'Ảnh đánh giá *', $this->mediaPicker('imageMediaId', $mediaOptions, $val('imageMediaId')))
+    . $field('altText', 'Mô tả ảnh', '<input class="form-input" name="altText" maxlength="255" value="' . $e($val('altText')) . '">', 'Dùng cho nội dung thay thế và khả năng truy cập.')
+    . '</section></div><div class="entry-side"><section class="form-panel"><div class="form-panel-head"><div><h2>Hiển thị</h2></div></div>'
+    . $field('sortOrder', 'Thứ tự', '<input class="form-input" type="number" name="sortOrder" value="' . $e($val('sortOrder', 0)) . '">')
+    . $field('isActive', 'Trạng thái', '<select class="form-select" name="isActive"><option value="1"' . ($active ? ' selected' : '') . '>Hiển thị</option><option value="0"' . ($active ? '' : ' selected') . '>Tắt</option></select>')
+    . '</section></div></div><div class="entry-form-actions"><a class="btn btn-ghost" href="' . $e($this->url('admin/reviews')) . '">Hủy</a>'
+    . '<button class="btn btn-primary" type="submit">Lưu ảnh đánh giá</button></div></form></div>';
+echo $html;

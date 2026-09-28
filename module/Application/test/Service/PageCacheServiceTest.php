@@ -36,14 +36,14 @@ final class PageCacheServiceTest extends TestCase
         $this->storage
             ->expects(self::once())
             ->method('setItem')
-            ->with(CacheConst::KEY_SETTINGS, serialize([['site_name' => 'Vạn Lang']]));
+            ->with(CacheConst::KEY_SETTINGS, serialize([['site_name' => 'Văn Lang']]));
 
         $value = $this->service->remember(
             CacheConst::KEY_SETTINGS,
-            static fn (): array => ['site_name' => 'Vạn Lang']
+            static fn (): array => ['site_name' => 'Văn Lang']
         );
 
-        self::assertSame(['site_name' => 'Vạn Lang'], $value);
+        self::assertSame(['site_name' => 'Văn Lang'], $value);
     }
 
     public function testHitSkipsProducer(): void

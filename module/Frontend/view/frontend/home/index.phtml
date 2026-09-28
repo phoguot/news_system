@@ -81,15 +81,19 @@ foreach ($sections as $section) {
             . '" data-interval="' . (int) ($section['intervalMs'] ?? 5000) . '">'
             . '<div class="slider-viewport"><div class="slider-track">' . $slides . '</div></div>'
             . $nav . '</section>';
+
+        // CHÈN KHỐI TĨNH NGAY SAU HERO
+        // $blocks[] = $staticServicesHtml;
+        // $staticServicesAdded = true;
         continue;
     }
 
     if ($kind === 'cta') {
-        $blocks[] = '<section class="container"><div class="cta-bottom">'
+        $blocks[] = '<section class="section"><div class="container"><div class="cta-bottom">'
             . '<div class="cta-left"><div><h2>' . $e($title) . '</h2></div></div>'
             . '<div class="cta-actions"><a class="btn btn-teal" href="'
             . $e($section['href'] ?? '') . '">' . $e($section['button'] ?? '') . '</a></div>'
-            . '</div></section>';
+            . '</div></div></section>';
         continue;
     }
 
@@ -116,21 +120,35 @@ foreach ($sections as $section) {
 
     if ($kind === 'services') {
         foreach ($items as $card) {
-            $excerpt = (string) ($card['subtitle'] ?? '');
-            $icon    = $img($card['icon'] ?? null) !== ''
-                ? '<span class="svc-icon">' . $img($card['icon'] ?? null) . '</span>'
-                : '';
-            $cards  .= '<a class="service-card" href="' . $e($card['href']) . '">'
-                . $icon . '<h4>' . $e($card['title']) . '</h4>'
+            $serviceTitle = (string) ($card['title'] ?? '');
+            $excerpt      = (string) ($card['subtitle'] ?? '');
+            $href         = (string) ($card['href'] ?? '');
+            $image        = $img($card['image'] ?? null);
+            $icon         = $img($card['icon'] ?? null);
+            $titleIcon    = $icon !== ''
+                ? '<span class="svc-icon">' . $icon . '</span>'
+                : '<svg viewBox="0 0 24 24" width="44.8" height="44.8" stroke="currentColor" fill="none"'
+                    . ' stroke-width="2" class="title-icon"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z">'
+                    . '</path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>';
+
+            $cards .= '<div class="main-svc-box"><div class="sec-head"><h2 class="sec-label">'
+                . $titleIcon . $e($serviceTitle) . '</h2>'
+                . ($excerpt !== '' ? '<p class="sec-subtitle">' . $e($excerpt) . '</p>' : '')
+                . '</div><div class="ms-content-wrap">'
+                . ($image !== '' ? '<div class="ms-image">' . $image . '</div>' : '')
+                . '<div class="ms-details"><h3>' . $e($serviceTitle) . '</h3>'
                 . ($excerpt !== '' ? '<p>' . $e($excerpt) . '</p>' : '')
-                . '</a>';
+                . '<a href="' . $e($href) . '" class="btn btn-teal">Tìm hiểu thêm →</a>'
+                . '</div><div class="ms-highlight"><div class="hl-icon">'
+                . '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="48" height="48">'
+                . '<path fill="#115E59" d="M9 2h6v7h7v6h-7v7H9v-7H2V9h7V2z"></path>'
+                . '</svg></div><p>Dịch vụ tận tâm<br><strong>An tâm mỗi ngày</strong></p>'
+                . '</div></div></div>';
         }
         $blocks[] = '<section class="section section-alt"><div class="container">'
-            . '<div class="sec-head">' . $head . '</div>'
-            . '<div class="services-grid">' . $cards . '</div></div></section>';
+            . $cards . '</div></section>';
         continue;
     }
-
     if ($kind === 'process') {
         $subtitle = (string) ($section['subtitle'] ?? '');
         foreach ($items as $card) {
@@ -163,27 +181,65 @@ foreach ($sections as $section) {
     }
 
     if ($kind === 'pricing') {
+        $cardsHtml = '';
         foreach ($items as $i => $item) {
             $num = (int) ($i + 1);
             $price = $item['price'] === null
                 ? 'Liên hệ'
-                : number_format((int) $item['price'], 0, ',', '.') . ' K';
-            $cards .= '<a class="pricing-card" href="' . $e($item['href'] ?? '#') . '">'
-                . '<div class="pricing-card-hd">'
+                : number_format((int) $item['price'], 0, ',', '.') . ' ₫';
+            $cardsHtml .= '<a class="pricing-grid-card" href="' . $e($item['href'] ?? '#') . '">'
+                . '<div class="pricing-grid-hd">'
                 . '<span class="pricing-num">' . $e($num) . '</span>'
-                . '<span class="pricing-name">' . $e($item['title'] ?? '') . '</span>'
+                . '<span class="pricing-name">' . $e($item['title'] ?? $item['name'] ?? '') . '</span>'
                 . '</div>'
-                . '<div class="pricing-card-bd">'
+                . '<div class="pricing-grid-bd">'
                 . '<span class="pricing-amount">' . $e($price) . '</span>'
                 . '</div></a>';
         }
         $blocks[] = '<section class="section section-alt"><div class="container">'
             . '<div class="sec-head">' . $head . '</div>'
-            . '<div class="pricing-grid">' . $cards . '</div></div></section>';
+            . '<div class="pricing-grid">' . $cardsHtml . '</div>'
+            . '<div style="text-align:center;margin-top:24px">'
+            . '<a class="btn btn-teal" href="' . $e($view->url('pricing'))
+            . '">Xem bảng giá đầy đủ →</a></div></div></section>';
+        continue;
+    }
+
+    if ($kind === 'reviews') {
+        $rating = (float) ($section['averageRating'] ?? 0);
+        $ratingPercent = max(0, min(100, ($rating / 5) * 100));
+        $total = (int) ($section['totalReviews'] ?? 0);
+        $counts = is_array($section['starCounts'] ?? null) ? $section['starCounts'] : [];
+        $denominator = max(1, $total, array_sum(array_map('intval', $counts)));
+        $bars = '';
+        foreach ([5, 4, 3, 2, 1] as $star) {
+            $count = max(0, (int) ($counts[$star] ?? 0));
+            $percent = min(100, ($count / $denominator) * 100);
+            $bars .= '<div class="review-bar-row"><span class="review-star-label">★ ' . $star . '</span>'
+                . '<span class="review-bar"><i style="width:' . $e(number_format($percent, 2, '.', '')) . '%"></i></span>'
+                . '<strong>' . $e(number_format($count, 0, ',', '.')) . '</strong></div>';
+        }
+        $gallery = '';
+        foreach ($items as $item) {
+            $image = $img($item['image'] ?? null);
+            if ($image !== '') {
+                $gallery .= '<figure class="review-shot">' . $image . '</figure>';
+            }
+        }
+        $galleryHtml = $gallery !== '' ? '<div class="review-gallery">' . $gallery . '</div>' : '';
+        $subtitle = (string) ($section['subtitle'] ?? '');
+        $blocks[] = '<section class="section review-section"><div class="container">'
+            . '<div class="sec-head"><h2 class="sec-label">' . $e($title) . '</h2>'
+            . ($subtitle !== '' ? '<p class="sec-subtitle">' . $e($subtitle) . '</p>' : '') . '</div>'
+            . '<div class="review-summary"><div class="review-score"><strong>' . $e(number_format($rating, 1)) . '</strong><span>/5</span>'
+            . '<div class="review-stars" aria-label="' . $e($rating) . ' trên 5 sao"><span>★★★★★</span>'
+            . '<i style="width:' . $e(number_format($ratingPercent, 2, '.', '')) . '%">★★★★★</i></div>'
+            . '<p>' . $e(number_format($total, 0, ',', '.')) . ' đánh giá</p></div>'
+            . '<div class="review-bars">' . $bars . '</div></div>'
+            . $galleryHtml . '</div></section>';
         continue;
     }
 }
-
 $bodyHtml = $blocks === []
     ? '<section class="section"><div class="container"><p>Trang chủ chưa có khối nào bật.'
         . ' Vào <a href="/admin/home-sections">Admin → Bố cục trang chủ</a> để thêm và bật section.'

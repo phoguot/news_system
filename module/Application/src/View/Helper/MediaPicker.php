@@ -41,10 +41,11 @@ final class MediaPicker
 
     /**
      * @param list<array{id: int|string, label: string, path?: string}> $options
-     * @param string $current id đang chọn (chuỗi rỗng = chưa chọn)
+     * @param string|int $current id đang chọn (chuỗi rỗng = chưa chọn)
      */
-    public function __invoke(string $name, array $options, string $current): string
+    public function __invoke(string $name, array $options, string|int $current): string
     {
+        $current = (string) $current;
         $e     = static fn (mixed $v): string => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8');
         $src   = '';
         foreach ($options as $opt) {

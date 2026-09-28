@@ -1,6 +1,6 @@
 -- Van Lang — News CMS — MySQL 8.0.19+ — utf8mb4_0900_ai_ci
 -- Convention: tables snake_case, columns camelCase, no FK, no deletedAt
--- 18 tables per docs/phan-tich-he-thong-website-tin-tuc.md v1.5 + batches 16/09-17/09
+-- 19 tables per docs/phan-tich-he-thong-website-tin-tuc.md v1.5 + review block 26/09/2026
 SET NAMES utf8mb4;
 SET time_zone = '+00:00';
 
@@ -216,6 +216,19 @@ CREATE TABLE IF NOT EXISTS home_section_items (
   UNIQUE KEY uq_home_section_items (sectionId, itemType, itemId),
   KEY idx_home_section_items_section_sort (sectionId, sortOrder),
   KEY idx_home_section_items_item (itemType, itemId)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE IF NOT EXISTS reviews (
+  id           INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  imageMediaId INT UNSIGNED NOT NULL,
+  altText      VARCHAR(255) NULL,
+  sortOrder    INT NOT NULL DEFAULT 0,
+  isActive     TINYINT(1) NOT NULL DEFAULT 1,
+  createdAt    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updatedAt    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_reviews_active_sort (isActive, sortOrder),
+  KEY idx_reviews_image_media (imageMediaId)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 CREATE TABLE IF NOT EXISTS team_members (

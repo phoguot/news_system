@@ -16,11 +16,14 @@ use Admin\Model\HomeSectionItem\HomeSectionItemModel;
 use Admin\Model\Media\MediaMapper;
 use Admin\Model\Post\PostMapper;
 use Admin\Model\Post\PostModel;
+use Admin\Model\Review\ReviewMapper;
+use Admin\Model\Review\ReviewModel;
 use Admin\Model\TeamMember\TeamMemberMapper;
 use Application\Constant\CacheConst;
 use Application\Service\PageCacheService;
 use ApplicationTest\Helper\TestContainer;
 use Frontend\Model\Service\ServiceMapper;
+use Frontend\Model\Service\ServiceModel;
 use Frontend\Service\HomeService;
 use Laminas\Cache\Storage\StorageInterface;
 use PHPUnit\Framework\MockObject\MockObject;
@@ -41,6 +44,7 @@ final class HomeServiceTest extends TestCase
     private TeamMemberMapper&MockObject $team;
     private CategoryMapper&MockObject $categories;
     private MediaMapper&MockObject $media;
+    private ReviewMapper&MockObject $reviews;
     private StorageInterface&MockObject $storage;
     private HomeService $service;
 
@@ -54,6 +58,7 @@ final class HomeServiceTest extends TestCase
         $this->team       = $this->createMock(TeamMemberMapper::class);
         $this->categories = $this->createMock(CategoryMapper::class);
         $this->media      = $this->createMock(MediaMapper::class);
+        $this->reviews    = $this->createMock(ReviewMapper::class);
         $this->storage    = $this->createMock(StorageInterface::class);
 
         $pageCache = (new PageCacheService())->setContainer(
@@ -73,6 +78,7 @@ final class HomeServiceTest extends TestCase
             TeamMemberMapper::class      => $this->team,
             CategoryMapper::class        => $this->categories,
             MediaMapper::class           => $this->media,
+            ReviewMapper::class          => $this->reviews,
         ];
         if ($pageCache !== null) {
             $entries[PageCacheService::class] = $pageCache;
@@ -166,6 +172,28 @@ final class HomeServiceTest extends TestCase
         self::assertArrayNotHasKey('image', $heroItems[0]);
     }
 
+    public function testServicesBlockAutoLoadsOnlyActiveParents(): void
+    {
+        $this->sections->method('listActiveOrdered')->willReturn([
+            $this->section(7, HomeSectionConst::TYPE_SERVICES, 'Dịch vụ', ['limit' => 6]),
+        ]);
+        $this->services->expects(self::once())->method('listActiveParents')->with(6)->willReturn([
+            ServiceModel::fromRow([
+                'id' => 10,
+                'parentId' => null,
+                'name' => 'Chăm sóc tại nhà',
+                'slug' => 'cham-soc-tai-nha',
+                'isActive' => 1,
+            ]),
+        ]);
+        $this->services->expects(self::never())->method('listActive');
+
+        $blocks = $this->service->sections();
+
+        self::assertSame('services', $blocks[0]['kind']);
+        self::assertSame('Chăm sóc tại nhà', $blocks[0]['items'][0]['title']);
+    }
+
     public function testHitSkipsDbEntirely(): void
     {
         $cached = [['kind' => 'cta', 'title' => 'T', 'href' => '/lien-he', 'button' => 'Go', 'items' => []]];
@@ -256,5 +284,34 @@ final class HomeServiceTest extends TestCase
         $image = $catItems[0]['image'];
         self::assertSame('/m/7-thumb.jpg', $image['path']);
         self::assertSame('A', $image['alt']);
+    }
+
+    public function testReviewBlockUsesConfiguredStatsLimitAndLargeImages(): void
+    {
+        $this->sections->method('listActiveOrdered')->willReturn([
+            $this->section(10, HomeSectionConst::TYPE_REVIEWS, 'Đánh giá', [
+                'average_rating' => 4.9,
+                'total_reviews' => 1519,
+                'star_5' => 1474,
+                'star_4' => 37,
+                'star_3' => 5,
+                'star_2' => 3,
+                'star_1' => 0,
+                'limit' => 6,
+            ]),
+        ]);
+        $this->reviews->expects(self::once())->method('listActive')->with(6)->willReturn([
+            ReviewModel::fromRow(['id' => 1, 'imageMediaId' => 31, 'altText' => 'Review thật']),
+        ]);
+        $this->media->method('mapCardsByIds')->with([31])->willReturn([
+            31 => ['path' => '/r.jpg', 'alt' => '', 'thumb' => '/r-thumb.jpg', 'large' => '/r-large.jpg'],
+        ]);
+        $block = $this->service->sections()[0];
+        self::assertSame('reviews', $block['kind']);
+        self::assertSame(4.9, $block['averageRating']);
+        self::assertSame(1519, $block['totalReviews']);
+        self::assertSame(1474, $block['starCounts'][5]);
+        self::assertSame('/r-large.jpg', $block['items'][0]['image']['path']);
+        self::assertSame('Review thật', $block['items'][0]['image']['alt']);
     }
 }

@@ -87,6 +87,43 @@ class ServiceService extends AppServiceFactory
         return $this->serviceMapper()->listAll();
     }
 
+    /**
+     * Danh sách phẳng theo thứ tự cây: dịch vụ cha rồi đến các dịch vụ con.
+     * Dòng mồ côi do dữ liệu cũ bị sửa trực tiếp vẫn được xếp cuối để Admin
+     * nhìn thấy và sửa lại quan hệ.
+     *
+     * @return list<array{service: ServiceModel, depth: int}>
+     */
+    public function listOrdered(): array
+    {
+        $all      = $this->serviceMapper()->listAll();
+        $byParent = [];
+        $topIds   = [];
+        foreach ($all as $service) {
+            $parentId = $service->parentId ?? 0;
+            $byParent[$parentId][] = $service;
+            if ($parentId === 0) {
+                $topIds[$service->id] = true;
+            }
+        }
+
+        $ordered = [];
+        foreach ($byParent[0] ?? [] as $parent) {
+            $ordered[] = ['service' => $parent, 'depth' => 0];
+            foreach ($byParent[$parent->id] ?? [] as $child) {
+                $ordered[] = ['service' => $child, 'depth' => 1];
+            }
+        }
+
+        foreach ($all as $service) {
+            $parentId = $service->parentId ?? 0;
+            if ($parentId !== 0 && ! isset($topIds[$parentId])) {
+                $ordered[] = ['service' => $service, 'depth' => 1];
+            }
+        }
+
+        return $ordered;
+    }
     public function findOrFail(int $id): ServiceModel
     {
         $service = $this->serviceMapper()->findById($id);
@@ -319,11 +356,16 @@ class ServiceService extends AppServiceFactory
     public function delete(int $id): void
     {
         $this->findOrFail($id);
-
-        if ($this->contactMapper()->countByServiceId($id) > 0) {
-            throw new ConflictException([ServiceConst::ERROR_DELETE_CONTACTS]);
+        $reasons = [];
+        if ($this->serviceMapper()->hasChildren($id)) {
+            $reasons[] = ServiceConst::ERROR_DELETE_CHILDREN;
         }
-
+        if ($this->contactMapper()->countByServiceId($id) > 0) {
+            $reasons[] = ServiceConst::ERROR_DELETE_CONTACTS;
+        }
+        if ($reasons !== []) {
+            throw new ConflictException($reasons);
+        }
         $this->serviceMapper()->delete($id);
         $this->invalidatePublicCaches();
     }
@@ -347,13 +389,19 @@ class ServiceService extends AppServiceFactory
         $parentId = $this->nullableInt($data['parentId'] ?? null);
         if ($parentId !== null) {
             if ($excludeId !== null && $parentId === $excludeId) {
-                throw new \Admin\Exception\ValidationException(['parentId' => ServiceConst::ERROR_PARENT_SELF]);
+                throw new ValidationException(['parentId' => ServiceConst::ERROR_PARENT_SELF]);
             }
-            if ($this->serviceMapper()->findById($parentId) === null) {
-                throw new \Admin\Exception\ValidationException(['parentId' => ServiceConst::ERROR_PARENT_INVALID]);
+            $parent = $this->serviceMapper()->findById($parentId);
+            if ($parent === null) {
+                throw new ValidationException(['parentId' => ServiceConst::ERROR_PARENT_INVALID]);
+            }
+            if ($parent->parentId !== null) {
+                throw new ValidationException(['parentId' => ServiceConst::ERROR_PARENT_DEPTH]);
+            }
+            if ($excludeId !== null && $this->serviceMapper()->hasChildren($excludeId)) {
+                throw new ValidationException(['parentId' => ServiceConst::ERROR_PARENT_HAS_CHILD]);
             }
         }
-
         return [
             'parentId'         => $parentId,
             'name'             => $name,

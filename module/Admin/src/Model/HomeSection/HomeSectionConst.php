@@ -23,7 +23,7 @@ final class HomeSectionConst
     public const TYPE_CONTACT_CTA    = 7;
     public const TYPE_PROCESS        = 8;
     public const TYPE_PRICING        = 9;
-
+    public const TYPE_REVIEWS        = 10;
     /** @var array<int, string> type => nhãn hiển thị */
     public const TYPE_LABELS = [
         self::TYPE_HERO_BANNER    => 'Hero banner',
@@ -35,6 +35,7 @@ final class HomeSectionConst
         self::TYPE_CONTACT_CTA    => 'CTA liên hệ',
         self::TYPE_PROCESS        => 'Quy trình',
         self::TYPE_PRICING        => 'Bảng giá',
+        self::TYPE_REVIEWS        => 'Đánh giá khách hàng',
     ];
 
     /** Giá trị `mode` trong config các section danh sách. */
@@ -104,4 +105,6 @@ final class HomeSectionConst
     public const ERROR_PROCESS_STEPS = 'Quy trình cần mảng steps gồm 3-6 bước, mỗi bước có title (2-80 ký tự).';
     public const ERROR_PRICING_GROUP = 'group_code phải là general, hospital, home hoặc để trống (tất cả).';
     public const ERROR_PRICING_LIMIT = 'limit phải là số nguyên từ 3 đến 20.';
+    public const ERROR_REVIEW_RATING = 'average_rating phải là số từ 0 đến 5.';
+    public const ERROR_REVIEW_COUNT = 'Số lượng đánh giá phải là số nguyên không âm.';
 }

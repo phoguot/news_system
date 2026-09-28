@@ -1977,3 +1977,4 @@ tbody.js-sortable tr[data-id]:not(.dragging):hover .drag-handle { color: var(--t
   font-size: 30px; line-height: 1; color: #f1f5f9; cursor: pointer;
 }
 .img-lightbox-close:hover { color: #fff; }
+.review-admin-thumb { width: 120px; height: 76px; object-fit: cover; border-radius: 8px; border: 1px solid var(--border, #dde3ea); }

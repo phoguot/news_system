@@ -41,7 +41,6 @@ final class MediaPickerTest extends TestCase
     public function testSelectedImageRendersWellFormedImgAndHiddenEmptyState(): void
     {
         $html = (new MediaPicker())('imageMediaId', $this->mediaOptions(), '7');
-
         // Thẻ img đóng đủ dấu nháy và kết thúc bằng `>` ngay sau alt=""
         // (không còn nuốt span phía sau vào thuộc tính).
         $this->assertStringContainsString(
@@ -56,6 +55,17 @@ final class MediaPickerTest extends TestCase
         // × hiện khi có ảnh chọn → có button clear và không mang attribute hidden.
         $this->assertStringContainsString('<button type="button" class="media-pick-clear"', $html);
         $this->assertStringNotContainsString('aria-label="Bỏ chọn ảnh" hidden', $html);
+    }
+
+    public function testIntegerCurrentIdIsNormalizedAndRendersSelectedImage(): void
+    {
+        $html = (new MediaPicker())('imageMediaId', $this->mediaOptions(), 7);
+
+        $this->assertStringContainsString('value="7">', $html);
+        $this->assertStringContainsString(
+            '<img class="media-pick-preview" src="/uploads/2026/09/logo.png" alt="">',
+            $html,
+        );
     }
 
     public function testEmptyStateShowsCameraAndHidesClearButton(): void

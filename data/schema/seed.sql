@@ -1,9 +1,9 @@
 INSERT INTO settings (groupCode, settingKey, settingValue, valueType, label, sortOrder) VALUES
-  ('general', 'site_name',                'Vạn Lang', 1, 'Tên website', 1),
+  ('general', 'site_name',                'Văn Lang', 1, 'Tên website', 1),
   ('general', 'site_logo',                NULL, 7,  'Logo', 2),
   ('general', 'site_favicon',             NULL, 7,  'Favicon', 3),
   ('general', 'footer_text',              NULL, 3,   'Nội dung chân trang', 4),
-  ('contact', 'company_name',             'Trung tâm Chăm sóc Sức khỏe Vạn Lang', 1, 'Tên pháp nhân', 1),
+  ('contact', 'company_name',             'Trung tâm Chăm sóc Sức khỏe Văn Lang', 1, 'Tên pháp nhân', 1),
   ('contact', 'address',                  '123 Hoàng Văn Ca, Long Biên, Hà Nội', 2,   'Địa chỉ', 2),
   ('contact', 'hotline',                  '1900 1234', 1, 'Hotline', 3),
   ('contact', 'email',                    'hello@vanlang.vn', 1, 'Email công khai', 4),
@@ -15,8 +15,8 @@ INSERT INTO settings (groupCode, settingKey, settingValue, valueType, label, sor
   ('social',  'youtube_url',              NULL, 1, 'YouTube', 2),
   ('social',  'zalo_url',                 NULL, 1, 'Zalo OA', 3),
   ('social',  'linkedin_url',             NULL, 1, 'LinkedIn', 4),
-  ('seo',     'default_meta_title',       'Vạn Lang - Tận tâm chăm sóc, vững tâm gia đình', 1, 'Meta title mặc định', 1),
-  ('seo',     'default_meta_description', 'Trung tâm Chăm sóc Sức khỏe Vạn Lang - dịch vụ chăm sóc người lớn tuổi tận tâm, chuyên nghiệp.', 2,   'Meta description mặc định', 2),
+  ('seo',     'default_meta_title',       'Văn Lang - Tận tâm chăm sóc, vững tâm gia đình', 1, 'Meta title mặc định', 1),
+  ('seo',     'default_meta_description', 'Trung tâm Chăm sóc Sức khỏe Văn Lang - dịch vụ chăm sóc người lớn tuổi tận tâm, chuyên nghiệp.', 2,   'Meta description mặc định', 2),
   ('seo',     'default_og_image',         NULL, 7,  'Ảnh chia sẻ mặc định', 3),
   ('seo',     'ga_measurement_id',        NULL, 1, 'Google Analytics Measurement ID', 4);
 
@@ -35,4 +35,5 @@ INSERT INTO home_sections (type, title, config, sortOrder) VALUES
   (5,               'Dịch vụ của chúng tôi', JSON_OBJECT('mode', 'auto', 'limit', 6), 3),
   (3,               'Tin mới nhất',          JSON_OBJECT('limit', 6), 4),
   (6,               'Đội ngũ',               JSON_OBJECT('mode', 'auto', 'limit', 4), 5),
-  (7,               'Bạn cần tư vấn?',       JSON_OBJECT('button_text', 'Liên hệ ngay', 'button_url', '/lien-he'), 6);
+  (7,               'Bạn cần tư vấn?',       JSON_OBJECT('button_text', 'Liên hệ ngay', 'button_url', '/lien-he'), 6),
+  (10,              'Bình luận & đánh giá của khách hàng', JSON_OBJECT('average_rating', 4.9, 'total_reviews', 1519, 'star_5', 1474, 'star_4', 37, 'star_3', 5, 'star_2', 3, 'star_1', 0, 'limit', 6), 7);

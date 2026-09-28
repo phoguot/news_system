@@ -1,6 +1,6 @@
 # Quy chuẩn DB
 
-> Nguồn sự thật cấu trúc: [`data/schema/schema.sql`](../../../data/schema/schema.sql) (18 bảng) đối chiếu [§4 phân tích](../../phan-tich-he-thong-website-tin-tuc.md). Khi hai bên lệch nhau, **schema.sql thắng**. Bổ sung cho [`01-quy-uoc-dat-ten.md`](01-quy-uoc-dat-ten.md) — file đó nói *tên*, file này nói *chuẩn kỹ thuật DB*.
+> Nguồn sự thật cấu trúc: [`data/schema/schema.sql`](../../../data/schema/schema.sql) (19 bảng) đối chiếu [§4 phân tích](../../phan-tich-he-thong-website-tin-tuc.md). Khi hai bên lệch nhau, **schema.sql thắng**. Bổ sung cho [`01-quy-uoc-dat-ten.md`](01-quy-uoc-dat-ten.md) — file đó nói *tên*, file này nói *chuẩn kỹ thuật DB*.
 
 ## 1. Nền tảng bắt buộc
 
@@ -52,7 +52,7 @@
 |---|---|---|
 | `posts.status` | `0`=draft · `1`=published · `2`=archived | §4.4.3, `schema.sql` `status TINYINT UNSIGNED DEFAULT 0` |
 | `post_revisions.type` | `0`=manual · `1`=autosave · `2`=before_publish | §4.4.3 |
-| `home_sections.type` | `1`=hero_banner · `2`=featured_posts · `3`=latest_posts · `4`=category_posts · `5`=services · `6`=team · `7`=contact_cta | §4.4.4 |
+| `home_sections.type` | `1`=hero_banner · `2`=featured_posts · `3`=latest_posts · `4`=category_posts · `5`=services · `6`=team · `7`=contact_cta · `8`=process · `9`=pricing · `10`=reviews | §4.4.4 |
 | `home_section_items.itemType` | `1`=post · `2`=service · `3`=team_member | §4.4.4 |
 | `contact_submissions.status` | `0`=new · `1`=processing · `2`=done · `3`=spam | §4.4.6 |
 | `settings.valueType` | `1`=string · `2`=text · `3`=html · `4`=number · `5`=boolean · `6`=json · `7`=media | §4.4.7 |
@@ -79,7 +79,7 @@
 
 | Chuẩn dự án | Chi tiết |
 |---|---|
-| Một file DDL gộp | `data/schema/schema.sql` — `CREATE TABLE IF NOT EXISTS` đầy đủ 18 bảng |
+| Một file DDL gộp | `data/schema/schema.sql` — `CREATE TABLE IF NOT EXISTS` đầy đủ 19 bảng |
 | Seed | `data/schema/seed.sql` — `settings` + `home_sections` mặc định |
 | Incremental (khi cần) | file `data/schema/YYYY-MM-DD-mo-ta.sql` chứa `ALTER`/`CREATE` mới; chạy tuần tự |
 | Thêm cột | nếu cột tham chiếu bảng khác → kèm `KEY` ngay trong câu `ALTER` |

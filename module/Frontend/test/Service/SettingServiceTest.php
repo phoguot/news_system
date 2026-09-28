@@ -46,7 +46,7 @@ final class SettingServiceTest extends TestCase
         return [
             SettingModel::fromRow([
                 'id' => 1, 'groupCode' => 'general', 'settingKey' => 'site_name',
-                'settingValue' => 'Vạn Lang', 'valueType' => SettingConst::VALUE_TYPE_STRING,
+                'settingValue' => 'Văn Lang', 'valueType' => SettingConst::VALUE_TYPE_STRING,
                 'label' => 'Tên trang', 'sortOrder' => 0,
             ]),
             SettingModel::fromRow([
@@ -59,7 +59,7 @@ final class SettingServiceTest extends TestCase
 
     public function testMissLoadsFromDbAndWritesCache(): void
     {
-        $expectedMap = ['site_name' => 'Vạn Lang', SettingConst::KEY_NOTIFY_EMAILS => null];
+        $expectedMap = ['site_name' => 'Văn Lang', SettingConst::KEY_NOTIFY_EMAILS => null];
         $this->mapper->method('listAll')->willReturn($this->rows());
         // PageCacheService ghi payload dạng serialize([map]) (FR-39).
         $this->storage
@@ -91,7 +91,7 @@ final class SettingServiceTest extends TestCase
     {
         $this->mapper->method('listAll')->willReturn($this->rows());
 
-        self::assertSame('Vạn Lang', $this->service->stringOrNull('site_name'));
+        self::assertSame('Văn Lang', $this->service->stringOrNull('site_name'));
         // NULL trong DB và key không tồn tại → null
         self::assertNull($this->service->stringOrNull(SettingConst::KEY_NOTIFY_EMAILS));
         self::assertNull($this->service->stringOrNull('khong_co'));
@@ -116,7 +116,7 @@ final class SettingServiceTest extends TestCase
         );
         $this->mapper->method('listAll')->willReturn($this->rows());
 
-        self::assertSame('Vạn Lang', $service->stringOrNull('site_name'));
+        self::assertSame('Văn Lang', $service->stringOrNull('site_name'));
         $service->invalidate();
     }
 

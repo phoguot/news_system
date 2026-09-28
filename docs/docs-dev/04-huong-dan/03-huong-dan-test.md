@@ -108,7 +108,7 @@ curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8080/admin       # 200
 ```
 
 > **Baseline đã đo 12/09/2026 trên `php -S` (PHP 8.3.28):**
-> - `GET /`, `/tin-tuc`, `/lien-he`, `/tim-kiem`, `/admin`, `/admin/login` → **200** nhưng là **nội dung stub**, `<title>` vẫn là "Laminas MVC Skeleton" (chưa bật `layout/frontend` / `layout/admin` — chưa có key `view_manager.layout`). *(Ghi chú 14/09/2026: baseline này hết hiệu lực phần layout — `view_manager.layout => 'layout/frontend'` đã đặt trong config Frontend; `<title>` trang công khai nay là "… - Vạn Lang".)*
+> - `GET /`, `/tin-tuc`, `/lien-he`, `/tim-kiem`, `/admin`, `/admin/login` → **200** nhưng là **nội dung stub**, `<title>` vẫn là "Laminas MVC Skeleton" (chưa bật `layout/frontend` / `layout/admin` — chưa có key `view_manager.layout`). *(Ghi chú 14/09/2026: baseline này hết hiệu lực phần layout — `view_manager.layout => 'layout/frontend'` đã đặt trong config Frontend; `<title>` trang công khai nay là "… - Văn Lang".)*
 > - `GET|POST /api/contact` **đã hết 500** — 12/09/2026 thay bằng trang `frontend/contact/index` + flow CSRF/captcha/rate-limit (xem `../03-tich-hop/02-xu-ly-loi.md`).
 > - `POST /api/admin/posts` → **200 `{"success":true}`** dù **không** gửi cookie phiên → xác nhận chưa có auth guard.
 > - `GET /sitemap.xml` và `GET /robots.txt` → **404**. Với `robots.txt`: chưa có file. Với `sitemap.xml`: route có tồn tại trong `module/Frontend/config/module.config.php`, nhưng **PHP built-in server không chuyển request có đuôi `.xml` vào `index.php`** → phải test sitemap trên Apache/nginx (rewrite) hoặc qua `AbstractHttpControllerTestCase::dispatch('/sitemap.xml')` trong PHPUnit, không test bằng `curl` trên `composer serve`.

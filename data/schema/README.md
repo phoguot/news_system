@@ -1,4 +1,4 @@
-# Database — Vạn Lang News
+# Database — Văn Lang News
 
 ## Yêu cầu
 - MySQL 8.0.19+ (InnoDB, utf8mb4, `time_zone = '+00:00'`)
@@ -11,6 +11,8 @@ mysql -u root -p news_system < data/schema/schema.sql
 mysql -u root -p news_system < data/schema/seed.sql
 php bin/create-admin.php --email=admin@vanlang.vn --name="Quan tri Van Lang"
 ```
+
+Nâng cấp database đang chạy để thêm khối đánh giá: `mysql -u root -p news_system < data/schema/2026-09-26-review-block.sql`.
 
 > **Đường tắt cho môi trường cục bộ/dev:** `mysql -u root -p news_system < data/schema/2026-09-13-seed-admin.sql` chèn đúng 1 dòng admin với mật khẩu **dev công khai** ghi ngay đầu file (idempotent — chạy lại chỉ reset mật khẩu, không tạo dòng thứ hai). Production BẮT BUỘC dùng `bin/create-admin.php` và đổi mật khẩu sau lần đăng nhập đầu.
 

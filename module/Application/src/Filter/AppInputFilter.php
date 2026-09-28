@@ -44,10 +44,10 @@ abstract class AppInputFilter extends InputFilter
      * ('Y-m-d', 'Y-m-d H:i'/'Y-m-d\TH:i', tuỳ chọn giây) — dùng chung cho
      * publishedAt/startAt/endAt; quy đổi UTC thuộc trách nhiệm Service.
      */
-    public const string DATETIME_PATTERN = '/^\d{4}-\d{2}-\d{2}([ T]\d{2}:\d{2}(:\d{2})?)?$/';
+    public const DATETIME_PATTERN = '/^\d{4}-\d{2}-\d{2}([ T]\d{2}:\d{2}(:\d{2})?)?$/';
 
     /** Pattern slug chuẩn của hệ thống: chữ thường, số, gạch nối đơn. */
-    public const string SLUG_PATTERN = '/^[a-z0-9]+(-[a-z0-9]+)*$/';
+    public const SLUG_PATTERN = '/^[a-z0-9]+(-[a-z0-9]+)*$/';
 
     private ?ContainerInterface $container = null;
 

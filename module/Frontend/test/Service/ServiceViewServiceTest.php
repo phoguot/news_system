@@ -15,6 +15,7 @@ use PHPUnit\Framework\TestCase;
 
 /**
  * Unit test cho ServiceViewService (FR-08):
+ * - paginate(): cha active làm filter, chỉ con active được render thành card.
  * - list(): trả về danh sách dịch vụ active, map icon/image media.
  * - detail(slug):
  *   - slug rỗng hoặc không tồn tại: null
@@ -90,6 +91,56 @@ final class ServiceViewServiceTest extends TestCase
         self::assertNull($result['services'][1]['image']);
     }
 
+    public function testPaginateShowsOnlyChildrenOfActiveParents(): void
+    {
+        $parents = [
+            $this->model(1, 'cham-soc-tai-nha', ['name' => 'Chăm sóc tại nhà', 'parentId' => null]),
+            $this->model(2, 'cham-soc-tai-vien', ['name' => 'Chăm sóc tại viện', 'parentId' => null]),
+        ];
+        $children = [
+            $this->model(11, 'dieu-duong-tai-nha', ['parentId' => 1]),
+            $this->model(21, 'kham-tong-quat', ['parentId' => 2]),
+        ];
+        $this->services->method('listActiveParents')->willReturn($parents);
+        $this->services->expects(self::once())->method('countActiveChildren')->with([1, 2])->willReturn(2);
+        $this->services->expects(self::once())
+            ->method('listActiveChildrenPage')
+            ->with([1, 2], 12, 0)
+            ->willReturn($children);
+        $result = $this->service->paginate(null, 1);
+        self::assertSame(2, $result['total']);
+        self::assertSame([11, 21], array_column($result['services'], 'id'));
+        self::assertSame(['cham-soc-tai-nha', 'cham-soc-tai-vien'], array_column($result['parentFilters'], 'slug'));
+        self::assertNull($result['selectedParent']);
+    }
+
+    public function testPaginateFiltersChildrenBySelectedParentSlug(): void
+    {
+        $parents = [
+            $this->model(1, 'tai-nha', ['name' => 'Tại nhà', 'parentId' => null]),
+            $this->model(2, 'tai-vien', ['name' => 'Tại viện', 'parentId' => null]),
+        ];
+        $this->services->method('listActiveParents')->willReturn($parents);
+        $this->services->expects(self::once())->method('countActiveChildren')->with([2])->willReturn(1);
+        $this->services->expects(self::once())
+            ->method('listActiveChildrenPage')
+            ->with([2], 12, 0)
+            ->willReturn([$this->model(21, 'kham-tong-quat', ['parentId' => 2])]);
+        $result = $this->service->paginate('tai-vien', 1);
+        self::assertSame('tai-vien', $result['selectedParent']['slug'] ?? null);
+        self::assertSame([21], array_column($result['services'], 'id'));
+    }
+
+    public function testPaginateUnknownParentSlugFallsBackToAllActiveParents(): void
+    {
+        $parents = [$this->model(1, 'tai-nha', ['parentId' => null])];
+        $this->services->method('listActiveParents')->willReturn($parents);
+        $this->services->expects(self::once())->method('countActiveChildren')->with([1])->willReturn(0);
+        $this->services->expects(self::never())->method('listActiveChildrenPage');
+        $result = $this->service->paginate('khong-ton-tai', 1);
+        self::assertNull($result['selectedParent']);
+        self::assertSame([], $result['services']);
+    }
     public function testDetailEmptySlugReturnsNull(): void
     {
         $this->services->expects(self::never())->method('findActiveBySlug');
@@ -129,5 +180,18 @@ final class ServiceViewServiceTest extends TestCase
         self::assertSame('Khám bệnh chuyên sâu', $item['metaTitle']);
         self::assertSame('Mô tả dịch vụ khám', $item['metaDescription']);
         self::assertSame('kham.jpg', $item['image']['path'] ?? null);
+    }
+
+    public function testDetailChildReturnsNullWhenParentIsInactive(): void
+    {
+        $child = $this->model(5, 'dich-vu-con', ['parentId' => 2]);
+        $parent = $this->model(2, 'dich-vu-cha', [
+            'parentId' => null,
+            'isActive' => ServiceConst::INACTIVE,
+        ]);
+        $this->services->method('findActiveBySlug')->with('dich-vu-con')->willReturn($child);
+        $this->services->method('findById')->with(2)->willReturn($parent);
+        $this->media->expects(self::never())->method('mapCardsByIds');
+        self::assertNull($this->service->detail('dich-vu-con'));
     }
 }
