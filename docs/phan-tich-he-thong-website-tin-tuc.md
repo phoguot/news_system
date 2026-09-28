@@ -118,8 +118,8 @@ Liên hệ                   /lien-he
 |---|---|
 | Số bài theo trạng thái | `posts` |
 | Liên hệ mới chưa xử lý | `contact_submissions.status = 0` (0=new) |
-| Top bài xem nhiều 7 / 30 ngày | `post_view_daily` |
-| Biểu đồ lượt xem theo ngày | `post_view_daily` |
+| Khách truy cập hôm nay / 7 / 30 ngày | `site_visit_daily` |
+| Biểu đồ khách truy cập theo ngày | `site_visit_daily` |
 
 ### 3.2 Danh mục tin tức
 
@@ -439,11 +439,13 @@ Hệ thống chỉ có **1 tài khoản quản trị duy nhất** — không có
 | 11 | `banners` | Giao diện | Banner |
 | 12 | `home_sections` | Giao diện | Các khối trang chủ |
 | 13 | `home_section_items` | Giao diện | Mục chọn thủ công trong khối |
-| 14 | `team_members` | Đội ngũ | Nhân sự |
-| 15 | `contact_submissions` | Liên hệ | Liên hệ từ khách |
-| 16 | `pricing_items` | Bảng giá | Bảng giá (16/09) |
-| 17 | `menu_items` | Giao diện | Menu frontend (17/09) |
-| 18 | `settings` | Hệ thống | Cài đặt chung |
+| 14 | `reviews` | Giao diện | Ảnh đánh giá khách hàng |
+| 15 | `team_members` | Đội ngũ | Nhân sự |
+| 16 | `contact_submissions` | Liên hệ | Liên hệ từ khách |
+| 17 | `pricing_items` | Bảng giá | Bảng giá (16/09) |
+| 18 | `menu_items` | Giao diện | Menu frontend (17/09) |
+| 19 | `settings` | Hệ thống | Cài đặt chung |
+| 20 | `site_visit_daily` | Hệ thống | Khách/trình duyệt duy nhất theo ngày UTC |
 
 ### 4.3 Sơ đồ quan hệ (ERD)
 
@@ -654,6 +656,12 @@ CREATE TABLE post_view_daily (
   views    INT UNSIGNED NOT NULL DEFAULT 0,
   PRIMARY KEY (postId, viewDate),
   KEY idx_post_view_daily_date (viewDate)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE site_visit_daily (
+  visitDate DATE         NOT NULL,
+  visitors  INT UNSIGNED NOT NULL DEFAULT 0,
+  PRIMARY KEY (visitDate)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 ```
 

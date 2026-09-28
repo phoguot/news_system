@@ -176,6 +176,13 @@ return [
             Model\Setting\SettingMapper::class => static function (ContainerInterface $c): Model\Setting\SettingMapper {
                 return new Model\Setting\SettingMapper($c->get(\Application\Service\DbService::class)->getAdapter());
             },
+            Model\SiteVisitDaily\SiteVisitDailyMapper::class => static function (
+                ContainerInterface $c
+            ): Model\SiteVisitDaily\SiteVisitDailyMapper {
+                return new Model\SiteVisitDaily\SiteVisitDailyMapper(
+                    $c->get(\Application\Service\DbService::class)->getAdapter()
+                );
+            },
             // Service nền 07 §4 (13/09/2026): extends AppServiceFactory,
             // constructor không nhận gì — mồi container qua AppInvokableFactory.
             Service\ContactService::class => AppInvokableFactory::class,
@@ -230,6 +237,9 @@ return [
             // PostViewService = FR-41 ghi lượt xem (post_view_daily upsert + posts.viewCount),
             // dedup cookie/session 30', bỏ bot UA, transaction.
             Service\PostViewService::class => AppInvokableFactory::class,
+            // Đếm khách toàn website: 1 trình duyệt/ngày UTC, chỉ route Frontend GET,
+            // bỏ bot; Module::init gắn cookie SameSite=Lax/HttpOnly tới hết ngày.
+            Service\SiteVisitService::class => AppInvokableFactory::class,
         ],
     ],
     'controllers' => [

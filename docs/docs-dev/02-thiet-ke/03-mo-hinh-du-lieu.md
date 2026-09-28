@@ -1,6 +1,6 @@
 # Mô hình dữ liệu
 
-> **18 bảng**, MySQL 8, InnoDB, `utf8mb4_0900_ai_ci`, cột `camelCase`. DDL đầy đủ: [`data/schema/schema.sql`](../../../data/schema/schema.sql) (KHÔNG lặp lại ở đây). Tóm tắt quan hệ theo [docs §4.2–§4.3](../../phan-tich-he-thong-website-tin-tuc.md).
+> **20 bảng**, MySQL 8, InnoDB, `utf8mb4_0900_ai_ci`, cột `camelCase`. DDL đầy đủ: [`data/schema/schema.sql`](../../../data/schema/schema.sql) (KHÔNG lặp lại ở đây). Tóm tắt quan hệ theo [docs §4.2–§4.3](../../phan-tich-he-thong-website-tin-tuc.md).
 > **Không có FOREIGN KEY** — quan hệ chỉ là cột `...Id` + index; suy diễn quan hệ do tầng Service chịu trách nhiệm (DB §6, docs §4.1).
 
 ## 1. Nhóm Hệ thống & Tài khoản
@@ -10,6 +10,7 @@
 | `users` | Tài khoản quản trị **duy nhất** (không phân quyền) | `id`; `uq_users_email(email)`; `passwordHash`, `failedLoginCount`, `lockedUntil`, `avatarMediaId` | 1→N `password_reset_tokens`; 1→N `posts.authorId`; 1→N `media.uploadedBy`; 1↔1 `team_members.userId` |
 | `password_reset_tokens` | Token đặt lại mật khẩu | `id`; `uq_..._hash(tokenHash)`; `expiresAt`, `usedAt` | N→1 `users.userId` |
 | `settings` | Cài đặt chung theo 4 nhóm | `id`; `uq_settings_key(settingKey)`; `groupCode`, `valueType` | N→1 `users.updatedBy` (nullable) |
+| `site_visit_daily` | Khách/trình duyệt duy nhất theo ngày UTC | PK `visitDate`; `visitors` | Độc lập; không lưu IP/fingerprint |
 
 ## 2. Nhóm Media
 
@@ -68,6 +69,7 @@ services ──< contact_submissions
 - **KHÔNG có `post_categories`** — mỗi bài **đúng 1 danh mục** qua `posts.categoryId`. Bảng `post_categories` chỉ là phương án mở rộng nếu sau này cho bài thuộc nhiều danh mục (docs §9 điểm 2), **hiện không tồn tại** trong `schema.sql`.
 - **`home_section_items`** — quan hệ **đa hình**: cặp `(itemType, itemId)` với `itemType`: `1`=post · `2`=service · `3`=team_member. Vì đa hình nên không FK; tầng ứng dụng validate theo `itemType` và bỏ qua mục đã ẩn/xoá khi render.
 - **`post_view_daily`** — PK tổ hợp `(postId, viewDate)`, `viewDate` theo UTC; ghi bằng upsert (`INSERT ... AS newRow ON DUPLICATE KEY UPDATE`, docs §5.8), `posts.viewCount` giữ bản tổng phi chuẩn hoá để sort nhanh.
+- **`site_visit_daily`** — một dòng/ngày UTC; `visitors` tăng khi trình duyệt chưa có cookie ngày hiện tại. Đây là số trình duyệt duy nhất theo ngày, không phải định danh người thật tuyệt đối.
 
 ## 8. Quy tắc kiểm tra media trước khi xoá (docs §5.14)
 

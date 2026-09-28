@@ -44,7 +44,7 @@ public/index.php  ──►  config/container.php  ──►  Laminas MVC (appli
 | Controller | **Mỏng**: nhận request, gọi Service, trả `ViewModel`/`JsonModel`; không chứa nghiệp vụ | `module/*/src/Controller/*.php` |
 | Service | Nghiệp vụ: validate, transaction xoá cứng, lọc HTML, tạo variant ảnh, tính `readingMinutes`… | `Application/Service/*` (dùng chung — trước 13/09 là `Core/Service/*`); service theo module (dự kiến) |
 | Mapper | **1 bảng = 1 Mapper** (`Model/<Entity>/<Entity>Mapper.php`) — lớp truy vấn/ghi cho đúng bảng mình sở hữu, dùng `Laminas\Db\Sql`; gom scope công khai `status=1 AND publishedAt<=NOW()`; không join bảng của mapper khác (chuẩn [`../01-quy-chuan/07-crud-convention.md`](../01-quy-chuan/07-crud-convention.md) §5) | `module/*/src/Model/*/` (đang refactor từ `src/Table/`) |
-| MySQL | Lưu trữ 18 bảng, không FOREIGN KEY, không `deletedAt`; kết nối đặt `time_zone='+00:00'` | `data/schema/schema.sql` |
+| MySQL | Lưu trữ 20 bảng, không FOREIGN KEY, không `deletedAt`; kết nối đặt `time_zone='+00:00'` | `data/schema/schema.sql` |
 
 ## Module
 
@@ -89,7 +89,7 @@ Repo hiện là **khung sườn**, chưa phải bản chạy đầy đủ:
 
 - `Admin`/`Frontend` có `Controller/` (không còn `Controller/Factory/` — DI bằng closure trong config), đa số action còn là placeholder; data access **đã refactor xong 12/09/2026** sang chuẩn `Model/<Entity>/{Mapper,Const}` + `Filter/` (Admin: `Model/User/UserMapper`, `Filter/Auth/LoginFilter`; Frontend: `Model/{Contact,Service,Setting}`, `Filter/Contact/ContactSaveFilter`) — chuẩn áp dụng ở [`../01-quy-chuan/07-crud-convention.md`](../01-quy-chuan/07-crud-convention.md). Đã có code thật: đăng nhập admin + form liên hệ.
 - `Application/Service/*` (DbService, SlugService, HtmlPurifierService, CaptchaService, DateService…) **đã code thật** (trước 13/09 thuộc `Core/Service/*` — factory & wiring nay ở `Application/config/module.config.php`); `MediaService` thuộc `Admin/Service` (chỉ admin upload). Helper `MediaUrl` (`Application\View\Helper\MediaUrl`) đã có thân hàm.
-- Route (Frontend + Admin + `admin-api`), config DB/session/cache/mail/app, `schema.sql` (18 bảng), `seed.sql` và `bin/create-admin.php` **đã có và đúng**.
+- Route (Frontend + Admin + `admin-api`), config DB/session/cache/mail/app, `schema.sql` (20 bảng), `seed.sql` và `bin/create-admin.php` **đã có và đúng**.
 
 ## Nguyên tắc thiết kế
 

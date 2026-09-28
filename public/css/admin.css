@@ -470,46 +470,11 @@ body {
 
 .section-heading h2 { font-size: 18px; }
 .section-heading span { color: var(--text-muted); font-size: 12px; }
-.view-dashboard-grid { margin-bottom: 20px; }
-.view-bar-chart { overflow-x: auto; padding-bottom: 4px; }
-.view-bar-chart .chart-bars { min-width: 680px; gap: 4px; }
-.view-bar { background: #a7f3d0; }
-.view-bar:hover { background: #16a34a; }
-
-.top-viewed-list { display: flex; flex-direction: column; }
-
-.top-viewed-item {
-  display: grid;
-  grid-template-columns: 28px minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 0;
-  color: var(--text);
-  text-decoration: none;
-  border-bottom: 1px solid var(--border);
-}
-
-.top-viewed-item:last-child { border-bottom: 0; }
-.top-viewed-item:hover .top-viewed-title { color: var(--primary); }
-.top-viewed-rank {
-  width: 26px;
-  height: 26px;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  background: #eff6ff;
-  color: var(--primary);
-  font-size: 12px;
-  font-weight: 700;
-}
-.top-viewed-title {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 13px;
-}
-.top-viewed-item strong { color: var(--text-secondary); font-size: 12px; white-space: nowrap; }
-.empty-note { color: var(--text-muted); font-size: 13px; padding: 14px 0; }
+.visitor-chart-card { margin-bottom: 20px; }
+.visitor-bar-chart { overflow-x: auto; padding-bottom: 4px; }
+.visitor-bar-chart .chart-bars { min-width: 680px; gap: 4px; }
+.visitor-bar { background: #a7f3d0; }
+.visitor-bar:hover { background: #16a34a; }
 
 /* ========== BAR CHART ========== */
 .bar-chart { padding-top: 8px; }

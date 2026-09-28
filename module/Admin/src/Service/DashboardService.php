@@ -8,7 +8,6 @@ use Admin\Model\Category\CategoryMapper;
 use Admin\Model\Post\PostConst;
 use Admin\Model\Post\PostMapper;
 use Admin\Model\Post\PostModel;
-use Admin\Model\PostViewDaily\PostViewDailyMapper;
 use Application\Factory\AppServiceFactory;
 use DateInterval;
 use DateTimeImmutable;
@@ -16,6 +15,7 @@ use DateTimeZone;
 use Frontend\Model\Contact\ContactConst;
 use Frontend\Model\Contact\ContactMapper;
 use Frontend\Model\Service\ServiceMapper;
+use Frontend\Model\SiteVisitDaily\SiteVisitDailyMapper;
 
 /**
  * Số liệu trang Tổng quan admin theo ĐÚNG mockup `Image/files/cms-doanh-nghiep.html`
@@ -25,8 +25,8 @@ use Frontend\Model\Service\ServiceMapper;
  *
  * Mỗi bảng đọc qua ĐÚNG mapper chủ bảng (07 §5 — không JOIN chéo); tên chuyên
  * mục của bài ghép bằng truy vấn riêng `CategoryMapper::getNamesByIds`.
- * Khối lượt xem bổ sung 28/09/2026: tổng, hôm nay, 7/30 ngày, biểu đồ 30 ngày
- * và top 5 bài. Ngày thống kê giữ UTC đúng schema/docs §5.8.
+ * Khối khách truy cập bổ sung 28/09/2026: tổng, hôm nay, 7/30 ngày và biểu đồ
+ * 30 ngày. Một trình duyệt chỉ được tính một lần mỗi ngày UTC trên toàn site.
  *
  * DI nền 07 §4 (13/09/2026): dependency lấy từ container qua
  * getContainerEntry() — constructor không nhận gì.
@@ -35,7 +35,6 @@ class DashboardService extends AppServiceFactory
 {
     /** Số bài mới nhất hiển thị ở cột "Bài viết mới nhất" (mockup: 3 dòng). */
     private const RECENT_LIMIT = 3;
-    private const TOP_VIEWED_LIMIT = 5;
 
     private function postMapper(): PostMapper
     {
@@ -61,10 +60,10 @@ class DashboardService extends AppServiceFactory
         return $this->getContainerEntry(ContactMapper::class);
     }
 
-    private function postViewDailyMapper(): PostViewDailyMapper
+    private function siteVisitDailyMapper(): SiteVisitDailyMapper
     {
-        /** @var PostViewDailyMapper */
-        return $this->getContainerEntry(PostViewDailyMapper::class);
+        /** @var SiteVisitDailyMapper */
+        return $this->getContainerEntry(SiteVisitDailyMapper::class);
     }
 
     /**
@@ -82,13 +81,12 @@ class DashboardService extends AppServiceFactory
      *     monthlyPosts: list<int>,
      *     currentMonth: int,
      *     recentPosts: list<array{title: string, dateUtc: string, categoryName: string}>,
-     *     viewTotal: int,
-     *     viewToday: int,
-     *     viewLast7Days: int,
-     *     viewLast30Days: int,
-     *     view30DayDelta: int,
-     *     dailyViews: list<array{date: string, views: int}>,
-     *     topViewedPosts: list<array{id: int, title: string, viewCount: int}>,
+     *     visitorTotal: int,
+     *     visitorToday: int,
+     *     visitorLast7Days: int,
+     *     visitorLast30Days: int,
+     *     visitor30DayDelta: int,
+     *     dailyVisitors: list<array{date: string, visitors: int}>,
      * }
      */
     public function summary(): array
@@ -109,7 +107,7 @@ class DashboardService extends AppServiceFactory
         $year      = (int) $now->format('Y');
         $recent    = $posts->listLatestPublished(self::RECENT_LIMIT);
         $catNames  = $this->categoryNames($recent);
-        $views     = $this->postViewDailyMapper();
+        $visits    = $this->siteVisitDailyMapper();
 
         $today        = new DateTimeImmutable('today', $utc);
         $tomorrow     = $today->modify('+1 day');
@@ -122,8 +120,8 @@ class DashboardService extends AppServiceFactory
         $sevenStartDate  = $sevenStart->format('Y-m-d');
         $thirtyStartDate = $thirtyStart->format('Y-m-d');
 
-        $viewLast30Days = $views->countBetween($thirtyStartDate, $tomorrowDate);
-        $viewPrevious30 = $views->countBetween($previousFrom->format('Y-m-d'), $thirtyStartDate);
+        $visitorLast30Days = $visits->countBetween($thirtyStartDate, $tomorrowDate);
+        $visitorPrevious30 = $visits->countBetween($previousFrom->format('Y-m-d'), $thirtyStartDate);
 
         return [
             'postTotal'       => $tabs[PostConst::TAB_ALL] ?? 0,
@@ -154,16 +152,15 @@ class DashboardService extends AppServiceFactory
                 },
                 $recent
             ),
-            'viewTotal'       => $views->countAll(),
-            'viewToday'       => $views->countBetween($todayDate, $tomorrowDate),
-            'viewLast7Days'   => $views->countBetween($sevenStartDate, $tomorrowDate),
-            'viewLast30Days'  => $viewLast30Days,
-            'view30DayDelta'  => $viewLast30Days - $viewPrevious30,
-            'dailyViews'      => $this->dailyViews(
+            'visitorTotal'       => $visits->countAll(),
+            'visitorToday'       => $visits->countBetween($todayDate, $tomorrowDate),
+            'visitorLast7Days'   => $visits->countBetween($sevenStartDate, $tomorrowDate),
+            'visitorLast30Days'  => $visitorLast30Days,
+            'visitor30DayDelta'  => $visitorLast30Days - $visitorPrevious30,
+            'dailyVisitors'      => $this->dailyVisitors(
                 $thirtyStart,
-                $views->countDailyBetween($thirtyStartDate, $tomorrowDate)
+                $visits->countDailyBetween($thirtyStartDate, $tomorrowDate)
             ),
-            'topViewedPosts'  => $posts->listTopViewed(self::TOP_VIEWED_LIMIT),
         ];
     }
 
@@ -172,15 +169,15 @@ class DashboardService extends AppServiceFactory
      *
      * @param array<string, int> $counts
      *
-     * @return list<array{date: string, views: int}>
+     * @return list<array{date: string, visitors: int}>
      */
-    private function dailyViews(DateTimeImmutable $from, array $counts): array
+    private function dailyVisitors(DateTimeImmutable $from, array $counts): array
     {
         $rows   = [];
         $cursor = $from;
         for ($i = 0; $i < 30; $i++) {
             $date   = $cursor->format('Y-m-d');
-            $rows[] = ['date' => $date, 'views' => $counts[$date] ?? 0];
+            $rows[] = ['date' => $date, 'visitors' => $counts[$date] ?? 0];
             $cursor = $cursor->add(new DateInterval('P1D'));
         }
 

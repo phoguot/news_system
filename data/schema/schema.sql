@@ -147,6 +147,12 @@ CREATE TABLE IF NOT EXISTS post_view_daily (
   KEY idx_post_view_daily_date (viewDate)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
+CREATE TABLE IF NOT EXISTS site_visit_daily (
+  visitDate DATE         NOT NULL,
+  visitors  INT UNSIGNED NOT NULL DEFAULT 0,
+  PRIMARY KEY (visitDate)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
 CREATE TABLE IF NOT EXISTS services (
   id               INT UNSIGNED NOT NULL AUTO_INCREMENT,
   parentId         INT UNSIGNED NULL,

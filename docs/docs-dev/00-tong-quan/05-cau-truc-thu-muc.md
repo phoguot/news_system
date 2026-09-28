@@ -22,7 +22,7 @@ News/
 ├── data/
 │   ├── cache/                  Config cache + `page/` (TTL 60s) — runtime, gitignore
 │   └── schema/
-│       ├── schema.sql          ⚙️  19 bảng (không FK, không deletedAt) — thêm `reviews` (26/09)
+│       ├── schema.sql          ⚙️  20 bảng (không FK, không deletedAt) — thêm `site_visit_daily` (28/09)
 │       ├── seed.sql            settings (`map_address` là ô Google Map chung, `map_embed_url` legacy) + home_sections (+ type 8 process) + services cha-con + pricing mẫu + menu mặc định
 │       ├── migrate-20260916-ui-overhaul.sql  idempotent: services.parentId + pricing_items + map_address + seed 2 cha 7 con + 12 pricing + section process
 │       └── migrate-20260917-menu-items.sql   idempotent: menu_items + seed menu mặc định + ẩn fallback map_embed_url khỏi form Admin
@@ -354,12 +354,12 @@ Toàn bộ các dòng "code cũ" đã chuyển xong 12/09/2026 (trừ CLAUDE.md 
 
 | Đường dẫn | Vai trò | Route riêng? | Sở hữu bảng (Mapper)? |
 |---|---|:-:|---|
-| `module/Frontend/` | Hiển thị nội dung công khai | ✅ `/`, `/tin-tuc`… | `Setting`, `Service`, `Contact`, `Pricing`, `Menu` (mapper Frontend sở hữu; Admin ghi hộ CRUD qua container gộp với `PricingService`/`MenuService`). **Chiều ngược từ batch 9 (13/09):** `HomeService` đọc các mapper **Admin sở hữu** (`Post`/`Banner`/`TeamMember`/`HomeSection`/`HomeSectionItem`/`Category`/`Media`) qua container gộp — chỉ SELECT, không tạo mapper thứ hai |
+| `module/Frontend/` | Hiển thị nội dung công khai | ✅ `/`, `/tin-tuc`… | `Setting`, `Service`, `Contact`, `Pricing`, `Menu`, `SiteVisitDaily` (mapper Frontend sở hữu; Admin đọc thống kê khách qua container gộp; Admin ghi hộ CRUD qua container gộp với `PricingService`/`MenuService`). **Chiều ngược từ batch 9 (13/09):** `HomeService` đọc các mapper **Admin sở hữu** (`Post`/`Banner`/`TeamMember`/`HomeSection`/`HomeSectionItem`/`Category`/`Media`) qua container gộp — chỉ SELECT, không tạo mapper thứ hai |
 | `module/Admin/` | CRUD nội dung + API JSON | ✅ `/admin/*`, `/api/admin/*` | `User`, `Category`, `Tag`, `Post`, `PostTag`, `PostRevision`, `PostViewDaily`, `HomeSection`, `HomeSectionItem`, `Banner`, `TeamMember`, `Media`, `Review` — `Contact`/`Service`/`Setting`/`Pricing`/`Menu` thuộc Frontend sở hữu Mapper; Admin dùng lại qua container gộp, KHÔNG tạo mapper thứ hai; method quét usages media nằm ở đúng mapper chủ bảng — vẫn giữ luật 1 bảng 1 Mapper |
 | `module/Core/` | — (đã gộp về Application từ 13/09/2026) | — | — |
 | `module/Application/` | Skeleton + dịch vụ dùng chung (từ 13/09 gộp Core) | (fallback) | — (không Model/, cấp `DbAdapter` qua `DbService`) |
 | `config/` | Nạp module, DB/session/cache/mail/app | ❌ | — |
-| `data/schema/` | DDL + seed 19 bảng | ❌ | Nguồn định nghĩa schema |
+| `data/schema/` | DDL + seed 20 bảng | ❌ | Nguồn định nghĩa schema |
 | `public/uploads/` | File media + biến thể | ❌ | File ứng với bảng `media` |
 | `bin/` | CLI tạo admin, xoá config cache | ❌ | `create-admin.php` dùng PDO thô — không phụ thuộc tầng Mapper |
 
