@@ -7,6 +7,7 @@ namespace AdminTest\Service;
 use Admin\Model\Category\CategoryMapper;
 use Admin\Model\Post\PostMapper;
 use Admin\Model\Post\PostModel;
+use Admin\Model\PostViewDaily\PostViewDailyMapper;
 use Admin\Service\DashboardService;
 use ApplicationTest\Helper\TestContainer;
 use Frontend\Model\Contact\ContactConst;
@@ -19,8 +20,8 @@ use PHPUnit\Framework\TestCase;
  * Dashboard theo mockup 13/09/2026 (`Image/files/cms-doanh-nghiep.html`,
  * `#page-dashboard`): payload cho 4 thẻ thống kê + delta "so với tháng trước",
  * biểu đồ 12 tháng, bài mới nhất kèm tên chuyên mục ghép bằng truy vấn riêng
- * (07 §5 — mapper nào bảng nấy). Widget lượt xem vẫn vắng (FR-41 chưa có
- * nguồn số liệu) — không còn mock PostViewDailyMapper/MediaMapper.
+ * (07 §5 — mapper nào bảng nấy), cùng khối lượt xem tổng/7/30 ngày, biểu đồ
+ * 30 ngày và top bài từ nguồn FR-41.
  */
 final class DashboardServiceTest extends TestCase
 {
@@ -28,6 +29,7 @@ final class DashboardServiceTest extends TestCase
     private CategoryMapper&MockObject $categories;
     private ServiceMapper&MockObject $services;
     private ContactMapper&MockObject $contacts;
+    private PostViewDailyMapper&MockObject $views;
     private DashboardService $service;
 
     protected function setUp(): void
@@ -36,6 +38,7 @@ final class DashboardServiceTest extends TestCase
         $this->categories = $this->createMock(CategoryMapper::class);
         $this->services   = $this->createMock(ServiceMapper::class);
         $this->contacts   = $this->createMock(ContactMapper::class);
+        $this->views      = $this->createMock(PostViewDailyMapper::class);
 
         // Mock tự trả rỗng/0 cho mọi method typed — test chỉ cài dữ liệu riêng
         $this->service = (new DashboardService())->setContainer(new TestContainer([
@@ -43,6 +46,7 @@ final class DashboardServiceTest extends TestCase
             CategoryMapper::class  => $this->categories,
             ServiceMapper::class   => $this->services,
             ContactMapper::class   => $this->contacts,
+            PostViewDailyMapper::class => $this->views,
         ]));
     }
 
@@ -55,6 +59,8 @@ final class DashboardServiceTest extends TestCase
                 'postTotal', 'categoryTotal', 'serviceTotal', 'newContacts',
                 'postDelta', 'categoryDelta', 'serviceDelta', 'contactDelta',
                 'monthlyPosts', 'currentMonth', 'recentPosts',
+                'viewTotal', 'viewToday', 'viewLast7Days', 'viewLast30Days',
+                'view30DayDelta', 'dailyViews', 'topViewedPosts',
             ],
             array_keys($summary)
         );
@@ -62,6 +68,8 @@ final class DashboardServiceTest extends TestCase
         self::assertGreaterThanOrEqual(1, $summary['currentMonth']);
         self::assertLessThanOrEqual(12, $summary['currentMonth']);
         self::assertSame([], $summary['recentPosts']);
+        self::assertCount(30, $summary['dailyViews']);
+        self::assertSame([], $summary['topViewedPosts']);
     }
 
     public function testTotalsAndDeltasComeFromOwningMappers(): void
@@ -118,5 +126,39 @@ final class DashboardServiceTest extends TestCase
                 'categoryName' => '',
             ],
         ], $summary['recentPosts']);
+    }
+
+    public function testViewMetricsFillMissingDatesAndIncludeTopPosts(): void
+    {
+        $today = new \DateTimeImmutable('today', new \DateTimeZone('UTC'));
+        $first = $today->modify('-29 days')->format('Y-m-d');
+        $last  = $today->format('Y-m-d');
+
+        // Thứ tự: 30 ngày hiện tại, 30 ngày trước, hôm nay, 7 ngày.
+        $this->views->method('countBetween')->willReturnOnConsecutiveCalls(300, 240, 12, 80);
+        $this->views->method('countAll')->willReturn(1234);
+        $this->views->method('countDailyBetween')->willReturn([
+            $first => 4,
+            $last  => 12,
+        ]);
+        $this->posts->method('listTopViewed')->with(5)->willReturn([
+            ['id' => 7, 'title' => 'Bài nổi bật', 'viewCount' => 500],
+        ]);
+
+        $summary = $this->service->summary();
+
+        self::assertSame(1234, $summary['viewTotal']);
+        self::assertSame(12, $summary['viewToday']);
+        self::assertSame(80, $summary['viewLast7Days']);
+        self::assertSame(300, $summary['viewLast30Days']);
+        self::assertSame(60, $summary['view30DayDelta']);
+        self::assertCount(30, $summary['dailyViews']);
+        self::assertSame(['date' => $first, 'views' => 4], $summary['dailyViews'][0]);
+        self::assertSame(['date' => $last, 'views' => 12], $summary['dailyViews'][29]);
+        self::assertSame(0, $summary['dailyViews'][1]['views']);
+        self::assertSame(
+            [['id' => 7, 'title' => 'Bài nổi bật', 'viewCount' => 500]],
+            $summary['topViewedPosts']
+        );
     }
 }

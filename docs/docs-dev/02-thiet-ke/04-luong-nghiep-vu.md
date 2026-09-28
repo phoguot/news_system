@@ -84,6 +84,8 @@ Request chi tiết hợp lệ → { INSERT post_view_daily ... ON DUPLICATE KEY 
 | Không phải bot | check UA |
 | `viewDate` | theo `UTC_DATE()` (§5.8) — khớp quy ước UTC |
 
+**Tổng hợp quản trị (28/09/2026):** `/admin/dashboard` đọc chính nguồn này để hiển thị tổng lượt xem, hôm nay, 7/30 ngày, biểu đồ 30 ngày và top 5 bài. `PostViewDailyMapper` chỉ tổng hợp `post_view_daily`; `PostMapper` chỉ lấy top theo `posts.viewCount`; `DashboardService` ghép payload, không JOIN chéo. Ranh giới ngày trên Dashboard là UTC và được ghi rõ trên giao diện.
+
 ---
 
 ## 6. Xoá cứng trong transaction (docs §4.6 / §5.16)

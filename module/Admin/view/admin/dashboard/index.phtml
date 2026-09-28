@@ -46,7 +46,21 @@ $statCard = static function (
     return '<div class="stat-card">'
         . '<div class="stat-icon ' . $iconCls . '">' . $iconSvg . '</div>'
         . '<div class="stat-info"><div class="stat-label">' . $label . '</div>'
-        . '<div class="stat-value">' . $value . '</div>' . $change . '</div></div>';
+        . '<div class="stat-value">' . number_format($value, 0, ',', '.') . '</div>' . $change . '</div></div>';
+};
+
+$viewCard = static function (
+    string $iconCls,
+    string $iconSvg,
+    string $label,
+    int $value,
+    string $note
+): string {
+    return '<div class="stat-card">'
+        . '<div class="stat-icon ' . $iconCls . '">' . $iconSvg . '</div>'
+        . '<div class="stat-info"><div class="stat-label">' . $label . '</div>'
+        . '<div class="stat-value">' . number_format($value, 0, ',', '.') . '</div>'
+        . '<div class="stat-change">' . $note . '</div></div></div>';
 };
 
 $postsUrl = $this->url('admin/posts');
@@ -81,6 +95,41 @@ foreach ($recentPosts as $i => $row) {
         . '<div class="recent-info"><div class="recent-title">' . $e($row['title'] ?? '') . '</div>'
         . '<div class="recent-meta">' . $e($fmtDayVn($row['dateUtc'] ?? null)) . '</div></div>'
         . $badge . '</div>';
+}
+
+/** @var list<array{date?: string, views?: int}> $dailyViews */
+$dailyViews = (array) ($summary['dailyViews'] ?? []);
+$viewPeak   = 0;
+foreach ($dailyViews as $row) {
+    $viewPeak = max($viewPeak, (int) ($row['views'] ?? 0));
+}
+
+$viewBars = '';
+foreach ($dailyViews as $i => $row) {
+    $date   = (string) ($row['date'] ?? '');
+    $count  = (int) ($row['views'] ?? 0);
+    $height = $viewPeak > 0 ? (int) round($count / $viewPeak * 100) : 0;
+    $label  = ($i % 5 === 0 || $i === count($dailyViews) - 1) && $date !== ''
+        ? substr($date, 8, 2) . '/' . substr($date, 5, 2)
+        : '';
+    $viewBars .= '<div class="bar-group"><div class="bar view-bar" style="height:' . $height
+        . '%" title="' . $e($date) . ': ' . number_format($count, 0, ',', '.') . ' lượt"></div>'
+        . '<span>' . $e($label) . '</span></div>';
+}
+
+$topViewedHtml = '';
+/** @var list<array{id?: int, title?: string, viewCount?: int}> $topViewedPosts */
+$topViewedPosts = (array) ($summary['topViewedPosts'] ?? []);
+foreach ($topViewedPosts as $i => $row) {
+    $id      = (int) ($row['id'] ?? 0);
+    $editUrl = $this->url('admin/posts', ['action' => 'edit', 'id' => $id]);
+    $topViewedHtml .= '<a class="top-viewed-item" href="' . $e($editUrl) . '">'
+        . '<span class="top-viewed-rank">' . ($i + 1) . '</span>'
+        . '<span class="top-viewed-title">' . $e($row['title'] ?? '') . '</span>'
+        . '<strong>' . number_format((int) ($row['viewCount'] ?? 0), 0, ',', '.') . ' lượt</strong></a>';
+}
+if ($topViewedHtml === '') {
+    $topViewedHtml = '<p class="empty-note">Chưa có lượt xem được ghi nhận.</p>';
 }
 
 $html = '<div class="page-header"><div><h1>Tổng quan</h1>'
@@ -121,6 +170,51 @@ $html .= $statCard(
     'tin'
 );
 $html .= '</div>';
+
+$viewDelta = (int) ($summary['view30DayDelta'] ?? 0);
+$viewDeltaNote = $viewDelta > 0
+    ? '+' . number_format($viewDelta, 0, ',', '.') . ' so với 30 ngày trước'
+    : ($viewDelta < 0
+        ? number_format($viewDelta, 0, ',', '.') . ' so với 30 ngày trước'
+        : 'Không đổi so với 30 ngày trước');
+
+$html .= '<div class="section-heading"><h2>Lượt xem bài viết</h2>'
+    . '<span>Ngày thống kê theo UTC</span></div><div class="stats-grid view-stats-grid">';
+$html .= $viewCard(
+    'blue',
+    $svg('<path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/>'),
+    'Tổng lượt xem',
+    (int) ($summary['viewTotal'] ?? 0),
+    'Từ trước đến nay'
+);
+$html .= $viewCard(
+    'green',
+    $svg('<path d="M3 3v18h18"/><path d="m7 16 4-5 4 3 5-7"/>'),
+    'Hôm nay',
+    (int) ($summary['viewToday'] ?? 0),
+    'Lượt hợp lệ trong ngày'
+);
+$html .= $viewCard(
+    'purple',
+    $svg('<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>'),
+    '7 ngày gần nhất',
+    (int) ($summary['viewLast7Days'] ?? 0),
+    'Bao gồm hôm nay'
+);
+$html .= $viewCard(
+    'orange',
+    $svg('<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>'),
+    '30 ngày gần nhất',
+    (int) ($summary['viewLast30Days'] ?? 0),
+    $viewDeltaNote
+);
+$html .= '</div>';
+
+$html .= '<div class="dashboard-grid view-dashboard-grid">'
+    . '<div class="card chart-card"><div class="card-header"><h3>Lượt xem 30 ngày gần nhất</h3></div>'
+    . '<div class="bar-chart view-bar-chart"><div class="chart-bars">' . $viewBars . '</div></div></div>'
+    . '<div class="card"><div class="card-header"><h3>Top 5 bài được xem nhiều nhất</h3></div>'
+    . '<div class="top-viewed-list">' . $topViewedHtml . '</div></div></div>';
 
 $html .= '<div class="dashboard-grid">'
     . '<div class="card chart-card"><div class="card-header"><h3>Bài viết theo tháng</h3></div>'

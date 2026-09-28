@@ -286,6 +286,38 @@ class PostMapper
         return array_values($counts);
     }
 
+    /**
+     * Các bài có tổng lượt xem cao nhất để hiển thị Dashboard. Đây là phép
+     * chiếu nhẹ của riêng bảng posts nên trả mảng scalar thay vì hydrate model.
+     *
+     * @return list<array{id: int, title: string, viewCount: int}>
+     */
+    public function listTopViewed(int $limit): array
+    {
+        $sql    = new Sql($this->db);
+        $select = $sql->select(self::TABLE_NAME);
+        $select->columns(['id', 'title', 'viewCount']);
+        $select->where->greaterThan('viewCount', 0);
+        $select->order(['viewCount' => 'DESC', 'id' => 'DESC']);
+        $select->limit(max(1, $limit));
+
+        $rows = [];
+        /** @psalm-suppress MixedAssignment — dòng trả về từ driver luôn là mixed */
+        foreach ($sql->prepareStatementForSqlObject($select)->execute() as $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+
+            $rows[] = [
+                'id'        => (int) ($row['id'] ?? 0),
+                'title'     => (string) ($row['title'] ?? ''),
+                'viewCount' => (int) ($row['viewCount'] ?? 0),
+            ];
+        }
+
+        return $rows;
+    }
+
     public function findById(int $id): ?PostModel
     {
         $sql    = new Sql($this->db);
