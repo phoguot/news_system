@@ -172,6 +172,52 @@ final class HomeServiceTest extends TestCase
         self::assertArrayNotHasKey('image', $heroItems[0]);
     }
 
+    public function testHeroUsesLargeDesktopAndMobileVariants(): void
+    {
+        $this->sections->method('listActiveOrdered')->willReturn([
+            $this->section(1, HomeSectionConst::TYPE_HERO_BANNER),
+        ]);
+        $this->banners->method('listActiveHomeHero')->willReturn([
+            BannerModel::fromRow([
+                'id'                 => 5,
+                'title'              => 'Banner 5',
+                'position'           => 'home_hero',
+                'imageMediaId'       => 41,
+                'mobileImageMediaId' => 42,
+                'isActive'           => 1,
+            ]),
+        ]);
+        $this->media->expects(self::once())->method('mapCardsByIds')->with([41, 42])->willReturn([
+            41 => [
+                'path'  => '/m/desktop.png',
+                'alt'   => 'Desktop',
+                'thumb' => '/m/desktop-thumb.webp',
+                'large' => '/m/desktop-large.webp',
+            ],
+            42 => [
+                'path'  => '/m/mobile.png',
+                'alt'   => 'Mobile',
+                'thumb' => '/m/mobile-thumb.webp',
+                'large' => '/m/mobile-large.webp',
+            ],
+        ]);
+
+        $blocks = $this->service->sections();
+
+        /**
+         * @var array{
+         *     items: list<array{
+         *         image: array{path: string, alt: string},
+         *         mobileImage: array{path: string, alt: string}
+         *     }>
+         * } $hero
+         */
+        $hero = $blocks[0];
+
+        self::assertSame('/m/desktop-large.webp', $hero['items'][0]['image']['path']);
+        self::assertSame('/m/mobile-large.webp', $hero['items'][0]['mobileImage']['path']);
+    }
+
     public function testServicesBlockAutoLoadsOnlyActiveParents(): void
     {
         $this->sections->method('listActiveOrdered')->willReturn([

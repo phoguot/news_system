@@ -38,13 +38,14 @@
 
 ## 5. File cấu hình & secret — Bắt buộc
 
+- [ ] cPanel đang chạy **PHP 8.3** và bật `pdo_mysql`, `mbstring`, `intl`, `fileinfo`, `gd`, `openssl` (code hiện dùng `json_validate()`).
 - [ ] `config/autoload/local.php` tồn tại, **không** nằm trong VCS (`git status` sạch; `config/autoload/.gitignore` có `local.php`, `*.local.php`).
 - [ ] **Không** còn giá trị `CHANGE_ME` / rỗng: `db.password`, `mail.transport.options.host/port/connection_config.*`, `mail.from`, `recaptcha.site_key/secret_key`.
 - [ ] `composer install --no-dev --optimize-autoloader` (không có `laminas-test`, `phpcs`, `psalm` ở prod).
 - [ ] `composer development-status` → **disabled**; không còn `config/development.config.php` trên server.
 - [ ] `php.ini`/FPM: `display_errors = Off`, `log_errors = On`, `expose_php = Off`; `upload_max_filesize` & `post_max_size` ≥ 5 MB.
 - [ ] `view_manager.display_exceptions = false` và `display_not_found_reason = false` đã override trong `local.php` (module `Application` đang commit giá trị `true`).
-- [ ] `session.config.options.cookie_secure = true` (đang `false` trong `global.php`) sau khi có HTTPS.
+- [ ] `session_config.cookie_secure = true` (đang `false` trong `global.php`) sau khi có HTTPS.
 - [ ] Sau mọi sửa config: `composer clear-config-cache`.
 
 ## 6. Web server & `public/uploads` — Bắt buộc

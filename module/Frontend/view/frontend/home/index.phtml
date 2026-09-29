@@ -49,7 +49,8 @@ foreach ($sections as $section) {
         $slides  = '';
         $dots    = '';
         foreach ($items as $i => $slide) {
-            $cover = (string) ($slide['image']['path'] ?? '');
+            $cover       = (string) ($slide['image']['path'] ?? '');
+            $mobileCover = (string) ($slide['mobileImage']['path'] ?? $cover);
             $inner = '<div class="slide-inner container"><div class="slide-copy">';
             if ((string) ($slide['title'] ?? '') !== '') {
                 $inner .= '<span class="slide-badge">' . $e($slide['title']) . '</span>';
@@ -64,7 +65,8 @@ foreach ($sections as $section) {
             }
             $inner .= '</div></div>';
             $style  = $cover !== ''
-                ? ' style="background-image:url(' . $e($view->mediaUrl($cover)) . ')"'
+                ? ' style="--slide-image:url(&quot;' . $e($view->mediaUrl($cover))
+                    . '&quot;);--slide-mobile-image:url(&quot;' . $e($view->mediaUrl($mobileCover)) . '&quot;)"'
                 : '';
             $slides .= '<figure class="slide"' . $style . '><div class="slide-overlay"></div>'
                 . $inner . '</figure>';

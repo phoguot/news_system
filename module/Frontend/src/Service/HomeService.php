@@ -590,11 +590,13 @@ class HomeService extends AppServiceFactory
             /** @var list<array<string, mixed>> $items */
             $items = $section['items'] ?? [];
             foreach ($items as &$item) {
-                $image = $this->imageOf($map, $item['imageId'] ?? null, ($item['kind'] ?? '') === 'review-image');
+                $kind       = (string) ($item['kind'] ?? '');
+                $largeImage = in_array($kind, ['banner', 'review-image'], true);
+                $image      = $this->imageOf($map, $item['imageId'] ?? null, $largeImage);
                 if ($image !== null) {
                     $item['image'] = $image;
                 }
-                $mobile = $this->imageOf($map, $item['mobileImageId'] ?? null);
+                $mobile = $this->imageOf($map, $item['mobileImageId'] ?? null, $kind === 'banner');
                 if ($mobile !== null) {
                     $item['mobileImage'] = $mobile;
                 }

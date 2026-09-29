@@ -20,10 +20,21 @@ return [
                 ],
             ],
         ],
-        'from' => 'no-reply@example.com',
+        'from'     => 'no-reply@example.com',
+        'base_url' => 'https://example.com',
+    ],
+    'app' => [
+        'site_url' => 'https://example.com',
     ],
     'recaptcha' => [
         'site_key'   => '',
         'secret_key' => '',
+    ],
+    'view_manager' => [
+        'display_exceptions'       => false,
+        'display_not_found_reason' => false,
+    ],
+    'session_config' => [
+        'cookie_secure' => true,
     ],
 ];

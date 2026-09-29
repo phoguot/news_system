@@ -1,6 +1,13 @@
 # Cấu hình deploy
 
-> App: Laminas MVC 3.8.0, PHP 8.1–8.3, MySQL 8. **Document root phải là `public/`** — toàn bộ `config/`, `module/`, `data/`, `vendor/` và các file HTML design tĩnh ở thư mục gốc (`index.html`, `gioi-thieu.html`, `lien-he.html`, `assets/`) phải nằm **ngoài** document root. `public/index.php` tự `chdir(dirname(__DIR__))` nên mọi đường dẫn tương đối (`data/cache`, `public/uploads`) tính từ gốc repo.
+> App: Laminas MVC 3.8.0, **production hiện phải chọn PHP 8.3**, MySQL 8.
+> `composer.json` vẫn khai báo PHP 8.1–8.3 nhưng code hiện có dùng
+> `json_validate()` (PHP 8.3); đây là độ lệch cần xử lý riêng nếu muốn tiếp tục
+> hỗ trợ PHP 8.1/8.2. **Document root phải là `public/`** — toàn bộ `config/`,
+> `module/`, `data/`, `vendor/` và các file HTML design tĩnh ở thư mục gốc
+> (`index.html`, `gioi-thieu.html`, `lien-he.html`, `assets/`) phải nằm **ngoài**
+> document root. `public/index.php` tự `chdir(dirname(__DIR__))` nên mọi đường
+> dẫn tương đối (`data/cache`, `public/uploads`) tính từ gốc repo.
 
 ## File config
 
@@ -36,15 +43,17 @@ return [
                 'connection_config' => ['username' => '...', 'password' => '...', 'ssl' => 'tls'],
             ],
         ],
-        'from' => 'no-reply@vanlang.vn',
+        'from' => 'no-reply@vanlangcare.com',
+        'base_url' => 'https://vanlangcare.com',
     ],
+    'app' => ['site_url' => 'https://vanlangcare.com'],
     'recaptcha' => ['site_key' => '<key>', 'secret_key' => '<secret>'],
     'view_manager' => [
         'display_exceptions' => false,        // che stack trace
         'display_not_found_reason' => false,  // che lý do 404
     ],
-    'session' => [
-        'config' => ['options' => ['cookie_secure' => true]], // bắt buộc khi có HTTPS
+    'session_config' => [
+        'cookie_secure' => true, // bắt buộc khi có HTTPS
     ],
 ];
 ```
@@ -61,7 +70,9 @@ Kèm theo ở tầng PHP/web server: `display_errors = Off`, `log_errors = On`, 
 
 ## Chặn thực thi script trong `public/uploads/` (bắt buộc — README dòng "Ghi chú", docs §7.3)
 
-Repo **không** có `.htaccess` nào. Chọn đúng một cấu hình theo web server:
+Repo có sẵn `public/.htaccess` để rewrite về front controller và
+`public/uploads/.htaccess` để chặn thực thi script trên Apache/cPanel. Với web
+server khác, chọn đúng một cấu hình tương đương dưới đây:
 
 **Nginx** (block `server`, đặt trước rule xử lý PHP):
 
@@ -85,14 +96,10 @@ location ~ \.php$ {
 }
 ```
 
-**Apache 2.4** — tạo `public/uploads/.htaccess`:
+**Apache 2.4** — `public/uploads/.htaccess` trong repo dùng cấu hình tương thích
+với shared hosting:
 
 ```apache
-# Tắt hoàn toàn PHP + exec trong thư mục uploads
-php_flag engine off
-SetHandler None
-RemoveHandler .php .phtml .phar
-RemoveType .php .phtml .phar
 Options -ExecCGI -Indexes
 <FilesMatch "\.(php|phtml|phar|cgi|pl|py|sh)$">
     Require all denied
@@ -128,6 +135,42 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^ index.php [QSA,L]
 ```
+
+## Shared hosting cPanel Nhân Hòa (`vanlangcare.com`)
+
+`bwaf.nhanhoa.com` là bảng quản trị WAF nằm trước máy chủ gốc, **không phải**
+File Manager để tải source. Trước tiên lấy email/tài khoản quản trị hosting và
+đăng nhập cPanel do Nhân Hòa cấp.
+
+Thứ tự triển khai khuyến nghị:
+
+1. Trong cPanel kiểm tra PHP 8.3, extension `pdo_mysql`, `mbstring`, `intl`,
+   `fileinfo`, `gd`, `openssl`, và MySQL 8.0.19+.
+2. Yêu cầu document root của `vanlangcare.com` trỏ tới
+   `/home/<cpanel-user>/vanlangcare/public`. Không đặt `config/`, `module/`,
+   `vendor/`, `data/` trong `public_html` chỉ để làm cho ứng dụng chạy.
+3. Upload mã nguồn vào `/home/<cpanel-user>/vanlangcare`; chạy
+   `composer install --no-dev --optimize-autoloader`, hoặc upload gói đã build
+   sẵn cả `vendor/` nếu hosting không có Terminal/SSH.
+4. Tạo database và database user riêng trong cPanel, cấp `ALL PRIVILEGES`;
+   import bản dump DB hiện tại nếu cần giữ toàn bộ nội dung đang có. Với site
+   mới hoàn toàn, import `data/schema/schema.sql`, rồi `data/schema/seed.sql`.
+5. Copy `config/autoload/local.php.dist` thành `local.php`, điền DB/SMTP/captcha,
+   đổi cả `mail.base_url` và `app.site_url` thành
+   `https://vanlangcare.com`. Không gửi hoặc commit file chứa secret.
+6. Bảo đảm `data/cache/page` và `public/uploads` tồn tại, PHP ghi được; chạy
+   `php bin/clear-config-cache.php`. Không có `config/development.config.php`
+   trên production.
+7. Trỏ DNS `@` và `www` tới IP hosting. Khi DNS đã nhận, chạy AutoSSL cho cả
+   domain gốc và `www`, sau đó mới bật chuyển hướng HTTP sang HTTPS.
+8. Kiểm tra origin trực tiếp chạy ổn rồi mới cấu hình domain trên Nhân Hòa WAF
+   và đổi DNS theo đích WAF được hệ thống cung cấp. Không áp dụng hướng dẫn cài
+   agent Nginx/VPS lên gói shared hosting.
+
+Nếu cPanel không cho đổi document root của domain chính, liên hệ Nhân Hòa yêu
+cầu trỏ document root tới thư mục `public/`. Chỉ dùng phương án tách
+`public_html` và sửa bootstrap sau khi đã xác nhận nhà cung cấp không hỗ trợ,
+vì cấu trúc mặc định của ứng dụng tính mọi đường dẫn từ gốc dự án.
 
 ## HTTPS
 
