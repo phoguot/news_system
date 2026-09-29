@@ -33,6 +33,10 @@ final class MediaConst
     public const ERROR_NO_FILE      = 'Chưa chọn file ảnh để tải lên.';
     /** %d = giới hạn MB từ cấu hình app.upload_max_mb. */
     public const ERROR_TOO_LARGE    = 'File vượt quá giới hạn %d MB cho phép.';
+    public const ERROR_SERVER_SIZE  = 'File vượt quá giới hạn dung lượng tải lên của máy chủ.';
+    public const ERROR_PARTIAL      = 'File chỉ được tải lên một phần — hãy thử lại.';
+    public const ERROR_UPLOAD       = 'Máy chủ không nhận được file tải lên — hãy thử lại.';
+    public const ERROR_FILEINFO     = 'Máy chủ chưa bật PHP extension fileinfo; vui lòng liên hệ quản trị hosting.';
     /** %s = MIME thật phát hiện được bằng finfo. */
     public const ERROR_TYPE         = 'Kiểu file không được phép (phát hiện: %s).';
     public const ERROR_MOVE         = 'Không lưu được file lên máy chủ — hãy thử lại.';

@@ -154,13 +154,17 @@ final class MediaServiceTest extends TestCase
      *
      * @return array<array-key, mixed>
      */
-    private function files(string $tmpPath, string $name, ?int $size = null): array
-    {
+    private function files(
+        string $tmpPath,
+        string $name,
+        ?int $size = null,
+        int $error = UPLOAD_ERR_OK
+    ): array {
         return ['files' => [
             'name'     => [$name],
             'tmp_name' => [$tmpPath],
             'type'     => ['application/octet-stream'],
-            'error'    => [UPLOAD_ERR_OK],
+            'error'    => [$error],
             'size'     => [$size ?? (int) filesize($tmpPath)],
         ]];
     }
@@ -259,6 +263,34 @@ final class MediaServiceTest extends TestCase
         self::assertStringContainsString('big.png', $result['errors'][0]);
         self::assertStringContainsString('1 MB', $result['errors'][0]);
         self::assertFileExists($tmp);
+    }
+
+    public function testUploadReportsPhpSizeLimitInsteadOfNoFile(): void
+    {
+        $this->media->expects(self::never())->method('insert');
+        $tmp = $this->makePng();
+        $result = $this->service->uploadForm(
+            $this->raw(),
+            $this->files('', 'large-banner.png', 0, UPLOAD_ERR_INI_SIZE),
+            7
+        );
+        self::assertSame(0, $result['uploaded']);
+        self::assertCount(1, $result['errors']);
+        self::assertStringContainsString('large-banner.png', $result['errors'][0]);
+        self::assertStringContainsString('giới hạn dung lượng tải lên của máy chủ', $result['errors'][0]);
+        self::assertFileExists($tmp);
+    }
+
+    public function testUploadReportsPartialUploadInsteadOfNoFile(): void
+    {
+        $this->media->expects(self::never())->method('insert');
+        $result = $this->service->uploadForm(
+            $this->raw(),
+            $this->files('', 'interrupted.png', 0, UPLOAD_ERR_PARTIAL),
+            7
+        );
+        self::assertSame(0, $result['uploaded']);
+        self::assertStringContainsString('chỉ được tải lên một phần', $result['errors'][0]);
     }
 
     public function testUploadRejectsPhpDisguisedAsPng(): void

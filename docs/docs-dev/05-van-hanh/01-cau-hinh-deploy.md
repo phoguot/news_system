@@ -146,6 +146,9 @@ Thứ tự triển khai khuyến nghị:
 
 1. Trong cPanel kiểm tra PHP 8.3, extension `pdo_mysql`, `mbstring`, `intl`,
    `fileinfo`, `gd`, `openssl`, và MySQL 8.0.19+.
+   Nếu upload báo `Class "finfo" not found`, vào **Select PHP Version →
+   Extensions**, bật `fileinfo` rồi lưu; không thay `finfo` bằng kiểm tra phần
+   mở rộng tên file vì sẽ làm yếu cổng chống file giả ảnh.
 2. Yêu cầu document root của `vanlangcare.com` trỏ tới
    `/home/<cpanel-user>/vanlangcare/public`. Không đặt `config/`, `module/`,
    `vendor/`, `data/` trong `public_html` chỉ để làm cho ứng dụng chạy.

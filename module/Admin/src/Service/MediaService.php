@@ -176,6 +176,10 @@ class MediaService extends AppServiceFactory
             throw new ValidationException($filter->fieldErrors());
         }
 
+        if (! class_exists(\finfo::class) || ! defined('FILEINFO_MIME_TYPE')) {
+            throw new ValidationException(['files' => MediaConst::ERROR_FILEINFO]);
+        }
+
         $maxBytes = $this->maxBytes();
         $allowed  = $this->allowedMimes();
         $uploaded = 0;
@@ -350,12 +354,13 @@ class MediaService extends AppServiceFactory
 
     /**
      * Chuyển `getFiles()` (dạng cột: name[]/tmp_name[]/…) thành danh sách mục
-     * upload còn hiệu lực; bỏ mục lỗi PHP upload hoặc tên/tmp rỗng.
+     * upload đã được người dùng chọn. Giữ lại mục có lỗi PHP để Service trả
+     * đúng nguyên nhân (quá dung lượng, upload dở...), chỉ bỏ UPLOAD_ERR_NO_FILE.
      * Hỗ trợ cả mảng thô $_FILES và mảng chuẩn hoá của Laminas.
      *
      * @param array<array-key, mixed> $files
      *
-     * @return list<array{name: string, tmp_name: string, size: int}>
+     * @return list<array{name: string, tmp_name: string, size: int, error: int}>
      */
     private function extractUploads(array $files): array
     {
@@ -377,18 +382,15 @@ class MediaService extends AppServiceFactory
                 $name    = $names[$offset] ?? null;
                 $tmpName = $tmpNames[$offset] ?? null;
                 $error   = (int) ($errors[$offset] ?? UPLOAD_ERR_NO_FILE);
-                if (! is_string($name) || $name === '' || ! is_string($tmpName) || $tmpName === '') {
-                    continue;
-                }
-
-                if ($error !== UPLOAD_ERR_OK) {
+                if (! is_string($name) || $name === '' || $error === UPLOAD_ERR_NO_FILE) {
                     continue;
                 }
 
                 $items[] = [
                     'name'     => basename($name),
-                    'tmp_name' => $tmpName,
+                    'tmp_name' => is_string($tmpName) ? $tmpName : '',
                     'size'     => (int) ($sizes[$offset] ?? 0),
+                    'error'    => $error,
                 ];
             }
         } else {
@@ -402,18 +404,15 @@ class MediaService extends AppServiceFactory
                 $error   = (int) ($fileInfo['error'] ?? UPLOAD_ERR_NO_FILE);
                 $size    = (int) ($fileInfo['size'] ?? 0);
 
-                if (! is_string($name) || $name === '' || ! is_string($tmpName) || $tmpName === '') {
-                    continue;
-                }
-
-                if ($error !== UPLOAD_ERR_OK) {
+                if (! is_string($name) || $name === '' || $error === UPLOAD_ERR_NO_FILE) {
                     continue;
                 }
 
                 $items[] = [
                     'name'     => basename($name),
-                    'tmp_name' => $tmpName,
+                    'tmp_name' => is_string($tmpName) ? $tmpName : '',
                     'size'     => $size,
+                    'error'    => $error,
                 ];
             }
         }
@@ -425,14 +424,19 @@ class MediaService extends AppServiceFactory
      * Lưu một file: dung lượng → MIME thật (finfo) → đường dẫn random → move →
      * kích thước thật → biến thể → ghi dòng `media`.
      *
-     * @param array{name: string, tmp_name: string, size: int} $item
-     * @param list<string>                                      $allowed
-     * @param int|null                                          $uploadedBy
+     * @param array{name: string, tmp_name: string, size: int, error: int} $item
+     * @param list<string>                                                   $allowed
+     * @param int|null                                                       $uploadedBy
      *
      * @throws ValidationException từng bước từ chối (thông báo gắn vào trường `files`)
      */
     private function storeUpload(array $item, int $maxBytes, array $allowed, ?int $uploadedBy): void
     {
+        $uploadError = $this->phpUploadError($item['error']);
+        if ($uploadError !== null) {
+            throw new ValidationException(['files' => $uploadError]);
+        }
+
         if ($item['size'] <= 0 || $item['size'] > $maxBytes) {
             $mb      = intdiv($maxBytes, 1024 * 1024);
             $message = $item['size'] <= 0
@@ -493,6 +497,16 @@ class MediaService extends AppServiceFactory
             'variants'     => MediaModel::encodeVariants($variants),
             'uploadedBy'   => $uploadedBy,
         ]);
+    }
+
+    private function phpUploadError(int $error): ?string
+    {
+        return match ($error) {
+            UPLOAD_ERR_OK => null,
+            UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE => MediaConst::ERROR_SERVER_SIZE,
+            UPLOAD_ERR_PARTIAL => MediaConst::ERROR_PARTIAL,
+            default => MediaConst::ERROR_UPLOAD,
+        };
     }
 
     /**
