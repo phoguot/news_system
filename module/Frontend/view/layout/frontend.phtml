@@ -1,4 +1,22 @@
-<?php /** @var \Laminas\View\Renderer\PhpRenderer $this */ ?>
+<?php
+
+/** @var \Laminas\View\Renderer\PhpRenderer $this */
+
+$contact      = $this->siteContact();
+$view         = $this;
+$e            = static fn (mixed $value): string => $view->escapeHtml((string) $value);
+$ea           = static fn (mixed $value): string => $view->escapeHtmlAttr((string) $value);
+$hotline      = $contact['hotline'];
+$hotlineHref  = $contact['hotlineHref'];
+$facebookUrl  = $contact['facebookUrl'];
+$zaloUrl      = $contact['zaloUrl'];
+$facebookLink = $facebookUrl === null ? '' : '<a href="' . $ea($facebookUrl)
+    . '" target="_blank" rel="noopener noreferrer" aria-label="Facebook">'
+    . '<img src="' . $ea($this->basePath('assets/img/logo_facebook.svg')) . '" alt="Facebook"></a>';
+$zaloLink = $zaloUrl === null ? '' : '<a href="' . $ea($zaloUrl)
+    . '" target="_blank" rel="noopener noreferrer" aria-label="Zalo">'
+    . '<img src="' . $ea($this->basePath('assets/img/logo_zalo.svg')) . '" alt="Zalo"></a>';
+?>
 <?= $this->doctype() ?>
 <html lang="vi">
 <head>
@@ -13,10 +31,15 @@
 <body>
 <header class="header">
   <div class="container header-inner">
-    <a class="logo" href="<?= $this->url('home') ?>"><img src="<?= $this->basePath('assets/img/Logo_VanLang_White.jpg') ?>" class="logo-mark" alt="Logo"><span><small>Trung tâm Chăm sóc Sức khỏe</small><b>VĂN LANG</b></span></a>
+    <a class="logo" href="<?= $this->url('home') ?>"><img src="<?= $this->basePath('assets/img/Logo_VanLang_White.jpg') ?>" class="logo-mark" alt="Logo">
+        <span class="logo-text">
+            <small>Trung tâm Chăm sóc Sức khỏe</small>
+            <b>VĂN LANG</b>
+        </span>
+    </a>
     <?= $this->frontendMenu('nav') ?>
     <div class="header-actions">
-      <a class="hotline" href="tel:19001234">☎ 1900 1234</a>
+      <a class="hotline" href="<?= $ea($hotlineHref) ?>">☎ <?= $e($hotline) ?></a>
       <a class="btn btn-teal" href="<?= $this->url('contact') ?>">Đăng ký dịch vụ</a>
     </div>
     <button class="hamburger" type="button" aria-expanded="false" aria-controls="mobile-menu" aria-label="Mở menu">
@@ -28,7 +51,7 @@
   <div class="container">
     <?= $this->frontendMenu('mobile-nav-links') ?>
     <div class="mobile-menu-actions">
-      <a class="btn btn-white" href="tel:19001234">☎ 1900 1234</a>
+      <a class="btn btn-white" href="<?= $ea($hotlineHref) ?>">☎ <?= $e($hotline) ?></a>
       <a class="btn btn-teal" href="<?= $this->url('contact') ?>">Đăng ký dịch vụ</a>
     </div>
   </div>
@@ -37,32 +60,25 @@
 <footer class="footer">
   <div class="container">
     <div class="footer-grid">
-      <div><div class="footer-logo"><img src="<?= $this->basePath('assets/img/Logo_VanLang_White.jpg') ?>" class="logo-mark" alt="Logo"><span><b>VĂN LANG</b></span></div><p>Trung tâm Chăm sóc Sức khỏe Văn Lang — tận tâm, chuyên nghiệp, đồng hành cùng gia đình.</p></div>
+      <div><div class="footer-logo"><img src="<?= $this->basePath('assets/img/Logo_VanLang_White.jpg') ?>" class="logo-mark" alt="Logo"><span><b>VĂN LANG</b></span></div><p><?= $e($contact['companyName']) ?> — tận tâm, chuyên nghiệp, đồng hành cùng gia đình.</p></div>
       <div><h4>Liên kết</h4><p><a href="<?= $this->url('about') ?>">Giới thiệu</a><br><a href="<?= $this->url('services') ?>">Dịch vụ</a><br><a href="<?= $this->url('pricing') ?>">Bảng giá</a><br><a href="<?= $this->url('team') ?>">Đội ngũ</a><br><a href="<?= $this->url('contact') ?>">Liên hệ</a></p></div>
       <div>
           <h4>Liên hệ</h4>
           <p>
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-map-pin"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-              <a class="ms-1">
-                  123 Hoàng Văn Ca, Long Biên, Hà Nội
-              </a>
+              <span class="ms-1"><?= $e($contact['address']) ?></span>
           </p>
           <p>
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-phone"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
-              <a href="tel:19001234" style="color:inherit" class="ms-1">
-                  1900 1234</a><br>
+              <a href="<?= $ea($hotlineHref) ?>" style="color:inherit" class="ms-1">
+                  <?= $e($hotline) ?></a><br>
               <a href="<?= $this->url('pricing') ?>" style="color:inherit">Xem bảng giá</a>
           </p>
       </div>
       <div>
           <h4>Theo dõi</h4>
           <div class="socials">
-              <span href="#">
-                  <img src="<?= $this->basePath('assets/img/logo_facebook.svg') ?>" alt="Facebook">
-              </span>
-              <span href="#">
-                  <img src="<?= $this->basePath('assets/img/logo_zalo.svg') ?>" alt="Logo">
-              </span>
+              <?= $facebookLink . $zaloLink ?>
           </div>
       </div>
     </div>

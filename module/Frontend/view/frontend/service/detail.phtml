@@ -38,7 +38,9 @@ if ($metaDesc !== '') {
 
 $view = $this;
 $e    = static fn (mixed $v): string => $view->escapeHtml((string) $v);
+$ea   = static fn (mixed $v): string => $view->escapeHtmlAttr((string) $v);
 $img  = static function (mixed $image) use ($view, $e): string {
+
     if (! is_array($image) || (string) ($image['path'] ?? '') === '') {
         return '';
     }
@@ -50,10 +52,18 @@ $img  = static function (mixed $image) use ($view, $e): string {
 /* ---- breadcrumb: Trang chủ › Dịch vụ › {name} ---- */
 $breadcrumb = '<nav class="breadcrumb" aria-label="Breadcrumb">'
     . '<a href="/">Trang chủ</a><span>›</span>'
-    . '<a href="/dich-vu">Dịch vụ</a><span>›</span>'
-    . '<span aria-current="page">' . $e($name) . '</span>'
+    . '<a href="/dich-vu">Dịch vụ</a><span class="service-detail-crumb-separator">›</span>'
+    . '<span class="service-detail-current" aria-current="page">' . $e($name) . '</span>'
     . '</nav>';
-
+/* ---- page banner: dùng chung giao diện và ảnh với /dich-vu ---- */
+$pageBannerImage  = $this->basePath('assets/img/banner-dich-vu-v2.jpg');
+$pageBannerMobile = $this->basePath('assets/img/banner-dich-vu-mobile-v2.jpg');
+$pageBanner = '<section class="page-banner page-banner-photo service-detail-page-banner"><div class="container">'
+    . '<h1>' . $e(mb_strtoupper($name, 'UTF-8')) . '</h1>' . $breadcrumb
+    . '</div><picture class="banner-img">'
+    . '<source media="(max-width:600px)" srcset="' . $ea($pageBannerMobile) . '">'
+    . '<img src="' . $ea($pageBannerImage) . '" alt="Dịch vụ chăm sóc sức khỏe Văn Lang">'
+    . '</picture></section>';
 /* ---- banner image ---- */
 $bannerHtml = $image !== null && $img($image) !== ''
     ? '<figure class="article-banner">' . $img($image) . '</figure>'
@@ -80,10 +90,9 @@ $ctaHtml = '<div class="cta-bottom">'
     . '</div>'
     . '</div>';
 
-$html = '<section class="section"><div class="container">'
+$html = $pageBanner
+    . '<section class="section"><div class="container">'
     . '<article class="article">'
-    . $breadcrumb
-    . '<div class="article-head"><h1>' . $e($name) . '</h1></div>'
     . $bannerHtml
     . $ledeHtml
     . $contentHtml

@@ -55,10 +55,13 @@ return [
             ): View\Helper\FrontendMenu {
                 return new View\Helper\FrontendMenu($c->get(\Frontend\Service\MenuService::class));
             },
-            View\Helper\ContactBubbles::class => static function (
-                ContainerInterface $c
-            ): View\Helper\ContactBubbles {
+            View\Helper\ContactBubbles::class => static function (ContainerInterface $c): View\Helper\ContactBubbles {
+
                 return new View\Helper\ContactBubbles($c->get(\Frontend\Service\SettingService::class));
+            },
+            View\Helper\SiteContact::class => static function (ContainerInterface $c): View\Helper\SiteContact {
+
+                return new View\Helper\SiteContact($c->get(\Frontend\Service\SettingService::class));
             },
         ],
         'aliases' => [
@@ -67,6 +70,7 @@ return [
             'mediaPicker' => View\Helper\MediaPicker::class,
             'frontendMenu' => View\Helper\FrontendMenu::class,
             'contactBubbles' => View\Helper\ContactBubbles::class,
+            'siteContact' => View\Helper\SiteContact::class,
         ],
     ],
     'view_manager' => [

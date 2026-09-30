@@ -41,7 +41,8 @@ $pages      = max(0, (int) ($this->pages ?? 0));
 $category   = is_array($this->category ?? null) ? $this->category : null;
 $curSlug    = (string) ($category['slug'] ?? '');
 $title      = $category === null ? 'Tin tức' : 'Tin tức · ' . (string) $category['name'];
-
+$bannerImage  = $this->basePath('assets/img/banner-tin-tuc-v2.jpg');
+$bannerMobile = $this->basePath('assets/img/banner-tin-tuc-mobile-v2.jpg');
 /** URL trang N giữ nguyên bộ lọc hiện tại. */
 $pageUrl = static function (int $p) use ($curSlug): string {
     $query = ['page' => $p];
@@ -156,9 +157,14 @@ $summary = $total > 0
         . '/' . $e(max(1, $pages)) . '</p>'
     : '';
 
-$pageHtml = '<section class="section"><div class="container">'
-    . '<h1 class="sec-label">' . $e($title) . '</h1>'
+$breadcrumb = '<nav class="breadcrumb" aria-label="Breadcrumb"><a href="/">Trang chủ</a>'
+    . '<span> › </span><span aria-current="page">' . $e($title) . '</span></nav>';
+$pageBanner = '<section class="page-banner page-banner-photo"><div class="container">'
+    . '<h1>' . $e(mb_strtoupper($title, 'UTF-8')) . '</h1>' . $breadcrumb
+    . '</div><picture class="banner-img"><source media="(max-width:600px)" srcset="' . $e($bannerMobile) . '">'
+    . '<img src="' . $e($bannerImage)
+    . '" alt="Tin tức chăm sóc sức khỏe Văn Lang"></picture></section>';
+$pageHtml = $pageBanner . '<section class="section"><div class="container">'
     . $bannerHtml . $toolbar . $summary . $body . $pager
     . '</div></section>';
-
 echo $pageHtml;

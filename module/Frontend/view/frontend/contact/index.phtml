@@ -35,15 +35,15 @@ $facebookUrl  = (string) ($settings['facebook_url'] ?? '');
 
 $hotlineHref = 'tel:' . preg_replace('/\s+/', '', $hotline);
 $zaloHref    = $zaloUrl !== '' ? $zaloUrl : ('https://zalo.me/' . preg_replace('/\D+/', '', $hotline));
-
+$bannerImage  = $this->basePath('assets/img/banner-lien-he-v2.jpg');
+$bannerMobile = $this->basePath('assets/img/banner-lien-he-mobile-v2.jpg');
 $sentAlert  = $sent ? '<div class="alert alert-success">Cảm ơn bạn đã liên hệ. Chúng tôi sẽ phản hồi sớm nhất.</div>' : '';
 $errorAlert = $error !== null && $error !== '' ? '<div class="alert alert-danger">' . $e($error) . '</div>' : '';
 
-$breadcrumb = '<div class="breadcrumb"><a href="/">⌂ Home</a> › <span aria-current="page">Liên hệ</span></div>';
-$banner = '<section class="page-banner"><div class="container" style="position:relative;z-index:1"><h1>LIÊN HỆ</h1>' . $breadcrumb
-    . '<p class="contact-intro" style="margin-top:10px;max-width:520px;color:var(--muted);font-size:13.5px">Chúng tôi luôn lắng nghe và sẵn sàng hỗ trợ bạn. Kết nối với Văn Lang ngay hôm nay để nhận tư vấn tốt nhất.</p>'
-    . '</div><div class="banner-img"><img src="https://images.unsplash.com/photo-1576765607924-3f7b8410a787?w=900&q=80" alt=""></div></section>';
-
+$breadcrumb = '<nav class="breadcrumb" aria-label="Breadcrumb"><a href="/">Trang chủ</a><span> › </span><span aria-current="page">Liên hệ</span></nav>';
+$banner = '<section class="page-banner page-banner-photo"><div class="container"><h1>LIÊN HỆ</h1>' . $breadcrumb
+    . '</div><picture class="banner-img"><source media="(max-width:600px)" srcset="' . $ea($bannerMobile) . '">'
+    . '<img src="' . $ea($bannerImage) . '" alt="Nhân viên Văn Lang tư vấn dịch vụ chăm sóc sức khỏe"></picture></section>';
 $infoRows = '<div class="info-list">'
     . '<h4 style="font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--teal);margin-top:6px">Thông tin liên lạc</h4>'
     . '<div class="info-item"><i>📍</i><div><b>Địa chỉ</b><br><span>' . $e($address) . '</span></div></div>'

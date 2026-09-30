@@ -98,7 +98,11 @@ final class ServiceViewServiceTest extends TestCase
             $this->model(2, 'cham-soc-tai-vien', ['name' => 'Chăm sóc tại viện', 'parentId' => null]),
         ];
         $children = [
-            $this->model(11, 'dieu-duong-tai-nha', ['parentId' => 1]),
+            $this->model(11, 'dieu-duong-tai-nha', [
+                'parentId' => 1,
+                'iconMediaId' => 10,
+                'imageMediaId' => 20,
+            ]),
             $this->model(21, 'kham-tong-quat', ['parentId' => 2]),
         ];
         $this->services->method('listActiveParents')->willReturn($parents);
@@ -107,9 +111,19 @@ final class ServiceViewServiceTest extends TestCase
             ->method('listActiveChildrenPage')
             ->with([1, 2], 12, 0)
             ->willReturn($children);
+        $this->media->expects(self::once())
+            ->method('mapCardsByIds')
+            ->with([10])
+            ->willReturn([10 => ['path' => 'icon.png', 'alt' => 'Icon dịch vụ']]);
         $result = $this->service->paginate(null, 1);
         self::assertSame(2, $result['total']);
-        self::assertSame([11, 21], array_column($result['services'], 'id'));
+        $cards = $result['services'];
+        self::assertCount(2, $cards);
+        self::assertSame([11, 21], array_column($cards, 'id'));
+        self::assertSame([1, 2], array_column($cards, 'parentId'));
+        $firstCard = $cards[0] ?? [];
+        self::assertSame('icon.png', $firstCard['icon']['path'] ?? null);
+        self::assertArrayNotHasKey('image', $firstCard);
         self::assertSame(['cham-soc-tai-nha', 'cham-soc-tai-vien'], array_column($result['parentFilters'], 'slug'));
         self::assertNull($result['selectedParent']);
     }

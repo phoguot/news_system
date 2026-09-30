@@ -12,7 +12,7 @@ class SettingConst
 {
     /** Key danh sách email nhận thông báo liên hệ (CSV) */
     public const KEY_NOTIFY_EMAILS = 'notify_emails';
-
+    public const KEY_COMPANY_NAME  = 'company_name';
     public const KEY_ADDRESS       = 'address';
     public const KEY_MAP_EMBED_URL = 'map_embed_url';
     public const KEY_MAP_ADDRESS   = 'map_address';

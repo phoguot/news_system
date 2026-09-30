@@ -17,12 +17,12 @@ declare(strict_types=1);
 $members = is_array($this->members ?? null) ? $this->members : [];
 $total   = (int) ($this->total ?? 0);
 
-$this->headTitle('Đội ngũ · Van Lang News');
-
+$this->headTitle('Đội ngũ · Văn Lang');
 $view = $this;
 $e    = static fn (mixed $v): string => $view->escapeHtml((string) $v);
 $eu   = static fn (mixed $v): string => $view->escapeHtmlAttr((string) $v);
-
+$bannerImage  = $this->basePath('assets/img/banner-doi-ngu-v2.jpg');
+$bannerMobile = $this->basePath('assets/img/banner-doi-ngu-mobile-v2.jpg');
 /* ---- avatar helper ---- */
 $avatar = static function (mixed $av, string $name) use ($view, $e): string {
     if (is_array($av) && (string) ($av['path'] ?? '') !== '') {
@@ -40,7 +40,11 @@ $breadcrumb = '<nav class="breadcrumb" aria-label="Breadcrumb">'
     . '<a href="/">Trang chủ</a><span>›</span>'
     . '<span aria-current="page">Đội ngũ</span>'
     . '</nav>';
-
+$banner = '<section class="page-banner page-banner-photo"><div class="container">'
+    . '<h1>ĐỘI NGŨ</h1>' . $breadcrumb
+    . '</div><picture class="banner-img"><source media="(max-width:600px)" srcset="' . $eu($bannerMobile) . '">'
+    . '<img src="' . $eu($bannerImage)
+    . '" alt="Đội ngũ chuyên môn Trung tâm Chăm sóc Sức khỏe Văn Lang"></picture></section>';
 /* ---- member cards ---- */
 $cards = '';
 foreach ($members as $m) {
@@ -82,10 +86,8 @@ $body = $cards === ''
     ? '<p class="news-empty">Hiện tại chưa có thành viên nào được công khai.</p>'
     : '<div class="team-grid">' . $cards . '</div>';
 
-$html = '<section class="section"><div class="container">'
-    . $breadcrumb
-    . '<h1 class="sec-label">Đội ngũ của chúng tôi</h1>'
+$html = $banner . '<section class="section"><div class="container">'
+    . '<h2 class="sec-label">Đội ngũ của chúng tôi</h2>'
     . $body
     . '</div></section>';
-
 echo $html;

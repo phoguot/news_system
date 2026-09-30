@@ -218,11 +218,12 @@ module/
 │         · search ✅ (13/09 batch 15 FR-07 — `search/index.phtml`: breadcrumb "Trang chủ ›
 │           Tìm kiếm" + form search `.search-box` + thông báo/tổng số + `.post-grid`, `noindex`,
 │           CSS `.search-box`/`.search-input` trong style.css)
-│         · service ✅ (13/09 batch 16 FR-08 — `service/list.phtml`: breadcrumb + grid
-│           `.service-card` (icon/ảnh `mediaUrl`), link `/dich-vu/{slug}`; 16/09 rewrite list.phtml 5 box: Box1 banner + Box2/3 grouped cha-con + Box4 pricing rút gọn 10 dòng + Box5 CTA map; `service/detail.phtml`:
+│         · service ✅ (30/09 — `service/list.phtml`: page-banner ảnh riêng + directory card dịch vụ con
+│           responsive; card chỉ dùng `iconMediaId`, badge theo dịch vụ cha, link `/dich-vu/{slug}`;
+│           `imageMediaId` chỉ dùng ở `service/detail.phtml`; Box bảng giá rút gọn 10 dòng + CTA map; detail:
 │           breadcrumb + lede + `.article-body` echo THÔ content (đã Purifier lúc lưu — §7.3) +
 │           headTitle/description fallback; CSS block FR-08)
-│         · team ✅ (13/09 batch 17 FR-09 — `team/list.phtml`: breadcrumb + `.team-grid` cards
+│         · team ✅ (30/09 — `team/list.phtml`: page-banner ảnh riêng + breadcrumb + `.team-grid` cards
 │           (avatar thumb — thiếu avatar fallback chữ cái đầu `.team-avatar-placeholder` ·
 │           tên · chức vụ · bio · `mailto:`/`tel:` chỉ render khi service cho — null đã lọc ở
 │           payload); CSS block FR-09)
@@ -230,10 +231,11 @@ module/
 │           dựng chuỗi XML (không control structure trong body — luật phpcs); `<urlset>` +
 │           mỗi `<url><loc>` absolute qua `serverUrl()` escapeHtml, `<lastmod>` YYYY-MM-DD
 │           khi có; terminal — không layout, header do controller gắn)
-│         · contact ✅ (13/09 — contact/index.phtml form; 16/09 rewrite bỏ form POST, hiện hotline/zalo/address/working_hours + iframe mapEmbedUrl, chuỗi-based)
+│         · contact ✅ (30/09 — page-banner ảnh riêng; nội dung hotline/zalo/address/working_hours + iframe mapEmbedUrl, chuỗi-based)
 │         · about ✅ (16/09 — about/index.phtml: page-banner + about-article 4 feat + sidebar video/why-grid/contact-mini, chuỗi-based)
-│         · pricing ✅ (16/09 — pricing/index.phtml; 17/09 rewrite Medlatec-style: filter GET nhom+q+page, table 4 cột STT/Tên dịch vụ/Giá dịch vụ/Giá BHYT, phân trang 20 dòng/trang, price null="Liên hệ", chuỗi-based)
-│       + layout/frontend.phtml (16/09 nav thêm Giới thiệu/Bảng giá — 7 link, footer thêm cột Liên kết, hotline tel:)
+│         · pricing ✅ (30/09 — page-banner ảnh riêng; pricing/index.phtml Medlatec-style: filter GET nhom+q+page, table 4 cột STT/Tên dịch vụ/Giá dịch vụ/Giá BHYT, phân trang 20 dòng/trang, price null="Liên hệ", chuỗi-based)
+│       + layout/frontend.phtml (30/09 header/footer lấy hotline, địa chỉ, Facebook, Zalo qua
+│         `Application\View\Helper\SiteContact` → `Frontend\Service\SettingService`; không còn ghi cứng)
 │
 └── Admin/                     CMS (một quản trị viên) — module GHI mọi bảng qua Mapper của nó
     ├── config/module.config.php  ✏️  Route /admin/* + /api/admin/:resource + DI closure ✅

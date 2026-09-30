@@ -155,9 +155,6 @@ class ServiceViewService extends AppServiceFactory
             if ($service->iconMediaId !== null) {
                 $mediaIds[] = $service->iconMediaId;
             }
-            if ($service->imageMediaId !== null) {
-                $mediaIds[] = $service->imageMediaId;
-            }
         }
 
         $mediaMap = $mediaIds === []
@@ -166,17 +163,16 @@ class ServiceViewService extends AppServiceFactory
 
         $items = [];
         foreach ($models as $service) {
-            $icon  = $service->iconMediaId !== null ? ($mediaMap[$service->iconMediaId] ?? null) : null;
-            $image = $service->imageMediaId !== null ? ($mediaMap[$service->imageMediaId] ?? null) : null;
+            $icon = $service->iconMediaId !== null ? ($mediaMap[$service->iconMediaId] ?? null) : null;
 
             $items[] = [
                 'id'               => $service->id,
+                'parentId'         => $service->parentId,
                 'name'             => $service->name,
                 'slug'             => $service->slug,
                 'href'             => '/dich-vu/' . $service->slug,
                 'shortDescription' => $service->shortDescription ?? '',
                 'icon'             => $icon,
-                'image'            => $image,
             ];
         }
 

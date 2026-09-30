@@ -48,44 +48,65 @@ $hotline  = (string) ($settings['hotline'] ?? '1900 1234');
 $zaloUrl  = (string) ($settings['zalo_url'] ?? '');
 $address  = (string) ($settings['address'] ?? '');
 $hotlineHref = 'tel:' . preg_replace('/\s+/', '', $hotline);
+$bannerImage  = $this->basePath('assets/img/banner-dich-vu-v2.jpg');
+$bannerMobile = $this->basePath('assets/img/banner-dich-vu-mobile-v2.jpg');
 $breadcrumb = '<nav class="breadcrumb" aria-label="Breadcrumb"><a href="/">Trang chủ</a><span> › </span><span aria-current="page">Dịch vụ</span></nav>';
 
 /* Box1 banner */
-$banner = '<section class="page-banner"><div class="container" style="position:relative;z-index:1"><h1>DỊCH VỤ</h1>' . $breadcrumb
-    . '<p class="contact-intro" style="margin-top:10px;max-width:560px">Dịch vụ chăm sóc sức khỏe toàn diện — tại viện và tại nhà, chuẩn y khoa, tận tâm từng giờ.</p>'
-    . '</div><div class="banner-img"><img src="https://images.unsplash.com/photo-1576765607924-3f7b8410a787?w=900&q=80" alt=""></div></section>';
+$banner = '<section class="page-banner page-banner-photo"><div class="container"><h1>DỊCH VỤ</h1>' . $breadcrumb
+    . '</div><picture class="banner-img"><source media="(max-width:600px)" srcset="' . $ea($bannerMobile) . '">'
+    . '<img src="' . $ea($bannerImage) . '" alt="Dịch vụ chăm sóc sức khỏe Văn Lang"></picture></section>';
 
 /* ---- Bộ lọc dịch vụ cha + lưới dịch vụ con ---- */
 $selectedSlug = (string) ($selectedParent['slug'] ?? '');
 $filterOptions = '<option value="">Tất cả nhóm dịch vụ</option>';
+$parentNames = [];
 foreach ($parentFilters as $parent) {
     $slug = (string) ($parent['slug'] ?? '');
+    $parentNames[(int) ($parent['id'] ?? 0)] = (string) ($parent['name'] ?? '');
     $selected = $slug !== '' && $slug === $selectedSlug ? ' selected' : '';
     $filterOptions .= '<option value="' . $ea($slug) . '"' . $selected . '>'
         . $e($parent['name'] ?? '') . '</option>';
 }
-$toolbar = '<form class="news-filter" method="get" action="/dich-vu">'
-    . '<label class="news-filter-label" for="nhom-dich-vu">Nhóm dịch vụ:</label>'
+$countText = $total > 0 ? $e($total) . ' dịch vụ đang hiển thị' : 'Danh sách đang được cập nhật';
+$toolbar = '<div class="service-directory-head"><div class="service-directory-heading">'
+    . '<span>Dịch vụ chăm sóc</span><h2>Lựa chọn dịch vụ phù hợp</h2>'
+    . '<p>Đồng hành cùng bạn và gia đình với các dịch vụ chăm sóc sức khỏe toàn diện, an toàn và tận tâm.</p>'
+    . '</div><form class="service-directory-filter" method="get" action="/dich-vu">'
+    . '<div class="service-directory-filter-row"><label for="nhom-dich-vu">Nhóm dịch vụ</label>'
     . '<select id="nhom-dich-vu" name="nhom" onchange="this.form.submit()">'
-    . $filterOptions . '</select><button class="btn btn-white" type="submit">Lọc</button></form>';
+    . $filterOptions . '</select><button class="btn btn-teal" type="submit">⌁ Lọc</button></div>'
+    . '<small>' . $countText . '</small></form></div>';
 $cards = '';
+$cardIndex = 0;
 foreach ($services as $card) {
-    $desc = (string) ($card['shortDescription'] ?? '');
-    $icon = '';
-    if (isset($card['icon']) && is_array($card['icon'])) {
-        $icon = '<span class="svc-icon">' . $img($card['icon']) . '</span>';
-    } elseif (isset($card['image']) && is_array($card['image'])) {
-        $icon = '<span class="svc-icon">' . $img($card['image']) . '</span>';
+    $cardIndex++;
+    $desc = trim((string) ($card['shortDescription'] ?? ''));
+    if ($desc === '') {
+        $desc = 'Dịch vụ được thiết kế linh hoạt theo nhu cầu chăm sóc thực tế của người bệnh và gia đình.';
     }
-    $cards .= '<a class="service-card" href="' . $ea($card['href'] ?? '/dich-vu/' . ($card['slug'] ?? '')) . '">'
-        . $icon . '<h4>' . $e($card['name'] ?? '') . '</h4>' . ($desc !== '' ? '<p>' . $e($desc) . '</p>' : '') . '</a>';
+
+    $icon = '<span class="service-directory-icon service-directory-icon--fallback" aria-hidden="true">'
+        . '<svg viewBox="0 0 64 64" focusable="false"><path d="M27 12h10v15h15v10H37v15H27V37H12V27h15z"/></svg></span>';
+    if (isset($card['icon']) && is_array($card['icon'])) {
+        $icon = '<span class="service-directory-icon">' . $img($card['icon']) . '</span>';
+    }
+
+    $parentName = $parentNames[(int) ($card['parentId'] ?? 0)]
+        ?? (string) ($selectedParent['name'] ?? 'Dịch vụ chuyên môn');
+    $tone = (($cardIndex - 1) % 5) + 1;
+    $cards .= '<a class="service-directory-card service-directory-card--tone-' . $tone . '" href="'
+        . $ea($card['href'] ?? '/dich-vu/' . ($card['slug'] ?? '')) . '">'
+        . '<span class="service-directory-accent" aria-hidden="true"></span>'
+        . $icon . '<span class="service-directory-card-body"><span class="service-directory-badge">'
+        . $e($parentName) . '</span><h3>' . $e($card['name'] ?? '') . '</h3><p>' . $e($desc) . '</p>'
+        . '<span class="service-directory-link">Xem chi tiết <i aria-hidden="true">→</i></span></span></a>';
 }
 
 $body = $cards === ''
     ? '<p class="news-empty">Hiện tại chưa có dịch vụ nào được công khai.</p>'
-    : '<div class="services-grid services-page-grid">' . $cards . '</div>';
+    : '<div class="service-directory-grid">' . $cards . '</div>';
 
-$summary = $total > 0 ? '<p class="news-count">' . $e($total) . ' dịch vụ con · trang ' . $e($page) . '/' . $e(max(1, $pages)) . '</p>' : '';
 $pageUrl = static function (int $p) use ($selectedSlug): string {
 
     $query = ['page' => $p];
@@ -133,8 +154,7 @@ if ($pages > 1) {
 }
 
 $servicesBlock = '<section class="section"><div class="container">'
-    . '<div class="sec-label"><span class="arr">→</span> Dịch vụ <span class="arr">←</span></div>'
-    . $toolbar . $summary . $body . $pager
+    . '<div class="service-directory">' . $toolbar . $body . $pager . '</div>'
     . '</div></section>';
 
 /* Box bảng giá rút gọn */

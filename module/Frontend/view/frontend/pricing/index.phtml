@@ -33,7 +33,8 @@ $this->headTitle('Bảng giá · Văn Lang');
 $view = $this;
 $e    = static fn (mixed $v): string => $view->escapeHtml((string) $v);
 $ea   = static fn (mixed $v): string => $view->escapeHtmlAttr((string) $v);
-
+$bannerImage  = $this->basePath('assets/img/banner-bang-gia-v2.jpg');
+$bannerMobile = $this->basePath('assets/img/banner-bang-gia-mobile-v2.jpg');
 $queryBase = [];
 if ($group !== '') {
     $queryBase['nhom'] = $group;
@@ -56,10 +57,11 @@ $priceText = static function (mixed $raw): string {
 $breadcrumb = '<nav class="breadcrumb" aria-label="Breadcrumb">'
     . '<a href="/">Trang chủ</a><span> › </span><span aria-current="page">Bảng giá</span></nav>';
 
-$banner = '<section class="page-banner pricing-hero"><div class="container"><h1>BẢNG GIÁ DỊCH VỤ</h1>'
+$banner = '<section class="page-banner page-banner-photo pricing-hero"><div class="container"><h1>BẢNG GIÁ DỊCH VỤ</h1>'
     . $breadcrumb
-    . '</div><div class="banner-img"><img src="https://images.unsplash.com/photo-1576765607924-3f7b8410a787?w=900&q=80" alt=""></div></section>';
-
+    . '</div><picture class="banner-img"><source media="(max-width:600px)" srcset="' . $ea($bannerMobile) . '">'
+    . '<img src="' . $ea($bannerImage)
+    . '" alt="Tư vấn bảng giá dịch vụ chăm sóc sức khỏe Văn Lang"></picture></section>';
 $groupOptions = '<option value="">Tất cả nhóm dịch vụ</option>';
 foreach ($groups as $code => $label) {
     $selected = $code === $group ? ' selected' : '';
