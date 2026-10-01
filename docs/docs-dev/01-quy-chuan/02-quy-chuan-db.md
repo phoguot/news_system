@@ -6,7 +6,7 @@
 
 | Hạng mục | Chuẩn dự án | Nguồn |
 |---|---|---|
-| Hệ quản trị | MySQL 8.0.19+ / engine `InnoDB` | `schema.sql` dòng 1 |
+| Hệ quản trị | MySQL 8.0.19+; production MariaDB 10.11.17 / engine `InnoDB` | `schema.sql` dòng 1; môi trường production 01/10/2026 |
 | Bảng mã | `utf8mb4`, collation **`utf8mb4_0900_ai_ci`** cho MỌI bảng/cột | mỗi `CREATE TABLE ... COLLATE=utf8mb4_0900_ai_ci` |
 | Kết nối | `SET NAMES utf8mb4` + `SET time_zone = '+00:00'` | `schema.sql` dòng 4–5, `config/autoload/global.php` `PDO::MYSQL_ATTR_INIT_COMMAND` |
 | Khoá chính | `id INT UNSIGNED AUTO_INCREMENT`; bảng tăng nhanh (`post_revisions`, `contact_submissions`) dùng `BIGINT UNSIGNED` | §4.1, `schema.sql` |

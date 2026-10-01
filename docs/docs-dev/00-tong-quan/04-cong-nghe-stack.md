@@ -7,7 +7,7 @@ Toàn bộ phiên bản lấy trực tiếp từ `composer.json` (constraint Com
 | Thành phần | Phiên bản / yêu cầu | Ghi chú (nguồn) |
 |---|---|---|
 | Ngôn ngữ | PHP `~8.1.0 \|\| ~8.2.0 \|\| ~8.3.0` | `composer.json` → `require.php` |
-| Hệ quản trị CSDL | MySQL 8.0.19+ | README; cần cú pháp `INSERT ... AS newRow` (upsert lượt xem) |
+| Hệ quản trị CSDL | MySQL 8.0.19+; production hiện dùng MariaDB 10.11.17 | UPSERT lượt xem không dùng alias hàng mới để chạy trên cả hai hệ |
 | Engine / charset | InnoDB · `utf8mb4` · collation `utf8mb4_0900_ai_ci` | docs v1.5 §4.1 · `schema.sql` |
 | Quản lý package | Composer 2.x | README |
 | Extension PHP | `pdo_mysql`, `gd` **hoặc** `imagick`, `fileinfo` | README (`gd`/`imagick` cho Intervention Image; `fileinfo` kiểm MIME upload) |

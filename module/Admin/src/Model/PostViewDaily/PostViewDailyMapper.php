@@ -21,14 +21,14 @@ class PostViewDailyMapper
 
     /**
      * Tăng lượt xem ngày UTC hiện tại cho một bài — insert nếu chưa có, +1 nếu đã có.
-     * Dùng ON DUPLICATE KEY UPDATE với alias newRow (MySQL 8.0.19+ syntax).
+     * Không dùng alias hàng mới để tương thích cả MariaDB 10.11 và MySQL 8.
      */
     public function increment(int $postId): void
     {
         $tbl = $this->db->getPlatform()->quoteIdentifier(self::TABLE_NAME);
-        $sql = 'INSERT INTO ' . $tbl . ' (postId, viewDate, views) VALUES (?, UTC_DATE(), 1) AS newRow'
-            . ' ON DUPLICATE KEY UPDATE views = ' . $tbl . '.views + newRow.views';
-        $stmt = $this->db->createStatement($sql);
+        $sql = 'INSERT INTO ' . $tbl . ' (postId, viewDate, views) VALUES (?, UTC_DATE(), 1)'
+            . ' ON DUPLICATE KEY UPDATE views = ' . $tbl . '.views + 1';
+        $stmt = $this->db->getDriver()->createStatement($sql);
         $stmt->prepare();
         $stmt->execute([$postId]);
     }

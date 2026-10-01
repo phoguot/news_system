@@ -68,7 +68,7 @@ services ──< contact_submissions
 - **`post_tags`** — n-n bài↔tag, PK `(postId,tagId)` chặn trùng; `idx_post_tags_tag` phục vụ chiều "tag → các bài". Không có `id` riêng.
 - **KHÔNG có `post_categories`** — mỗi bài **đúng 1 danh mục** qua `posts.categoryId`. Bảng `post_categories` chỉ là phương án mở rộng nếu sau này cho bài thuộc nhiều danh mục (docs §9 điểm 2), **hiện không tồn tại** trong `schema.sql`.
 - **`home_section_items`** — quan hệ **đa hình**: cặp `(itemType, itemId)` với `itemType`: `1`=post · `2`=service · `3`=team_member. Vì đa hình nên không FK; tầng ứng dụng validate theo `itemType` và bỏ qua mục đã ẩn/xoá khi render.
-- **`post_view_daily`** — PK tổ hợp `(postId, viewDate)`, `viewDate` theo UTC; ghi bằng upsert (`INSERT ... AS newRow ON DUPLICATE KEY UPDATE`, docs §5.8), `posts.viewCount` giữ bản tổng phi chuẩn hoá để sort nhanh.
+- **`post_view_daily`** — PK tổ hợp `(postId, viewDate)`, `viewDate` theo UTC; ghi bằng upsert tương thích MariaDB/MySQL (`ON DUPLICATE KEY UPDATE views = views + 1`, docs §5.8), `posts.viewCount` giữ bản tổng phi chuẩn hoá để sort nhanh.
 - **`site_visit_daily`** — một dòng/ngày UTC; `visitors` tăng khi trình duyệt chưa có cookie ngày hiện tại. Đây là số trình duyệt duy nhất theo ngày, không phải định danh người thật tuyệt đối.
 
 ## 8. Quy tắc kiểm tra media trước khi xoá (docs §5.14)

@@ -1143,10 +1143,9 @@ WHERE p.slug = :slug
 Mỗi lượt xem hợp lệ (không trùng cookie/phiên trong 30 phút, không phải bot) được ghi ngay trong request, trong **một transaction**:
 
 ```sql
--- MySQL 8.0.19+ : bí danh hàng mới thay cho VALUES() đã bị deprecate
 INSERT INTO post_view_daily (postId, viewDate, views)
-VALUES (:postId, :viewDate, 1) AS newRow
-ON DUPLICATE KEY UPDATE views = post_view_daily.views + newRow.views;
+VALUES (:postId, :viewDate, 1)
+ON DUPLICATE KEY UPDATE views = post_view_daily.views + 1;
 
 UPDATE posts SET viewCount = viewCount + 1 WHERE id = :postId;
 ```

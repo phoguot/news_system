@@ -22,8 +22,8 @@ class SiteVisitDailyMapper
     public function incrementToday(): void
     {
         $table = $this->db->getPlatform()->quoteIdentifier(self::TABLE_NAME);
-        $sql   = 'INSERT INTO ' . $table . ' (visitDate, visitors) VALUES (UTC_DATE(), 1) AS newRow'
-            . ' ON DUPLICATE KEY UPDATE visitors = ' . $table . '.visitors + newRow.visitors';
+        $sql   = 'INSERT INTO ' . $table . ' (visitDate, visitors) VALUES (UTC_DATE(), 1)'
+            . ' ON DUPLICATE KEY UPDATE visitors = ' . $table . '.visitors + 1';
         $statement = $this->db->getDriver()->createStatement($sql);
         $statement->prepare();
         $statement->execute();

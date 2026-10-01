@@ -9,7 +9,7 @@
 | PHP | 8.1 / 8.2 / 8.3 (`composer.json`: `~8.1.0 \|\| ~8.2.0 \|\| ~8.3.0`) | `php -v` |
 | Extension PHP | `pdo_mysql`, `gd` **hoặc** `imagick` (Intervention Image), `fileinfo` (kiểm MIME upload). Khuyến nghị thêm `intl` (cho `laminas-i18n`), `mbstring`, `openssl` | `php -m` |
 | Composer | 2.x | `composer --version` |
-| MySQL | 8.0.19+ (cần `INSERT ... AS newRow` docs §5.8, `utf8mb4_0900_ai_ci`) | `mysql --version` |
+| MySQL / MariaDB | MySQL 8.0.19+ hoặc MariaDB 10.11+; UPSERT không dùng alias hàng mới. DDL gốc vẫn dùng collation MySQL `utf8mb4_0900_ai_ci` | `mysql --version` |
 | Web server | Không bắt buộc khi dev — dùng `php -S` (builtin server đã có sẵn logic trả file tĩnh trong `public/index.php`) | — |
 
 > **Cấu hình MySQL cho tìm kiếm tiếng Việt:** đặt `innodb_ft_min_token_size = 2` trong `[mysqld]` của `my.ini`/`my.cnf` rồi khởi động lại MySQL, sau đó rebuild index `ft_posts_title_excerpt` — mặc định MySQL bỏ qua từ < 3 ký tự, làm mất âm tiết tiếng Việt ("an", "đi"...). Nguồn: `data/schema/README.md`, docs §4.4.3. Nên đặt **trước khi** import `schema.sql`.
