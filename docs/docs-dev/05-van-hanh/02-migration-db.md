@@ -12,6 +12,10 @@
 
 ## Các file nguồn sự thật
 
+> **Production MariaDB 10.11:** migration triển khai lên production phải dùng
+> `utf8mb4_unicode_ci` (tương thích cả MariaDB 10.11 và MySQL 8), không dùng
+> `utf8mb4_0900_ai_ci` vì MariaDB sẽ trả lỗi `#1273 Unknown collation`.
+
 | File | Vai trò | Lưu ý |
 |---|---|---|
 | `data/schema/schema.sql` | **DDL đầy đủ 20 bảng** — nguồn sự thật cấu trúc | `CREATE TABLE IF NOT EXISTS`; `SET NAMES utf8mb4;` + `SET time_zone = '+00:00';` ở đầu file; mọi bảng `ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci`; **không INSERT dữ liệu** |

@@ -1,5 +1,7 @@
 -- Bảng giá hai cấp: nhóm cha và dòng giá con liên kết trực tiếp `services`.
 -- Có thể chạy trên MySQL 8 / MariaDB 10.11 sau schema hiện hành.
+-- Dùng utf8mb4_unicode_ci vì utf8mb4_0900_ai_ci chỉ tồn tại trên MySQL 8,
+-- không được MariaDB 10.11 trên production hỗ trợ.
 SET NAMES utf8mb4;
 SET time_zone = '+00:00';
 
@@ -13,7 +15,7 @@ CREATE TABLE IF NOT EXISTS pricing_groups (
   PRIMARY KEY (id),
   UNIQUE KEY uq_pricing_groups_service (serviceId),
   KEY idx_pricing_groups_active_sort (isActive, sortOrder)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 SET @has_service_id := (
   SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
