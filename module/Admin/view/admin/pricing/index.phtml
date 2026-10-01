@@ -1,80 +1,82 @@
 <?php
 
 /** @var \Laminas\View\Renderer\PhpRenderer $this */
-/** @var list<\Frontend\Model\Pricing\PricingModel> $items */
-$items = (array) ($this->items ?? []);
-$flag    = isset($this->flag) && is_string($this->flag) ? $this->flag : null;
-$csrf    = (string) ($this->deleteCsrfHash ?? '');
+/** @var list<array{service: \Frontend\Model\Service\ServiceModel, config: \Frontend\Model\PricingGroup\PricingGroupModel|null, children: list<array{service: \Frontend\Model\Service\ServiceModel, config: \Frontend\Model\Pricing\PricingModel|null}>}> $tree */
+$tree = (array) ($this->tree ?? []);
+$flag = isset($this->flag) && is_string($this->flag) ? $this->flag : null;
 $reorderCsrf = (string) ($this->reorderCsrfHash ?? '');
 $activeCsrf = (string) ($this->activeCsrfHash ?? '');
-$e       = fn (mixed $v): string => $this->escapeHtml((string) $v);
-$url     = fn (array $params = []): string => $this->url('admin/pricing', $params);
+$e = fn (mixed $value): string => $this->escapeHtml((string) $value);
+$url = fn (array $params = []): string => $this->url('admin/pricing', $params);
 
 $flags = [
-    'created'  => ['alert-success', 'Đã tạo mục bảng giá.'],
-    'updated'  => ['alert-success', 'Đã cập nhật mục bảng giá.'],
-    'deleted'  => ['alert-success', 'Đã xoá mục bảng giá.'],
-    'csrf'     => ['alert-danger', 'Token bảo mật không hợp lệ.'],
-    'notfound' => ['alert-danger', 'Không tìm thấy mục bảng giá.'],
-    'reordered' => ['alert-success', 'Đã cập nhật thứ tự bảng giá.'],
-    'active-updated' => ['alert-success', 'Đã cập nhật hiển thị mục bảng giá.'],
+    'updated' => ['alert-success', 'Đã cập nhật thông tin bảng giá.'],
+    'csrf' => ['alert-danger', 'Token bảo mật không hợp lệ.'],
+    'notfound' => ['alert-danger', 'Không tìm thấy dịch vụ.'],
+    'reordered' => ['alert-success', 'Đã cập nhật thứ tự nhóm và dịch vụ trong bảng giá.'],
+    'active-updated' => ['alert-success', 'Đã cập nhật trạng thái hiển thị trong bảng giá.'],
 ];
 
-$activeSelect = static function (int $id, int $current) use ($url, $e, $activeCsrf): string {
+$activeSelect = static function (int $serviceId, int $current) use ($url, $e, $activeCsrf): string {
     $yes = $current === \Frontend\Model\Pricing\PricingConst::ACTIVE ? ' selected' : '';
-    $no  = $current === \Frontend\Model\Pricing\PricingConst::ACTIVE ? '' : ' selected';
-
-    return '<form class="inline-status-form" method="post" action="' . $e($url(['action' => 'active', 'id' => $id])) . '">'
+    $no = $yes === '' ? ' selected' : '';
+    return '<form class="inline-status-form" method="post" action="'
+        . $e($url(['action' => 'active', 'id' => $serviceId])) . '">'
         . '<input type="hidden" name="csrf" value="' . $e($activeCsrf) . '">'
         . '<select class="form-select status-select" name="isActive" onchange="this.form.submit()">'
-        . '<option value="1"' . $yes . '>Có</option>'
-        . '<option value="0"' . $no . '>Tắt</option></select></form>';
+        . '<option value="1"' . $yes . '>Có</option><option value="0"' . $no . '>Tắt</option>'
+        . '</select></form>';
 };
 
 $html = '<div class="page-header"><div><h1>Bảng giá</h1>'
-    . '<p class="subtitle">Quản lý các mục bảng giá hiển thị ở /bang-gia và khối giá trong /dich-vu.</p></div>'
-    . '<a class="btn btn-primary" href="' . $url(['action' => 'create']) . '">'
-    . '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">'
-    . '<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Thêm mục</a></div>';
-
+    . '<p class="subtitle">Kéo dịch vụ cha để đổi thứ tự cả khối; kéo dịch vụ con để đổi thứ tự trong nhóm.</p>'
+    . '</div></div>';
 if ($flag !== null && isset($flags[$flag])) {
-    [$cls, $msg] = $flags[$flag];
-    $html .= '<div class="alert ' . $cls . '">' . $msg . '</div>';
+    [$class, $message] = $flags[$flag];
+    $html .= '<div class="alert ' . $class . '">' . $e($message) . '</div>';
 }
 
-$groupLabels = \Frontend\Model\Pricing\PricingConst::GROUP_LABELS;
-
-$rowsHtml = '';
-foreach ($items as $item) {
-    /** @var \Frontend\Model\Pricing\PricingModel $item */
-    $id    = $item->id;
-    $statusSelect = $activeSelect((int) $id, (int) $item->isActive);
-    $priceText = $item->price !== null ? number_format($item->price, 0, ',', '.') . ' đ' : 'Liên hệ';
-    $groupName = $groupLabels[$item->groupCode] ?? $e($item->groupCode);
-
-    $rowsHtml .= '<tr data-id="' . (int) $id . '">'
-        . '<td class="drag-col"><span class="drag-handle" title="Kéo để đổi thứ tự">⠿</span></td>'
-        . '<td><strong>' . $e($item->name) . '</strong><br><span class="slug-text">' . $e($item->slug) . '</span></td>'
-        . '<td>' . $e($groupName) . '</td>'
-        . '<td>' . $e($priceText) . ($item->unit !== null ? ' / ' . $e($item->unit) : '') . '</td>'
-        . '<td>' . $statusSelect . '</td>'
-        . '<td><div class="actions">'
-        . '<a class="btn sm btn-ghost" href="' . $url(['action' => 'edit', 'id' => $id]) . '">Sửa</a>'
-        . '<form method="post" action="' . $url(['action' => 'delete', 'id' => $id]) . '"'
-        . ' onsubmit="return confirm(\'Xoá vĩnh viễn mục này?\');">'
-        . '<input type="hidden" name="csrf" value="' . $e($csrf) . '">'
-        . '<button class="btn sm btn-ghost danger" type="submit">Xoá</button></form>'
-        . '</div></td></tr>';
+$rows = '';
+$groupIndex = 0;
+foreach ($tree as $group) {
+    $parent = $group['service'];
+    $groupConfig = $group['config'];
+    $groupActive = $groupConfig?->isActive ?? \Frontend\Model\Pricing\PricingConst::INACTIVE;
+    $rows .= '<tr class="pricing-admin-group" data-id="' . $parent->id . '" data-parent="">'
+        . '<td class="drag-col"><span class="drag-handle" title="Kéo cả nhóm">⠿</span></td>'
+        . '<td><strong>' . $e($parent->name) . '</strong><br><span class="slug-text">Nhóm dịch vụ cha</span></td>'
+        . '<td class="muted">—</td><td>' . $activeSelect($parent->id, $groupActive) . '</td>'
+        . '<td class="sort-cell">' . $groupIndex . '</td><td class="muted">Di chuyển cả khối</td></tr>';
+    $childIndex = 0;
+    foreach ($group['children'] as $childRow) {
+        $child = $childRow['service'];
+        $config = $childRow['config'];
+        $price = $config === null
+            ? '<span class="muted">Chưa cấu hình</span>'
+            : ($config->price === null ? 'Liên hệ' : number_format($config->price, 0, ',', '.') . ' đ')
+                . ($config->unit !== null ? ' / ' . $e($config->unit) : '');
+        $active = $config?->isActive ?? \Frontend\Model\Pricing\PricingConst::INACTIVE;
+        $rows .= '<tr data-id="' . $child->id . '" data-parent="' . $parent->id . '">'
+            . '<td class="drag-col"><span class="drag-handle" title="Kéo trong nhóm">⠿</span></td>'
+            . '<td><span class="tree-indent">↳</span> <strong>' . $e($child->name) . '</strong>'
+            . '<br><span class="slug-text tree-child-slug">' . $e($child->slug) . '</span></td>'
+            . '<td>' . $price . '</td><td>' . $activeSelect($child->id, $active) . '</td>'
+            . '<td class="sort-cell">' . $childIndex . '</td>'
+            . '<td><a class="btn sm btn-ghost" href="'
+            . $e($url(['action' => 'edit', 'id' => $child->id])) . '">Sửa giá</a></td></tr>';
+        $childIndex++;
+    }
+    $groupIndex++;
+}
+if ($rows === '') {
+    $rows = '<tr><td colspan="6" class="muted">Chưa có cây dịch vụ để cấu hình bảng giá.</td></tr>';
 }
 
-if ($items === []) {
-    $rowsHtml = '<tr><td colspan="6" class="muted">Chưa có mục bảng giá nào.</td></tr>';
-}
-
-$html .= '<div class="card"><div class="table-wrap"><table class="data-table"><thead><tr>'
-    . '<th class="drag-col"></th><th>Tên / Slug</th><th>Nhóm</th><th>Giá</th><th>Hiển thị</th><th class="action-col">Thao tác</th>'
-    . '</tr></thead><tbody class="js-sortable"'
-    . ' data-reorder-url="' . $e($url(['action' => 'reorder'])) . '" data-csrf="' . $e($reorderCsrf) . '">'
-    . $rowsHtml . '</tbody></table></div></div>';
+$html .= '<div class="card"><div class="table-wrap"><table class="data-table pricing-admin-tree">'
+    . '<thead><tr><th class="drag-col"></th><th>Tên dịch vụ</th><th>Giá</th><th>Hiển thị</th>'
+    . '<th>Thứ tự</th><th class="action-col">Thao tác</th></tr></thead>'
+    . '<tbody class="js-sortable" data-tree="1" data-reorder-url="'
+    . $e($url(['action' => 'reorder'])) . '" data-csrf="' . $e($reorderCsrf) . '">' . $rows
+    . '</tbody></table></div></div>';
 
 echo $html;

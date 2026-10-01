@@ -39,7 +39,6 @@ class ServiceController extends AbstractActionController
         $parentSlug = trim((string) $this->params()->fromQuery('nhom', ''));
         $payload    = $this->serviceViewService->paginate($parentSlug === '' ? null : $parentSlug, $page);
         $pricing = $this->pricingViewService->list(null, null);
-        $pricing['items'] = array_slice($pricing['items'], 0, 10);
         $mapUrl = $this->settingService->mapEmbedUrl();
         $settings = $this->settingService->all();
 

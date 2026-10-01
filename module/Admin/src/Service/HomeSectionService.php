@@ -24,7 +24,6 @@ use Application\Constant\ContentConst;
 use Application\Factory\AppServiceFactory;
 use Application\Service\DbService;
 use Application\Service\PageCacheService;
-use Frontend\Model\Pricing\PricingConst;
 use Frontend\Model\Service\ServiceMapper;
 
 /**
@@ -708,15 +707,10 @@ class HomeSectionService extends AppServiceFactory
         };
     }
 
-    /** Kiểm tra group_code hợp lệ cho section pricing */
+    /** Mã nhóm bảng giá hiện là slug dịch vụ cha; rỗng nghĩa là lấy mọi nhóm. */
     private function isValidPricingGroup(string $value): bool
     {
-        if ($value === '') {
-            return true;
-        }
-        $groups = [PricingConst::GROUP_GENERAL, PricingConst::GROUP_HOSPITAL, PricingConst::GROUP_HOME];
-
-        return in_array($value, $groups, true);
+        return $value === '' || preg_match('/^[a-z0-9]+(?:-[a-z0-9]+)*$/', $value) === 1;
     }
 
     /** @param list<mixed> $steps */

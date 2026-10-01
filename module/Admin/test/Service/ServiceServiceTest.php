@@ -12,6 +12,8 @@ use Application\Service\PageCacheService;
 use Application\Service\SlugService;
 use ApplicationTest\Helper\TestContainer;
 use Frontend\Model\Contact\ContactMapper;
+use Frontend\Model\Pricing\PricingMapper;
+use Frontend\Model\PricingGroup\PricingGroupMapper;
 use Frontend\Model\Service\ServiceConst;
 use Frontend\Model\Service\ServiceMapper;
 use Frontend\Model\Service\ServiceModel;
@@ -25,6 +27,8 @@ final class ServiceServiceTest extends TestCase
     private ContactMapper&MockObject $contacts;
     private SlugService&MockObject $slugs;
     private DbService&MockObject $db;
+    private PricingMapper&MockObject $pricing;
+    private PricingGroupMapper&MockObject $pricingGroups;
     private ServiceService $service;
 
     protected function setUp(): void
@@ -33,6 +37,8 @@ final class ServiceServiceTest extends TestCase
         $this->contacts = $this->createMock(ContactMapper::class);
         $this->slugs    = $this->createMock(SlugService::class);
         $this->db       = $this->createMock(DbService::class);
+        $this->pricing = $this->createMock(PricingMapper::class);
+        $this->pricingGroups = $this->createMock(PricingGroupMapper::class);
         $this->db->method('transactional')->willReturnCallback(
             static fn (callable $fn): mixed => $fn()
         );
@@ -47,6 +53,8 @@ final class ServiceServiceTest extends TestCase
             ContactMapper::class => $this->contacts,
             SlugService::class   => $this->slugs,
             DbService::class     => $this->db,
+            PricingMapper::class => $this->pricing,
+            PricingGroupMapper::class => $this->pricingGroups,
         ]));
     }
 
@@ -253,6 +261,9 @@ final class ServiceServiceTest extends TestCase
             ServiceMapper::class    => $this->services,
             ContactMapper::class    => $this->contacts,
             SlugService::class      => $this->slugs,
+            DbService::class        => $this->db,
+            PricingMapper::class    => $this->pricing,
+            PricingGroupMapper::class => $this->pricingGroups,
             PageCacheService::class => (new PageCacheService())->setContainer(
                 new TestContainer([CacheConst::SERVICE_PAGE_CACHE => $storage])
             ),
@@ -262,9 +273,9 @@ final class ServiceServiceTest extends TestCase
         $service->update(8, ['name' => 'Tour']);
         $service->delete(8);
 
-        self::assertCount(6, $forgotten);
+        self::assertCount(9, $forgotten);
         self::assertSame(
-            [CacheConst::KEY_HOME, CacheConst::KEY_SITEMAP],
+            [CacheConst::KEY_HOME, CacheConst::KEY_SITEMAP, CacheConst::KEY_PRICING],
             array_values(array_unique($forgotten))
         );
     }

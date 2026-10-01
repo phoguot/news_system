@@ -1,6 +1,6 @@
 -- Van Lang — News CMS — MySQL 8.0.19+ — utf8mb4_0900_ai_ci
 -- Convention: tables snake_case, columns camelCase, no FK, no deletedAt
--- 19 tables per docs/phan-tich-he-thong-website-tin-tuc.md v1.5 + review block 26/09/2026
+-- 21 tables per docs/phan-tich-he-thong-website-tin-tuc.md + pricing tree 02/10/2026
 SET NAMES utf8mb4;
 SET time_zone = '+00:00';
 
@@ -284,8 +284,21 @@ CREATE TABLE IF NOT EXISTS contact_submissions (
   KEY idx_contact_submissions_service (serviceId)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
+CREATE TABLE IF NOT EXISTS pricing_groups (
+  id         INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  serviceId  INT UNSIGNED NOT NULL,
+  sortOrder  INT          NOT NULL DEFAULT 0,
+  isActive   TINYINT(1)   NOT NULL DEFAULT 1,
+  createdAt  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updatedAt  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_pricing_groups_service (serviceId),
+  KEY idx_pricing_groups_active_sort (isActive, sortOrder)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
 CREATE TABLE IF NOT EXISTS pricing_items (
   id         INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  serviceId  INT UNSIGNED NULL,
   groupCode  VARCHAR(50)  NOT NULL DEFAULT 'general',
   name       VARCHAR(255) NOT NULL,
   slug       VARCHAR(255) NOT NULL,
@@ -297,6 +310,7 @@ CREATE TABLE IF NOT EXISTS pricing_items (
   createdAt  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updatedAt  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
+  UNIQUE KEY uq_pricing_items_service (serviceId),
   UNIQUE KEY uq_pricing_items_slug (slug),
   KEY idx_pricing_items_group_sort (groupCode, sortOrder),
   KEY idx_pricing_items_active_sort (isActive, sortOrder)

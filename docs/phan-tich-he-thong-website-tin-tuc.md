@@ -287,9 +287,9 @@ Trang chủ được chia thành các **khối (section)**. Quản trị viên b
 - Sắp xếp frontend: theo `team_members.sortOrder` (một danh sách chung, không nhóm theo phòng ban).
 - Thông tin cá nhân (ảnh, email, SĐT) chỉ công khai khi nhân sự đã đồng ý.
 
-### 3.9 Bảng giá (16/09, cập nhật phân trang 17/09)
+### 3.9 Bảng giá (16/09, refactor cây dịch vụ 02/10)
 
-Bảng giá Medlatec-style hiển thị tại `/bang-gia` (filter `?nhom=<groupCode>&q=<keyword>&page=<n>`), nhóm theo `groupCode` (general/hospital/home), bảng 4 cột STT/Tên dịch vụ/Giá dịch vụ/Giá BHYT. Dữ liệu hiện chỉ có giá dịch vụ; cột BHYT hiển thị `—` cho tới khi có trường riêng. Giá `NULL` hiện “Liên hệ”. Nguồn `pricing_items` (Frontend sở hữu, Admin CRUD qua `PricingService`, cache một key `pricing-v1` TTL 60s; filter + phân trang 20 dòng/trang chạy trên mảng đã cache). Trang `/dich-vu` Box4 nhúng 10 dòng đầu + link tới `/bang-gia`.
+Bảng giá hiển thị tại `/bang-gia` và được nhóm theo dịch vụ cha. Tên, slug và quan hệ cây lấy từ `services`; `pricing_groups` lưu thứ tự/trạng thái riêng của khối cha, `pricing_items.serviceId` lưu cấu hình giá duy nhất của dịch vụ con. Admin kéo cha để đổi thứ tự cả khối, kéo con trong nhóm; thứ tự này chỉ áp dụng cho bảng giá ở Trang chủ, `/dich-vu`, `/bang-gia`, không đổi `services.sortOrder`. Trang chủ dùng card theo nhóm; `/dich-vu` và `/bang-gia` dùng một bảng liên tục, trong đó hàng cha in đậm phân tách các dòng con. Giá `NULL` hiện “Liên hệ”; ẩn tại Bảng giá không xoá hoặc ẩn dịch vụ. Cache dùng một key `pricing-v1` TTL 60s và filter `?nhom=<slug-cha>&q=<keyword>` trên mảng đã cache.
 
 | Trường | Bắt buộc | Ghi chú |
 |---|:-:|---|
@@ -442,10 +442,11 @@ Hệ thống chỉ có **1 tài khoản quản trị duy nhất** — không có
 | 14 | `reviews` | Giao diện | Ảnh đánh giá khách hàng |
 | 15 | `team_members` | Đội ngũ | Nhân sự |
 | 16 | `contact_submissions` | Liên hệ | Liên hệ từ khách |
-| 17 | `pricing_items` | Bảng giá | Bảng giá (16/09) |
-| 18 | `menu_items` | Giao diện | Menu frontend (17/09) |
-| 19 | `settings` | Hệ thống | Cài đặt chung |
-| 20 | `site_visit_daily` | Hệ thống | Khách/trình duyệt duy nhất theo ngày UTC |
+| 17 | `pricing_groups` | Bảng giá | Thứ tự/trạng thái riêng của nhóm dịch vụ cha (02/10) |
+| 18 | `pricing_items` | Bảng giá | Giá và thứ tự riêng của dịch vụ con (16/09, nối dịch vụ 02/10) |
+| 19 | `menu_items` | Giao diện | Menu frontend (17/09) |
+| 20 | `settings` | Hệ thống | Cài đặt chung |
+| 21 | `site_visit_daily` | Hệ thống | Khách/trình duyệt duy nhất theo ngày UTC |
 
 ### 4.3 Sơ đồ quan hệ (ERD)
 
@@ -471,6 +472,8 @@ erDiagram
     media |o--o{ team_members : "avatar"
 
     services |o--o{ contact_submissions : "được quan tâm"
+    services ||--o| pricing_groups : "cấu hình nhóm cha"
+    services ||--o| pricing_items : "cấu hình giá dịch vụ con"
     home_sections ||--o{ home_section_items : "chứa"
 ```
 
@@ -780,8 +783,21 @@ CREATE TABLE home_section_items (
 | `home_section_items.itemId` | Id trong bảng tương ứng `itemType`; tham chiếu đa hình nên không có khoá ngoại |
 
 ```sql
+CREATE TABLE pricing_groups (
+  id         INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  serviceId  INT UNSIGNED NOT NULL,
+  sortOrder  INT NOT NULL DEFAULT 0,
+  isActive   TINYINT(1) NOT NULL DEFAULT 1,
+  createdAt  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updatedAt  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_pricing_groups_service (serviceId),
+  KEY idx_pricing_groups_active_sort (isActive, sortOrder)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
 CREATE TABLE pricing_items (
   id         INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  serviceId  INT UNSIGNED NULL,
   groupCode  VARCHAR(50)  NOT NULL DEFAULT 'general',
   name       VARCHAR(255) NOT NULL,
   slug       VARCHAR(255) NOT NULL,
@@ -793,19 +809,22 @@ CREATE TABLE pricing_items (
   createdAt  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updatedAt  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
+  UNIQUE KEY uq_pricing_items_service (serviceId),
   UNIQUE KEY uq_pricing_items_slug (slug),
   KEY idx_pricing_items_group_sort (groupCode, sortOrder),
   KEY idx_pricing_items_active_sort (isActive, sortOrder)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 ```
 
-**Chú giải `pricing_items` (16/09)**
+**Chú giải bảng giá (02/10)**
 
 | Cột | Ý nghĩa |
 |---|---|
-| `groupCode` | Nhóm hiển thị: `general`/`hospital` (tại viện)/`home` (tại nhà) |
+| `pricing_groups.serviceId` | Dịch vụ cha sở hữu khối; duy nhất trong bảng |
+| `pricing_groups.sortOrder` | Thứ tự riêng giữa các khối cha ở ba vị trí bảng giá |
+| `pricing_items.serviceId` | Dịch vụ con sở hữu dòng giá; duy nhất khi đã cấu hình |
 | `price` | NULL = “Liên hệ” |
-| `slug` | Duy nhất toàn bảng |
+| `groupCode/name/slug` | Cột tương thích dữ liệu trước 02/10; luồng mới hiển thị dữ liệu thật từ `services` |
 
 ```sql
 CREATE TABLE menu_items (
@@ -1274,7 +1293,7 @@ COMMIT;
 | `/dich-vu` · `/dich-vu/{slug}` | Dịch vụ | |
 | `/doi-ngu` | Đội ngũ | |
 | `/gioi-thieu` | Giới thiệu | Trang tĩnh giới thiệu (16/09) |
-| `/bang-gia` | Bảng giá | Table filter nhóm+từ khoá + phân trang 20 dòng/trang (17/09) |
+| `/bang-gia` | Bảng giá | Một table có hàng nhóm cha + dòng dịch vụ con, lọc nhóm và từ khoá (02/10) |
 | `/lien-he` | Liên hệ | Chỉ SĐT/Zalo/địa chỉ/bản đồ (16/09 bỏ form gửi mail) |
 | `POST /api/contact` | Gửi form liên hệ | Có CSRF, captcha, rate limit |
 | `/sitemap.xml` · `/robots.txt` | SEO | Sitemap tự sinh, cache |

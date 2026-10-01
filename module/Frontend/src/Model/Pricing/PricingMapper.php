@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Frontend\Model\Pricing;
 
 use Laminas\Db\Adapter\AdapterInterface;
-use Laminas\Db\Sql\Expression;
 use Laminas\Db\Sql\Select;
 use Laminas\Db\Sql\Sql;
 use Laminas\Db\Sql\Where;
@@ -51,64 +50,13 @@ class PricingMapper
         return $this->models($sql, $select);
     }
 
-    /**
-     * Lấy danh sách mục bảng giá active cho trang chủ (có giới hạn).
-     *
-     * @return list<PricingModel>
-     */
-    public function listActiveForHome(string $groupCode, int $limit): array
+    public function findByServiceId(int $serviceId): ?PricingModel
     {
-        $sql    = new Sql($this->db);
-        $select = $sql->select(self::TABLE_NAME)
-            ->order(['sortOrder' => 'ASC', 'id' => 'ASC']);
-        $select->columns(['*']);
-        $where = new Where();
-        $where->equalTo('isActive', PricingConst::ACTIVE);
-        if ($groupCode !== '') {
-            $where->equalTo('groupCode', $groupCode);
-        }
-        $select->where($where);
-        $select->limit($limit);
-
-        return $this->models($sql, $select);
-    }
-
-    public function findById(int $id): ?PricingModel
-    {
-        $sql    = new Sql($this->db);
-        $select = $sql->select(self::TABLE_NAME)
-            ->where(['id' => $id])
-            ->limit(1);
-
+        $sql = new Sql($this->db);
+        $select = $sql->select(self::TABLE_NAME)->where(['serviceId' => $serviceId])->limit(1);
         $row = $sql->prepareStatementForSqlObject($select)->execute()->current();
-
         return is_array($row) ? PricingModel::fromRow($row) : null;
     }
-
-    public function existsSlug(string $slug, ?int $excludeId = null): bool
-    {
-        $sql    = new Sql($this->db);
-        $select = $sql->select(self::TABLE_NAME)
-            ->columns(['cnt' => new Expression('COUNT(*)')])
-            ->where(['slug' => $slug]);
-        if ($excludeId !== null) {
-            $select->where->notEqualTo('id', $excludeId);
-        }
-        $row = $sql->prepareStatementForSqlObject($select)->execute()->current();
-
-        return is_array($row) && (int) ($row['cnt'] ?? 0) > 0;
-    }
-
-    public function countAll(): int
-    {
-        $sql    = new Sql($this->db);
-        $select = $sql->select(self::TABLE_NAME);
-        $select->columns(['total' => new Expression('COUNT(*)')]);
-        $row = $sql->prepareStatementForSqlObject($select)->execute()->current();
-
-        return is_array($row) ? (int) ($row['total'] ?? 0) : 0;
-    }
-
     /** @param array<array-key, mixed> $values */
     public function insert(array $values): int
     {
@@ -128,14 +76,12 @@ class PricingMapper
         )->execute();
     }
 
-    public function delete(int $id): void
+    public function deleteByServiceId(int $serviceId): void
     {
         $sql = new Sql($this->db);
-        $sql->prepareStatementForSqlObject(
-            $sql->delete(self::TABLE_NAME)->where(['id' => $id])
-        )->execute();
+        $delete = $sql->delete(self::TABLE_NAME)->where(['serviceId' => $serviceId]);
+        $sql->prepareStatementForSqlObject($delete)->execute();
     }
-
     /** @return list<array<array-key, mixed>> */
     private function rows(Sql $sql, Select $select): array
     {

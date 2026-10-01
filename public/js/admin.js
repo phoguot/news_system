@@ -1026,6 +1026,25 @@ document.querySelectorAll('select.media-select').forEach((sel) => {
         });
 
         function renumber() {
+            if (tree) {
+                let parentIndex = 0;
+                const childIndexes = {};
+                rowList().forEach((tr) => {
+                    const cell = tr.querySelector('td.sort-cell');
+                    if (!cell) {
+                        return;
+                    }
+                    const parentId = tr.getAttribute('data-parent') || '';
+                    if (parentId === '') {
+                        cell.textContent = String(parentIndex++);
+                        return;
+                    }
+                    const index = childIndexes[parentId] || 0;
+                    cell.textContent = String(index);
+                    childIndexes[parentId] = index + 1;
+                });
+                return;
+            }
             rowList().forEach((tr, index) => {
                 const cell = tr.querySelector('td.sort-cell');
                 if (cell) {

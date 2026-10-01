@@ -15,7 +15,9 @@ final class ActiveStatusFilter extends AppInputFilter
     public function __construct(bool $withCsrf = true)
     {
         $this->addIdField();
-        $this->addRawField('isActive', true);
+        // Laminas coi chuỗi "0" là empty khi field required, khiến thao tác
+        // chuyển trạng thái sang Tắt luôn thất bại validation.
+        $this->addRawField('isActive');
         parent::__construct($withCsrf);
     }
 

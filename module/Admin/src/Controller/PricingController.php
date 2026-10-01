@@ -8,6 +8,7 @@ use Admin\Exception\NotFoundException;
 use Admin\Exception\ValidationException;
 use Admin\Service\PricingService;
 use Frontend\Model\Pricing\PricingConst;
+use Frontend\Model\Service\ServiceModel;
 use Laminas\Http\Request as HttpRequest;
 use Laminas\Http\Response;
 use Laminas\Mvc\Controller\AbstractActionController;
@@ -33,26 +34,25 @@ class PricingController extends AbstractActionController
     public function indexAction()
     {
         return new ViewModel([
-            'items'               => $this->pricingService->listAll(),
+            'tree'                => $this->pricingService->tree(),
             'flag'                => $this->queryFlag(),
-            'deleteCsrfHash'      => $this->pricingService->deleteFormCsrfHash(),
             'reorderCsrfHash'     => $this->pricingService->reorderCsrfHash(),
             'activeCsrfHash'      => $this->pricingService->activeFormCsrfHash(),
         ]);
     }
 
     /**
-     * @return ViewModel
+     * @return Response
      */
     public function createAction()
     {
-        return $this->renderForm(null, [], [], 'Thêm mục bảng giá');
+        return $this->redirect()->toRoute('admin/pricing');
     }
 
     /**
      * Alias giữ tương thích với URL cũ /admin/pricing/add.
      *
-     * @return ViewModel
+     * @return Response
      * @psalm-suppress PossiblyUnusedMethod router dispatch gọi action động, không có lời gọi tĩnh.
      */
     public function addAction()
@@ -72,12 +72,20 @@ class PricingController extends AbstractActionController
         }
 
         try {
-            $model = $this->pricingService->findOrFail($id);
+            $context = $this->pricingService->configurationForService($id);
         } catch (NotFoundException) {
             return $this->redirect()->toRoute('admin/pricing', [], ['query' => ['flag' => 'notfound']]);
         }
 
-        return $this->renderForm($id, $model->toFormValues(), [], 'Sửa mục bảng giá');
+            $values = $context['config']?->toFormValues() ?? [
+            'serviceId' => $context['service']->id,
+            'price' => '',
+            'unit' => '',
+            'note' => '',
+            'sortOrder' => $context['service']->sortOrder,
+            'isActive' => PricingConst::INACTIVE,
+            ];
+            return $this->renderForm($id, $values, [], 'Cập nhật giá dịch vụ', $context['service'], $context['parent']);
     }
 
     /**
@@ -95,47 +103,29 @@ class PricingController extends AbstractActionController
         $post = $request->getPost();
         $raw  = $post->toArray();
         $id   = $this->intParam('id');
-        $title = $id === null ? 'Thêm mục bảng giá' : 'Sửa mục bảng giá';
-
+        if ($id === null) {
+            return $this->redirect()->toRoute('admin/pricing');
+        }
+        $raw['serviceId'] = (string) $id;
+        $title = 'Cập nhật giá dịch vụ';
         try {
-            $this->pricingService->saveForm($id, $raw);
-
+            $this->pricingService->saveForm($raw);
             return $this->redirect()->toRoute(
                 'admin/pricing',
                 [],
-                ['query' => ['flag' => $id === null ? PricingConst::FLAG_CREATED : PricingConst::FLAG_UPDATED]]
+                ['query' => ['flag' => PricingConst::FLAG_UPDATED]]
             );
         } catch (ValidationException $e) {
-            return $this->renderForm($id, $raw, $e->getErrors(), $title);
+            try {
+                $context = $this->pricingService->configurationForService($id);
+            } catch (NotFoundException) {
+                return $this->redirect()->toRoute('admin/pricing', [], ['query' => ['flag' => 'notfound']]);
+            }
+            return $this->renderForm($id, $raw, $e->getErrors(), $title, $context['service'], $context['parent']);
         } catch (NotFoundException) {
-            return $this->renderForm($id, $raw, ['name' => PricingConst::ERROR_NOT_FOUND], $title);
+            return $this->redirect()->toRoute('admin/pricing', [], ['query' => ['flag' => 'notfound']]);
         }
     }
-
-    /**
-     * @return Response
-     * @psalm-suppress PossiblyUnusedMethod router dispatch gọi action động, không có lời gọi tĩnh.
-     */
-    public function deleteAction()
-    {
-        $request = $this->getRequest();
-        if (! $request instanceof HttpRequest || ! $request->isPost()) {
-            return $this->redirect()->toRoute('admin/pricing');
-        }
-
-        /** @var ParametersInterface $post */
-        $post = $request->getPost();
-        $rawArray = $post->toArray();
-        // Route id inject
-        $id = $this->intParam('id');
-        if ($id !== null) {
-            $rawArray['id'] = (string) $id;
-        }
-        $flag = $this->pricingService->deleteForm($rawArray);
-
-        return $this->redirect()->toRoute('admin/pricing', [], ['query' => ['flag' => $flag]]);
-    }
-
     /**
      * POST /admin/pricing/active/:id — đổi nhanh cột Hiển thị từ danh sách.
      *
@@ -185,6 +175,7 @@ class PricingController extends AbstractActionController
         $result = $this->pricingService->formReorder($post->toArray());
 
         if ($request->isXmlHttpRequest()) {
+            /** @var array<string, mixed> $result */
             return new JsonModel($result);
         }
 
@@ -199,15 +190,23 @@ class PricingController extends AbstractActionController
      * @param array<array-key, mixed> $values
      * @param array<string, string>   $errors
      */
-    private function renderForm(?int $id, array $values, array $errors, string $title): ViewModel
-    {
+    private function renderForm(
+        ?int $id,
+        array $values,
+        array $errors,
+        string $title,
+        ?ServiceModel $service = null,
+        ?ServiceModel $parent = null
+    ): ViewModel {
         $model = new ViewModel([
             'id'       => $id,
             'values'   => $values,
             'errors'   => $errors,
             'title'    => $title,
-            'csrfHash' => $this->pricingService->saveFormCsrfHash($id),
-            'isEdit'   => $id !== null,
+            'csrfHash' => $this->pricingService->saveFormCsrfHash(),
+            'isEdit'   => true,
+            'service'  => $service,
+            'parent'   => $parent,
         ]);
         $model->setTemplate('admin/pricing/form');
 

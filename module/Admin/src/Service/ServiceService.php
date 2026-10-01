@@ -18,6 +18,8 @@ use Application\Service\DbService;
 use Application\Service\PageCacheService;
 use Application\Service\SlugService;
 use Frontend\Model\Contact\ContactMapper;
+use Frontend\Model\Pricing\PricingMapper;
+use Frontend\Model\PricingGroup\PricingGroupMapper;
 use Frontend\Model\Service\ServiceConst;
 use Frontend\Model\Service\ServiceMapper;
 use Frontend\Model\Service\ServiceModel;
@@ -48,6 +50,18 @@ class ServiceService extends AppServiceFactory
     {
         /** @var MediaMapper */
         return $this->getContainerEntry(MediaMapper::class);
+    }
+
+    private function pricingMapper(): PricingMapper
+    {
+        /** @var PricingMapper */
+        return $this->getContainerEntry(PricingMapper::class);
+    }
+
+    private function pricingGroupMapper(): PricingGroupMapper
+    {
+        /** @var PricingGroupMapper */
+        return $this->getContainerEntry(PricingGroupMapper::class);
     }
 
     private function db(): DbService
@@ -366,7 +380,14 @@ class ServiceService extends AppServiceFactory
         if ($reasons !== []) {
             throw new ConflictException($reasons);
         }
-        $this->serviceMapper()->delete($id);
+        $services = $this->serviceMapper();
+        $pricing = $this->pricingMapper();
+        $groups = $this->pricingGroupMapper();
+        $this->db()->transactional(static function () use ($id, $services, $pricing, $groups): void {
+            $pricing->deleteByServiceId($id);
+            $groups->deleteByServiceId($id);
+            $services->delete($id);
+        });
         $this->invalidatePublicCaches();
     }
 
@@ -453,5 +474,6 @@ class ServiceService extends AppServiceFactory
         $cache = $this->pageCache();
         $cache?->forget(CacheConst::KEY_HOME);
         $cache?->forget(CacheConst::KEY_SITEMAP);
+        $cache?->forget(CacheConst::KEY_PRICING);
     }
 }

@@ -7,58 +7,51 @@ namespace Frontend\Service;
 use Application\Constant\CacheConst;
 use Application\Factory\AppServiceFactory;
 use Application\Service\PageCacheService;
-use Frontend\Constant\FrontendConst;
 use Frontend\Model\Pricing\PricingMapper;
+use Frontend\Model\PricingGroup\PricingGroupMapper;
+use Frontend\Model\Service\ServiceMapper;
+use Frontend\Model\Service\ServiceModel;
 
-/**
- * Tầng đọc bảng giá công khai /bang-gia — cache 60s như home, filter theo nhóm + tìm kiếm.
- * Trang công khai phân trang trên mảng đã cache (20 dòng/trang) để Admin chỉ
- * cần forget một key `pricing-v1` sau khi ghi.
- *
- * Cache **một** khóa `pricing-v1` (mảng thuần toàn bộ mục active) — Admin\PricingService
- * forget đúng khóa này là đủ; bộ lọc `nhom/q` áp dụng bằng PHP sau khi lấy cache,
- * tránh phình khóa theo `md5(group|q)` khiến invalidate không bao phủ hết biến thể.
- */
+/** Dựng bảng giá công khai theo cây dịch vụ và thứ tự bảng giá độc lập. */
 class PricingViewService extends AppServiceFactory
 {
     /**
-     * @return array{
-     *     items: list<array<string, mixed>>,
-     *     groups: array<string, string>,
-     *     total: int,
-     *     page: int,
-     *     pages: int,
-     *     perPage: int
-     * }
+     * @return array{items: list<array<string, mixed>>, groups: array<string, string>,
+     *   groupBlocks: list<array<string, mixed>>, total: int, page: int, pages: int, perPage: int}
      */
     public function list(?string $groupCode = null, ?string $q = null, int $requestedPage = 1): array
     {
-        $filtered = $this->applyFilter($this->allCached(), $groupCode, $q);
-        $total    = count($filtered);
-        $pages    = (int) ceil($total / FrontendConst::PRICING_PAGE_SIZE);
-        $page     = min(max(1, $requestedPage), max(1, $pages));
-        $items    = array_slice(
-            $filtered,
-            ($page - 1) * FrontendConst::PRICING_PAGE_SIZE,
-            FrontendConst::PRICING_PAGE_SIZE
-        );
+        unset($requestedPage);
+        $blocks = $this->applyFilter($this->allCached(), $groupCode, $q);
+        $items = [];
+        $options = [];
+        foreach ($this->allCached() as $block) {
+            $options[(string) $block['slug']] = (string) $block['name'];
+        }
+        foreach ($blocks as $block) {
+            foreach ((array) ($block['items'] ?? []) as $item) {
+                if (is_array($item)) {
+                    $items[] = $item;
+                }
+            }
+        }
 
         return [
-            'items'   => $items,
-            'groups'  => \Frontend\Model\Pricing\PricingConst::GROUP_LABELS,
-            'total'   => $total,
-            'page'    => $page,
-            'pages'   => $pages,
-            'perPage' => FrontendConst::PRICING_PAGE_SIZE,
+            'items' => $items,
+            'groups' => $options,
+            'groupBlocks' => $blocks,
+            'total' => count($items),
+            'page' => 1,
+            'pages' => 1,
+            'perPage' => max(1, count($items)),
         ];
     }
 
-    /** @return list<array<string, mixed>> toàn bộ mục active (đã cache `pricing-v1`). */
+    /** @return list<array<string, mixed>> */
     private function allCached(): array
     {
-        $cache    = $this->pageCache();
         $producer = fn (): array => $this->buildAll();
-
+        $cache = $this->pageCache();
         if ($cache === null) {
             return $producer();
         }
@@ -70,50 +63,95 @@ class PricingViewService extends AppServiceFactory
     /** @return list<array<string, mixed>> */
     private function buildAll(): array
     {
-        $models = $this->pricing()->listActive(null, null);
-        $out = [];
-        foreach ($models as $m) {
-            $out[] = [
-                'id'        => $m->id,
-                'groupCode' => $m->groupCode,
-                'name'      => $m->name,
-                'slug'      => $m->slug,
-                'price'     => $m->price,
-                'priceText' => $m->price !== null ? number_format($m->price, 0, ',', '.') . ' đ' : 'Liên hệ',
-                'unit'      => $m->unit ?? '',
-                'note'      => $m->note ?? '',
-            ];
+        $services = [];
+        foreach ($this->services()->listActiveAll() as $service) {
+            $services[$service->id] = $service;
+        }
+        $itemsByService = [];
+        foreach ($this->pricing()->listActive() as $item) {
+            if ($item->serviceId !== null) {
+                $itemsByService[$item->serviceId] = $item;
+            }
         }
 
-        return $out;
+        $blocks = [];
+        foreach ($this->groups()->listActive() as $groupConfig) {
+            $parent = $services[$groupConfig->serviceId] ?? null;
+            if (! $parent instanceof ServiceModel || $parent->parentId !== null) {
+                continue;
+            }
+            $children = [];
+            foreach ($services as $service) {
+                if ($service->parentId !== $parent->id) {
+                    continue;
+                }
+                $item = $itemsByService[$service->id] ?? null;
+                if ($item === null) {
+                    continue;
+                }
+                $children[] = [
+                    'id' => $item->id,
+                    'serviceId' => $service->id,
+                    'groupCode' => $parent->slug,
+                    'groupName' => $parent->name,
+                    'name' => $service->name,
+                    'slug' => $service->slug,
+                    'price' => $item->price,
+                    'priceText' => $item->price !== null
+                        ? number_format($item->price, 0, ',', '.') . ' đ' : 'Liên hệ',
+                    'unit' => $item->unit ?? '',
+                    'note' => $item->note ?? '',
+                    'sortOrder' => $item->sortOrder,
+                ];
+            }
+            usort($children, static fn (array $a, array $b): int =>
+                [(int) $a['sortOrder'], (int) $a['serviceId']]
+                <=> [(int) $b['sortOrder'], (int) $b['serviceId']]);
+            if ($children !== []) {
+                $blocks[] = [
+                    'id' => $parent->id,
+                    'slug' => $parent->slug,
+                    'name' => $parent->name,
+                    'description' => $parent->shortDescription ?? '',
+                    'sortOrder' => $groupConfig->sortOrder,
+                    'items' => $children,
+                ];
+            }
+        }
+
+        return $blocks;
     }
 
     /**
-     * @param list<array<string, mixed>> $all
-     *
+     * @param list<array<string, mixed>> $blocks
      * @return list<array<string, mixed>>
      */
-    private function applyFilter(array $all, ?string $groupCode, ?string $q): array
+    private function applyFilter(array $blocks, ?string $groupCode, ?string $q): array
     {
-        $groupCode = $groupCode !== null ? trim($groupCode) : null;
-        $q         = $q !== null ? trim($q) : null;
-
-        if (($groupCode === null || $groupCode === '') && ($q === null || $q === '')) {
-            return $all;
-        }
-
-        $out = [];
-        foreach ($all as $row) {
-            if ($groupCode !== null && $groupCode !== '' && (string) ($row['groupCode'] ?? '') !== $groupCode) {
+        $groupCode = trim((string) $groupCode);
+        $q = trim((string) $q);
+        $filtered = [];
+        foreach ($blocks as $block) {
+            if ($groupCode !== '' && (string) ($block['slug'] ?? '') !== $groupCode) {
                 continue;
             }
-            if ($q !== null && $q !== '' && mb_stripos((string) ($row['name'] ?? ''), $q, 0, 'UTF-8') === false) {
-                continue;
+            $items = [];
+            foreach ((array) ($block['items'] ?? []) as $item) {
+                if (! is_array($item)) {
+                    continue;
+                }
+                if ($q !== '' && mb_stripos((string) ($item['name'] ?? ''), $q, 0, 'UTF-8') === false) {
+                    continue;
+                }
+                $items[] = $item;
             }
-            $out[] = $row;
+            if ($items !== []) {
+                $block['items'] = $items;
+                $filtered[] = $block;
+            }
         }
 
-        return $out;
+        return $filtered;
     }
 
     private function pricing(): PricingMapper
@@ -122,10 +160,21 @@ class PricingViewService extends AppServiceFactory
         return $this->getContainerEntry(PricingMapper::class);
     }
 
+    private function groups(): PricingGroupMapper
+    {
+        /** @var PricingGroupMapper */
+        return $this->getContainerEntry(PricingGroupMapper::class);
+    }
+
+    private function services(): ServiceMapper
+    {
+        /** @var ServiceMapper */
+        return $this->getContainerEntry(ServiceMapper::class);
+    }
+
     private function pageCache(): ?PageCacheService
     {
         $entry = $this->getContainerEntry(PageCacheService::class);
-
         return $entry instanceof PageCacheService ? $entry : null;
     }
 }

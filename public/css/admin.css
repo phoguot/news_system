@@ -1718,6 +1718,12 @@ tbody.js-sortable tr[data-id] { will-change: transform; }
 tbody.js-sortable tr.dragging { opacity: .5; background: var(--bg); }
 tbody.js-sortable tr.dragging td { box-shadow: inset 0 0 0 9999px rgba(0, 0, 0, .015); }
 tbody.js-sortable tr[data-id]:not(.dragging):hover .drag-handle { color: var(--text); }
+.pricing-admin-tree .pricing-admin-group td {
+  background: #edf8f6; border-top: 2px solid rgba(15, 104, 98, .22); color: var(--text);
+}
+.pricing-admin-tree .pricing-admin-group strong { color: var(--primary); font-size: 14px; }
+.pricing-admin-tree .tree-indent { color: var(--primary); font-weight: 800; margin-left: 12px; }
+.pricing-admin-tree .tree-child-slug { margin-left: 34px; }
 .inline-status-form {
   display: inline-flex;
   margin: 0;

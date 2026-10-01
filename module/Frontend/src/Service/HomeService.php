@@ -22,8 +22,6 @@ use Application\Factory\AppServiceFactory;
 use Application\Service\PageCacheService;
 use DateTimeImmutable;
 use DateTimeZone;
-use Frontend\Model\Pricing\PricingMapper;
-use Frontend\Model\Pricing\PricingModel;
 use Frontend\Model\Service\ServiceMapper;
 use Frontend\Model\Service\ServiceModel;
 
@@ -110,10 +108,10 @@ class HomeService extends AppServiceFactory
         return $this->getContainerEntry(TeamMemberMapper::class);
     }
 
-    private function pricing(): PricingMapper
+    private function pricingView(): PricingViewService
     {
-        /** @var PricingMapper */
-        return $this->getContainerEntry(PricingMapper::class);
+        /** @var PricingViewService */
+        return $this->getContainerEntry(PricingViewService::class);
     }
 
     private function categories(): CategoryMapper
@@ -661,33 +659,38 @@ class HomeService extends AppServiceFactory
         $limit = (int) ($config['limit'] ?? HomeSectionConst::PRICING_DEFAULT_LIMIT);
         $limit = max(HomeSectionConst::PRICING_LIMIT_MIN, min(HomeSectionConst::PRICING_LIMIT_MAX, $limit));
 
-        // Lấy mục theo nhóm (nếu có) hoặc tất cả
-        $rows = $this->pricing()->listActiveForHome($groupCode, $limit);
-
-        if ($rows === []) {
+        $payload = $this->pricingView()->list($groupCode !== '' ? $groupCode : null);
+        if ($payload['groupBlocks'] === [] && $groupCode !== '') {
+            // Giữ tương thích cấu hình cũ (general/home/hospital) sau khi nhóm giá
+            // được chuyển sang slug của dịch vụ cha.
+            $payload = $this->pricingView()->list();
+        }
+        $sourceGroups = $payload['groupBlocks'];
+        if ($sourceGroups === []) {
             return null;
         }
 
-        $items = [];
-        foreach ($rows as $item) {
-            $items[] = [
-                'kind'     => 'pricing',
-                'title'    => $item->name,
-                'href'     => $item->slug !== '' ? '/bang-gia?nhom=' . $item->groupCode : '/bang-gia',
-                'price'    => $item->price,
-                'priceText' => $item->price !== null
-                    ? number_format($item->price, 0, ',', '.') . ' đ'
-                    : 'Liên hệ',
-                'unit'     => $item->unit ?? '',
-                'note'     => $item->note ?? '',
-            ];
+        $groups = [];
+        $remaining = $limit;
+        foreach ($sourceGroups as $group) {
+            if ($remaining <= 0) {
+                break;
+            }
+            $items = array_slice((array) ($group['items'] ?? []), 0, $remaining);
+            if ($items === []) {
+                continue;
+            }
+            $group['items'] = $items;
+            $groups[] = $group;
+            $remaining -= count($items);
         }
 
         return [
             'kind'       => 'pricing',
             'title'      => $section->title ?? '',
             'subtitle'   => $section->subtitle ?? '',
-            'items'      => $items,
+            'items'      => [],
+            'groups'     => $groups,
         ];
     }
 

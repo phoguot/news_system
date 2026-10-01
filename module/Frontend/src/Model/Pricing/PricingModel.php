@@ -10,6 +10,7 @@ namespace Frontend\Model\Pricing;
 class PricingModel
 {
     public int $id = 0;
+    public ?int $serviceId = null;
     public string $groupCode = PricingConst::GROUP_GENERAL;
     public string $name = '';
     public string $slug = '';
@@ -26,6 +27,7 @@ class PricingModel
     {
         $m             = new static();
         $m->id         = (int) ($row['id'] ?? 0);
+        $m->serviceId  = self::intOrNull($row['serviceId'] ?? null);
         $m->groupCode  = (string) ($row['groupCode'] ?? PricingConst::GROUP_GENERAL);
         $m->name       = (string) ($row['name'] ?? '');
         $m->slug       = (string) ($row['slug'] ?? '');
@@ -45,6 +47,7 @@ class PricingModel
     {
         return [
             'id'        => $this->id,
+            'serviceId' => $this->serviceId,
             'groupCode' => $this->groupCode,
             'name'      => $this->name,
             'slug'      => $this->slug,
@@ -62,9 +65,7 @@ class PricingModel
     public function toFormValues(): array
     {
         return [
-            'groupCode' => $this->groupCode,
-            'name'      => $this->name,
-            'slug'      => $this->slug,
+            'serviceId' => $this->serviceId,
             'price'     => $this->price ?? '',
             'unit'      => $this->unit ?? '',
             'note'      => $this->note ?? '',

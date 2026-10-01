@@ -5,80 +5,102 @@ declare(strict_types=1);
 namespace FrontendTest\Service;
 
 use ApplicationTest\Helper\TestContainer;
-use Frontend\Constant\FrontendConst;
 use Frontend\Model\Pricing\PricingConst;
 use Frontend\Model\Pricing\PricingMapper;
 use Frontend\Model\Pricing\PricingModel;
+use Frontend\Model\PricingGroup\PricingGroupMapper;
+use Frontend\Model\PricingGroup\PricingGroupModel;
+use Frontend\Model\Service\ServiceConst;
+use Frontend\Model\Service\ServiceMapper;
+use Frontend\Model\Service\ServiceModel;
 use Frontend\Service\PricingViewService;
-use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 
-/**
- * /bang-gia đọc toàn bộ bảng giá active qua một cache key, rồi filter + phân
- * trang trên mảng thuần để URL `?page=` không làm nở key cache.
- */
 final class PricingViewServiceTest extends TestCase
 {
-    private PricingMapper&MockObject $pricing;
-    private PricingViewService $service;
-
-    protected function setUp(): void
+    public function testListUsesIndependentGroupAndChildPricingOrder(): void
     {
-        $this->pricing = $this->createMock(PricingMapper::class);
-        $this->service = (new PricingViewService())->setContainer(new TestContainer([
-            PricingMapper::class => $this->pricing,
+        $serviceMapper = $this->createMock(ServiceMapper::class);
+        $serviceMapper->method('listActiveAll')->willReturn([
+            $this->service(10, null, 'Tại nhà', 'tai-nha'),
+            $this->service(11, 10, 'Truyền dịch', 'truyen-dich'),
+            $this->service(20, null, 'Tại viện', 'tai-vien'),
+            $this->service(21, 20, 'Chăm sóc theo giờ', 'cham-soc-theo-gio'),
+        ]);
+        $groupMapper = $this->createMock(PricingGroupMapper::class);
+        $groupMapper->method('listActive')->willReturn([
+            PricingGroupModel::fromRow(['id' => 2, 'serviceId' => 20, 'sortOrder' => 0, 'isActive' => 1]),
+            PricingGroupModel::fromRow(['id' => 1, 'serviceId' => 10, 'sortOrder' => 1, 'isActive' => 1]),
+        ]);
+        $pricingMapper = $this->createMock(PricingMapper::class);
+        $pricingMapper->method('listActive')->willReturn([
+            $this->price(11, 1, 200000),
+            $this->price(21, 0, 100000),
+        ]);
+        $service = (new PricingViewService())->setContainer(new TestContainer([
+            ServiceMapper::class => $serviceMapper,
+            PricingGroupMapper::class => $groupMapper,
+            PricingMapper::class => $pricingMapper,
         ]));
+
+        $payload = $service->list();
+
+        self::assertSame(['Tại viện', 'Tại nhà'], array_column($payload['groupBlocks'], 'name'));
+        self::assertSame('Chăm sóc theo giờ', $payload['groupBlocks'][0]['items'][0]['name']);
+        self::assertSame(['tai-vien' => 'Tại viện', 'tai-nha' => 'Tại nhà'], $payload['groups']);
+        self::assertSame(2, $payload['total']);
     }
 
-    public function testListPaginatesAfterLoadingAllActiveRows(): void
+    public function testListFiltersByParentSlugAndChildName(): void
     {
-        $this->pricing->method('listActive')->willReturn($this->rows(45));
+        $serviceMapper = $this->createMock(ServiceMapper::class);
+        $serviceMapper->method('listActiveAll')->willReturn([
+            $this->service(10, null, 'Tại nhà', 'tai-nha'),
+            $this->service(11, 10, 'Truyền dịch', 'truyen-dich'),
+            $this->service(12, 10, 'Thay băng', 'thay-bang'),
+        ]);
+        $groupMapper = $this->createMock(PricingGroupMapper::class);
+        $groupMapper->method('listActive')->willReturn([
+            PricingGroupModel::fromRow(['id' => 1, 'serviceId' => 10, 'sortOrder' => 0, 'isActive' => 1]),
+        ]);
+        $pricingMapper = $this->createMock(PricingMapper::class);
+        $pricingMapper->method('listActive')->willReturn([
+            $this->price(11, 0, 200000),
+            $this->price(12, 1, 80000),
+        ]);
+        $service = (new PricingViewService())->setContainer(new TestContainer([
+            ServiceMapper::class => $serviceMapper,
+            PricingGroupMapper::class => $groupMapper,
+            PricingMapper::class => $pricingMapper,
+        ]));
 
-        $payload = $this->service->list(null, null, 3);
+        $payload = $service->list('tai-nha', 'băng', 99);
 
-        self::assertSame(45, $payload['total']);
-        self::assertSame(3, $payload['page']);
-        self::assertSame(3, $payload['pages']);
-        self::assertSame(FrontendConst::PRICING_PAGE_SIZE, $payload['perPage']);
-        self::assertCount(5, $payload['items']);
-        self::assertSame(41, $payload['items'][0]['id']);
+        self::assertSame(1, $payload['total']);
+        self::assertSame('Thay băng', $payload['items'][0]['name']);
+        self::assertSame(1, $payload['page']);
+        self::assertSame(1, $payload['pages']);
     }
 
-    public function testListFiltersBeforePaginatingAndClampsPage(): void
+    private function service(int $id, ?int $parentId, string $name, string $slug): ServiceModel
     {
-        $rows = array_merge(
-            $this->rows(23, PricingConst::GROUP_HOSPITAL, 'Siêu âm'),
-            $this->rows(5, PricingConst::GROUP_HOME, 'Chăm sóc')
-        );
-        $this->pricing->method('listActive')->willReturn($rows);
-
-        $payload = $this->service->list(PricingConst::GROUP_HOSPITAL, 'Siêu âm', 99);
-
-        self::assertSame(23, $payload['total']);
-        self::assertSame(2, $payload['page']);
-        self::assertSame(2, $payload['pages']);
-        self::assertCount(3, $payload['items']);
-        self::assertSame(PricingConst::GROUP_HOSPITAL, $payload['items'][0]['groupCode']);
+        return ServiceModel::fromRow([
+            'id' => $id,
+            'parentId' => $parentId,
+            'name' => $name,
+            'slug' => $slug,
+            'isActive' => ServiceConst::ACTIVE,
+        ]);
     }
 
-    /** @return list<PricingModel> */
-    private function rows(int $count, string $group = PricingConst::GROUP_GENERAL, string $prefix = 'Dịch vụ'): array
+    private function price(int $serviceId, int $sortOrder, int $price): PricingModel
     {
-        $rows = [];
-        for ($i = 1; $i <= $count; $i++) {
-            $rows[] = PricingModel::fromRow([
-                'id'        => $i,
-                'groupCode' => $group,
-                'name'      => $prefix . ' ' . $i,
-                'slug'      => 'pricing-' . $group . '-' . $i,
-                'price'     => 100000 + $i,
-                'unit'      => 'lần',
-                'note'      => null,
-                'sortOrder' => $i,
-                'isActive'  => PricingConst::ACTIVE,
-            ]);
-        }
-
-        return $rows;
+        return PricingModel::fromRow([
+            'id' => $serviceId,
+            'serviceId' => $serviceId,
+            'price' => $price,
+            'sortOrder' => $sortOrder,
+            'isActive' => PricingConst::ACTIVE,
+        ]);
     }
 }

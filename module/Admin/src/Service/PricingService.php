@@ -7,23 +7,21 @@ namespace Admin\Service;
 use Admin\Exception\NotFoundException;
 use Admin\Exception\ValidationException;
 use Admin\Filter\Active\ActiveStatusFilter;
-use Admin\Filter\Pricing\PricingActionFilter;
 use Admin\Filter\Pricing\PricingSaveFilter;
 use Admin\Filter\Reorder\ReorderFilter;
 use Application\Constant\CacheConst;
 use Application\Factory\AppServiceFactory;
 use Application\Service\DbService;
 use Application\Service\PageCacheService;
-use Application\Service\SlugService;
 use Frontend\Model\Pricing\PricingConst;
 use Frontend\Model\Pricing\PricingMapper;
 use Frontend\Model\Pricing\PricingModel;
+use Frontend\Model\PricingGroup\PricingGroupMapper;
+use Frontend\Model\PricingGroup\PricingGroupModel;
+use Frontend\Model\Service\ServiceMapper;
+use Frontend\Model\Service\ServiceModel;
 
-/**
- * Nghiệp vụ bảng giá (pricing_items). Bảng do mapper Frontend sở hữu
- * (05-cau-truc §4) — Admin dùng qua cùng class, container gộp (07 §4-5).
- * Luồng chuẩn 07 §2: Service chạy Filter trên raw, Mapper trả Model.
- */
+/** Quản trị giá theo cây dịch vụ, với thứ tự riêng cho cả cha và con. */
 class PricingService extends AppServiceFactory
 {
     private function pricingMapper(): PricingMapper
@@ -32,10 +30,16 @@ class PricingService extends AppServiceFactory
         return $this->getContainerEntry(PricingMapper::class);
     }
 
-    private function slugService(): SlugService
+    private function groupMapper(): PricingGroupMapper
     {
-        /** @var SlugService */
-        return $this->getContainerEntry(SlugService::class);
+        /** @var PricingGroupMapper */
+        return $this->getContainerEntry(PricingGroupMapper::class);
+    }
+
+    private function serviceMapper(): ServiceMapper
+    {
+        /** @var ServiceMapper */
+        return $this->getContainerEntry(ServiceMapper::class);
     }
 
     private function db(): DbService
@@ -44,76 +48,102 @@ class PricingService extends AppServiceFactory
         return $this->getContainerEntry(DbService::class);
     }
 
-    /** @return list<PricingModel> */
-    public function listAll(): array
+    /**
+     * @return list<array{service: ServiceModel, config: PricingGroupModel|null,
+     *   children: list<array{service: ServiceModel, config: PricingModel|null}>}>
+     */
+    public function tree(): array
     {
-        return $this->pricingMapper()->listAll();
-    }
-
-    public function findOrFail(int $id): PricingModel
-    {
-        $model = $this->pricingMapper()->findById($id);
-        if ($model === null) {
-            throw NotFoundException::forEntity('mục bảng giá', $id);
+        $groupsByService = [];
+        foreach ($this->groupMapper()->listAll() as $group) {
+            $groupsByService[$group->serviceId] = $group;
+        }
+        $itemsByService = [];
+        foreach ($this->pricingMapper()->listAll() as $item) {
+            if ($item->serviceId !== null) {
+                $itemsByService[$item->serviceId] = $item;
+            }
         }
 
-        return $model;
+        $parents = [];
+        $children = [];
+        foreach ($this->serviceMapper()->listAll() as $service) {
+            if ($service->parentId === null) {
+                $parents[$service->id] = $service;
+            } else {
+                $children[$service->parentId][] = $service;
+            }
+        }
+        uasort($parents, static function (ServiceModel $a, ServiceModel $b) use ($groupsByService): int {
+            $aOrder = $groupsByService[$a->id]->sortOrder ?? $a->sortOrder;
+            $bOrder = $groupsByService[$b->id]->sortOrder ?? $b->sortOrder;
+            return [$aOrder, $a->id] <=> [$bOrder, $b->id];
+        });
+
+        $tree = [];
+        foreach ($parents as $parent) {
+            $childRows = $children[$parent->id] ?? [];
+            usort($childRows, static function (ServiceModel $a, ServiceModel $b) use ($itemsByService): int {
+                $aOrder = $itemsByService[$a->id]->sortOrder ?? $a->sortOrder;
+                $bOrder = $itemsByService[$b->id]->sortOrder ?? $b->sortOrder;
+                return [$aOrder, $a->id] <=> [$bOrder, $b->id];
+            });
+            $configured = [];
+            foreach ($childRows as $child) {
+                $configured[] = ['service' => $child, 'config' => $itemsByService[$child->id] ?? null];
+            }
+            $tree[] = [
+                'service' => $parent,
+                'config' => $groupsByService[$parent->id] ?? null,
+                'children' => $configured,
+            ];
+        }
+
+        return $tree;
     }
 
-    /**
-     * @param array<array-key, mixed> $raw
-     *
-     * @throws ValidationException
-     */
-    public function saveForm(?int $id, array $raw): void
+    /** @return array{service: ServiceModel, parent: ServiceModel, config: PricingModel|null} */
+    public function configurationForService(int $serviceId): array
     {
-        $this->saveValidated($id, $raw, true);
+        $service = $this->serviceMapper()->findById($serviceId);
+        if ($service === null || $service->parentId === null) {
+            throw NotFoundException::forEntity('dịch vụ con', $serviceId);
+        }
+        $parent = $this->serviceMapper()->findById($service->parentId);
+        if ($parent === null) {
+            throw NotFoundException::forEntity('dịch vụ cha', $service->parentId);
+        }
+
+        return [
+            'service' => $service,
+            'parent' => $parent,
+            'config' => $this->pricingMapper()->findByServiceId($serviceId),
+        ];
     }
 
     /** @param array<array-key, mixed> $raw */
-    private function saveValidated(?int $id, array $raw, bool $withCsrf): void
+    public function saveForm(array $raw): void
     {
-        $filter = new PricingSaveFilter($this->pricingMapper(), $id, $withCsrf);
+        $filter = new PricingSaveFilter();
         $filter->setData($raw);
         if (! $filter->isValid()) {
             throw new ValidationException($filter->fieldErrors());
         }
         $values = $filter->getValues();
-        if ($id === null) {
-            $this->create($values);
-
-            return;
+        $context = $this->configurationForService($filter->serviceIdValue());
+        $config = $context['config'];
+        $data = $this->itemValues($context['service'], $context['parent'], $values);
+        if ($config === null) {
+            $this->pricingMapper()->insert($data);
+        } else {
+            $this->pricingMapper()->update($config->id, $data);
         }
-        $this->update($id, $values);
+        $this->invalidatePublicCaches();
     }
 
-    /** @param array<array-key, mixed> $raw */
-    public function deleteForm(array $raw): string
+    public function saveFormCsrfHash(): string
     {
-        $filter = new PricingActionFilter();
-        $filter->setData($raw);
-        if (! $filter->isValid()) {
-            $errors = $filter->fieldErrors();
-
-            return isset($errors['csrf']) ? 'csrf' : 'notfound';
-        }
-        try {
-            $this->delete($filter->idValue());
-
-            return PricingConst::FLAG_DELETED;
-        } catch (NotFoundException) {
-            return 'notfound';
-        }
-    }
-
-    public function saveFormCsrfHash(?int $id): string
-    {
-        return (new PricingSaveFilter($this->pricingMapper(), $id))->csrfHash();
-    }
-
-    public function deleteFormCsrfHash(): string
-    {
-        return (new PricingActionFilter())->csrfHash();
+        return (new PricingSaveFilter())->csrfHash();
     }
 
     public function reorderCsrfHash(): string
@@ -121,44 +151,38 @@ class PricingService extends AppServiceFactory
         return (new ReorderFilter())->csrfHash();
     }
 
-    /** Hash CSRF cho select bật/tắt nhanh trên danh sách. */
     public function activeFormCsrfHash(): string
     {
         return (new ActiveStatusFilter())->csrfHash();
     }
 
-    /**
-     * Đổi nhanh cột isActive từ danh sách — chỉ chạm đúng cờ hiển thị.
-     *
-     * @param array<array-key, mixed> $raw id + isActive + csrf
-     */
+    /** @param array<array-key, mixed> $raw */
     public function activeForm(array $raw): string
     {
         $filter = new ActiveStatusFilter();
         $filter->setData($raw);
         if (! $filter->isValid()) {
-            $errors = $filter->fieldErrors();
-            return isset($errors['csrf']) ? 'csrf' : 'notfound';
+            return isset($filter->fieldErrors()['csrf']) ? 'csrf' : 'notfound';
         }
-
-        try {
-            $id = $filter->idValue();
-            $this->findOrFail($id);
-            $this->pricingMapper()->update($id, ['isActive' => $filter->activeValue()]);
-            $this->invalidatePublicCaches();
-            return 'active-updated';
-        } catch (NotFoundException) {
+        $service = $this->serviceMapper()->findById($filter->idValue());
+        if ($service === null) {
             return 'notfound';
         }
+        $active = $filter->activeValue();
+        if ($service->parentId === null) {
+            $this->saveGroupConfig($service, null, $active);
+        } else {
+            $parent = $this->serviceMapper()->findById($service->parentId);
+            if ($parent === null) {
+                return 'notfound';
+            }
+            $this->saveItemConfig($service, $parent, null, $active);
+        }
+        $this->invalidatePublicCaches();
+        return 'active-updated';
     }
 
-    /**
-     * Kéo-thả thứ tự bảng giá — giống ServiceService::formReorder.
-     *
-     * @param array<array-key, mixed> $raw
-     *
-     * @return array{flag: string, applied: int}
-     */
+    /** @param array<array-key, mixed> $raw @return array{flag: string, applied: int} */
     public function formReorder(array $raw): array
     {
         $filter = new ReorderFilter();
@@ -166,124 +190,103 @@ class PricingService extends AppServiceFactory
         if (! $filter->isValid()) {
             return ['flag' => 'csrf', 'applied' => 0];
         }
-        $sequence = $this->reorderSequence($filter->idList());
-        $mapper   = $this->pricingMapper();
-        $changed = [];
-        foreach ($sequence as $index => $row) {
-            if ($row->sortOrder !== $index) {
-                $changed[$row->id] = $index;
+        $byId = [];
+        foreach ($this->serviceMapper()->listAll() as $service) {
+            $byId[$service->id] = $service;
+        }
+        $groupOrder = 0;
+        $childOrders = [];
+        $operations = [];
+        foreach ($filter->idList() as $serviceId) {
+            $service = $byId[$serviceId] ?? null;
+            if ($service === null) {
+                continue;
             }
+            if ($service->parentId === null) {
+                $operations[] = [$service, null, $groupOrder++];
+                continue;
+            }
+            $parent = $byId[$service->parentId] ?? null;
+            if ($parent === null) {
+                continue;
+            }
+            $order = $childOrders[$parent->id] ?? 0;
+            $childOrders[$parent->id] = $order + 1;
+            $operations[] = [$service, $parent, $order];
         }
-        if ($changed === []) {
-            return ['flag' => 'reordered', 'applied' => 0];
-        }
-        $this->db()->transactional(static function () use ($mapper, $changed): void {
-            foreach ($changed as $id => $index) {
-                $mapper->update($id, ['sortOrder' => $index]);
+        $this->db()->transactional(function () use ($operations): void {
+            foreach ($operations as [$service, $parent, $order]) {
+                if ($parent === null) {
+                    $this->saveGroupConfig($service, $order, null);
+                } else {
+                    $this->saveItemConfig($service, $parent, $order, null);
+                }
             }
         });
         $this->invalidatePublicCaches();
-
-        return ['flag' => 'reordered', 'applied' => count($changed)];
+        return ['flag' => 'reordered', 'applied' => count($operations)];
     }
 
-    /**
-     * @param list<int> $requested
-     *
-     * @return list<PricingModel>
-     */
-    private function reorderSequence(array $requested): array
+    private function saveGroupConfig(ServiceModel $service, ?int $sortOrder, ?int $active): void
     {
-        $rows = $this->pricingMapper()->listAll();
-        $byId = [];
-        $existing = [];
-        foreach ($rows as $row) {
-            $byId[$row->id] = $row;
-            $existing[]     = $row->id;
+        $config = $this->groupMapper()->findByServiceId($service->id);
+        $values = [
+            'sortOrder' => $sortOrder ?? $config?->sortOrder ?? $service->sortOrder,
+            'isActive' => $active ?? $config?->isActive ?? PricingConst::INACTIVE,
+        ];
+        if ($config === null) {
+            $this->groupMapper()->insert(['serviceId' => $service->id] + $values);
+        } else {
+            $this->groupMapper()->update($config->id, $values);
         }
-        $left = array_flip($existing);
-        $ordered = [];
-        foreach ($requested as $id) {
-            if (isset($left[$id])) {
-                $ordered[] = $byId[$id];
-                unset($left[$id]);
-            }
+    }
+
+    private function saveItemConfig(
+        ServiceModel $service,
+        ServiceModel $parent,
+        ?int $sortOrder,
+        ?int $active
+    ): void {
+        $config = $this->pricingMapper()->findByServiceId($service->id);
+        $values = $this->itemValues($service, $parent, [
+            'price' => $config?->price,
+            'unit' => $config?->unit,
+            'note' => $config?->note,
+            'sortOrder' => $sortOrder ?? $config?->sortOrder ?? $service->sortOrder,
+            'isActive' => $active ?? $config?->isActive ?? PricingConst::INACTIVE,
+        ]);
+        if ($config === null) {
+            $this->pricingMapper()->insert($values);
+        } else {
+            $this->pricingMapper()->update($config->id, $values);
         }
-        foreach ($existing as $id) {
-            if (isset($left[$id])) {
-                $ordered[] = $byId[$id];
-            }
-        }
-
-        return $ordered;
     }
 
-    /** @param array<array-key, mixed> $data */
-    public function create(array $data): int
+    /** @param array<array-key, mixed> $data @return array<array-key, mixed> */
+    private function itemValues(ServiceModel $service, ServiceModel $parent, array $data): array
     {
-        $id = $this->pricingMapper()->insert($this->buildValues($data, null));
-        $this->invalidatePublicCaches();
-
-        return $id;
-    }
-
-    /** @param array<array-key, mixed> $data */
-    public function update(int $id, array $data): void
-    {
-        $this->findOrFail($id);
-        $this->pricingMapper()->update($id, $this->buildValues($data, $id));
-        $this->invalidatePublicCaches();
-    }
-
-    public function delete(int $id): void
-    {
-        $this->findOrFail($id);
-        $this->pricingMapper()->delete($id);
-        $this->invalidatePublicCaches();
-    }
-
-    /**
-     * @param array<array-key, mixed> $data
-     *
-     * @return array<array-key, mixed>
-     */
-    private function buildValues(array $data, ?int $excludeId): array
-    {
-        $slugs   = $this->slugService();
-        $pricing = $this->pricingMapper();
-        $name      = trim((string) $data['name']);
-        $slugInput = trim((string) ($data['slug'] ?? ''));
-        $slug      = $slugInput !== ''
-            ? $slugs->slugify($slugInput, PricingConst::MAX_LENGTH_SLUG)
-            : $slugs->slugify($name, PricingConst::MAX_LENGTH_SLUG);
-
         return [
-            'groupCode' => trim((string) ($data['groupCode'] ?? PricingConst::GROUP_GENERAL))
-                ?: PricingConst::GROUP_GENERAL,
-            'name'      => $name,
-            'slug'      => $slugs->unique(
-                $slug,
-                static fn (string $candidate): bool => $pricing->existsSlug($candidate, $excludeId)
-            ),
-            'price'     => $this->nullableInt($data['price'] ?? null),
-            'unit'      => $this->nullableTrim($data['unit'] ?? null),
-            'note'      => $this->nullableTrim($data['note'] ?? null),
+            'serviceId' => $service->id,
+            'groupCode' => $parent->slug,
+            'name' => $service->name,
+            'slug' => $service->slug,
+            'price' => $this->nullableInt($data['price'] ?? null),
+            'unit' => $this->nullableTrim($data['unit'] ?? null),
+            'note' => $this->nullableTrim($data['note'] ?? null),
             'sortOrder' => (int) ($data['sortOrder'] ?? 0),
-            'isActive'  => $this->flag($data['isActive'] ?? null),
+            'isActive' => $this->flag($data['isActive'] ?? null),
         ];
     }
 
     private function flag(mixed $raw): int
     {
-        return $raw === null || $raw === '' || $raw === '0' || $raw === false
-            ? PricingConst::INACTIVE
-            : PricingConst::ACTIVE;
+        return $raw === null || $raw === '' || $raw === 0 || $raw === '0' || $raw === false
+            ? PricingConst::INACTIVE : PricingConst::ACTIVE;
     }
 
     private function nullableTrim(mixed $raw): ?string
     {
         $value = trim((string) $raw);
-
         return $value === '' ? null : $value;
     }
 
@@ -295,7 +298,6 @@ class PricingService extends AppServiceFactory
     private function pageCache(): ?PageCacheService
     {
         $entry = $this->getContainerEntry(PageCacheService::class);
-
         return $entry instanceof PageCacheService ? $entry : null;
     }
 

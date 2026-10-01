@@ -183,24 +183,26 @@ foreach ($sections as $section) {
     }
 
     if ($kind === 'pricing') {
-        $cardsHtml = '';
-        foreach ($items as $i => $item) {
-            $num = (int) ($i + 1);
-            $price = $item['price'] === null
-                ? 'Liên hệ'
-                : number_format((int) $item['price'], 0, ',', '.') . ' ₫';
-            $cardsHtml .= '<a class="pricing-grid-card" href="' . $e($item['href'] ?? '#') . '">'
-                . '<div class="pricing-grid-hd">'
-                . '<span class="pricing-num">' . $e($num) . '</span>'
-                . '<span class="pricing-name">' . $e($item['title'] ?? $item['name'] ?? '') . '</span>'
-                . '</div>'
-                . '<div class="pricing-grid-bd">'
-                . '<span class="pricing-amount">' . $e($price) . '</span>'
-                . '</div></a>';
+        $groupsHtml = '';
+        $pricingGroups = is_array($section['groups'] ?? null) ? $section['groups'] : [];
+        foreach ($pricingGroups as $group) {
+            $cardsHtml = '';
+            foreach ((array) ($group['items'] ?? []) as $item) {
+                $price = (string) ($item['priceText'] ?? 'Liên hệ');
+                $unit = trim((string) ($item['unit'] ?? ''));
+                $cardsHtml .= '<article class="pricing-grid-card"><div class="pricing-grid-hd">'
+                    . '<span class="pricing-name">' . $e($item['name'] ?? '') . '</span></div>'
+                    . '<div class="pricing-grid-bd"><span class="pricing-amount">' . $e($price) . '</span>'
+                    . ($unit !== '' ? '<small> / ' . $e($unit) . '</small>' : '') . '</div></article>';
+            }
+            $groupsHtml .= '<section class="pricing-group-block"><div class="pricing-group-heading">'
+                . '<div><span>Nhóm dịch vụ</span><h3>' . $e($group['name'] ?? '') . '</h3></div>'
+                . '<a href="' . $e($view->url('pricing', [], ['query' => ['nhom' => $group['slug'] ?? '']]))
+                . '">Xem chi tiết →</a></div><div class="pricing-grid">' . $cardsHtml . '</div></section>';
         }
         $blocks[] = '<section class="section section-alt"><div class="container">'
             . '<div class="sec-head">' . $head . '</div>'
-            . '<div class="pricing-grid">' . $cardsHtml . '</div>'
+            . '<div class="pricing-groups">' . $groupsHtml . '</div>'
             . '<div style="text-align:center;margin-top:24px">'
             . '<a class="btn btn-teal" href="' . $e($view->url('pricing'))
             . '">Xem bảng giá đầy đủ →</a></div></div></section>';

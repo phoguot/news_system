@@ -27,7 +27,7 @@ $pages    = max(0, (int) ($this->pages ?? 0));
 $parentFilters = is_array($this->parentFilters ?? null) ? $this->parentFilters : [];
 $selectedParent = is_array($this->selectedParent ?? null) ? $this->selectedParent : null;
 $pricingData = is_array($this->pricing ?? null) ? $this->pricing : [];
-$pricingItems = is_array($pricingData['items'] ?? null) ? $pricingData['items'] : [];
+$pricingGroups = is_array($pricingData['groupBlocks'] ?? null) ? $pricingData['groupBlocks'] : [];
 $mapUrl   = is_string($this->mapUrl ?? null) ? $this->mapUrl : null;
 $settings = is_array($this->settings ?? null) ? $this->settings : [];
 
@@ -159,26 +159,30 @@ $servicesBlock = '<section class="section"><div class="container">'
 
 /* Box bảng giá rút gọn */
 $priceRows = '';
-foreach ($pricingItems as $row) {
-    $name      = (string) ($row['name'] ?? '');
-    $unit      = (string) ($row['unit'] ?? '');
-    $note      = (string) ($row['note'] ?? '');
-    $price     = (string) ($row['priceText'] ?? 'Liên hệ');
-    $priceCls  = $price === 'Liên hệ' ? 'pricing-price pricing-contact' : 'pricing-price';
-
-    $priceRows .= '<tr>'
-        . '<td class="pricing-name"><strong>' . $e($name) . '</strong></td>'
-        . '<td class="pricing-unit">' . $e($unit) . '</td>'
-        . '<td class="' . $priceCls . '">' . $e($price) . '</td>'
-        . '<td class="pricing-note">' . $e($note) . '</td>'
-        . '</tr>';
+$priceNumber = 0;
+foreach ($pricingGroups as $pricingGroup) {
+    $priceRows .= '<tr class="pricing-parent-row"><td class="pricing-parent-cell" colspan="5">'
+        . '<strong>' . $e($pricingGroup['name'] ?? '') . '</strong></td></tr>';
+    foreach ((array) ($pricingGroup['items'] ?? []) as $row) {
+        $priceNumber++;
+        $price = (string) ($row['priceText'] ?? 'Liên hệ');
+        $priceCls = $price === 'Liên hệ' ? 'pricing-price pricing-contact' : 'pricing-price';
+        $priceRows .= '<tr><td class="pricing-index">' . $priceNumber . '</td>'
+            . '<td class="pricing-name"><strong>' . $e($row['name'] ?? '') . '</strong></td>'
+            . '<td class="pricing-unit">' . $e($row['unit'] ?? '') . '</td>'
+            . '<td class="' . $priceCls . '">' . $e($price) . '</td>'
+            . '<td class="pricing-note">' . $e($row['note'] ?? '') . '</td></tr>';
+    }
 }
-if ($priceRows === '') {
-    $priceRows = '<tr><td colspan="4" class="news-empty">Bảng giá đang cập nhật.</td></tr>';
-}
+$priceTable = $priceRows === ''
+    ? '<p class="news-empty">Bảng giá đang cập nhật.</p>'
+    : '<div class="pricing-card pricing-card-unified"><div class="table-wrap">'
+        . '<table class="data-table pricing-table pricing-table-public pricing-table-home"><thead><tr>'
+        . '<th>STT</th><th>Tên dịch vụ</th><th>Đơn vị</th><th>Giá tham khảo</th><th>Ghi chú</th>'
+        . '</tr></thead><tbody>' . $priceRows . '</tbody></table></div></div>';
 $pricingBlock = '<section class="section section-alt"><div class="container">'
     . '<div class="sec-label"><span class="arr">→</span> Bảng giá tham khảo <span class="arr">←</span></div>'
-    . '<div class="pricing-card" style="margin-top:14px"><div class="table-wrap"><table class="data-table pricing-table pricing-table-public pricing-table-home"><thead><tr><th>Tên dịch vụ</th><th>Đơn vị</th><th>Giá tham khảo</th><th>Ghi chú</th></tr></thead><tbody>' . $priceRows . '</tbody></table></div></div>'
+    . '<div class="pricing-unified">' . $priceTable . '</div>'
     . '<div style="text-align:center;margin-top:14px"><a class="btn btn-teal" href="/bang-gia">Xem bảng giá đầy đủ →</a></div>'
     . '</div></section>';
 

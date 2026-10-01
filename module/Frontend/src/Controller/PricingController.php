@@ -28,6 +28,7 @@ class PricingController extends AbstractActionController
         return new ViewModel([
             'items'   => $data['items'],
             'groups'  => $data['groups'],
+            'groupBlocks' => $data['groupBlocks'],
             'total'   => $data['total'],
             'page'    => $data['page'],
             'pages'   => $data['pages'],

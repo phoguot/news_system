@@ -168,7 +168,16 @@ return [
                 return new Model\Service\ServiceMapper($c->get(\Application\Service\DbService::class)->getAdapter());
             },
             Model\Pricing\PricingMapper::class => static function (ContainerInterface $c): Model\Pricing\PricingMapper {
+
                 return new Model\Pricing\PricingMapper($c->get(\Application\Service\DbService::class)->getAdapter());
+            },
+            Model\PricingGroup\PricingGroupMapper::class => static function (
+                ContainerInterface $c
+            ): Model\PricingGroup\PricingGroupMapper {
+
+                return new Model\PricingGroup\PricingGroupMapper(
+                    $c->get(\Application\Service\DbService::class)->getAdapter()
+                );
             },
             Model\Menu\MenuMapper::class => static function (ContainerInterface $c): Model\Menu\MenuMapper {
                 return new Model\Menu\MenuMapper($c->get(\Application\Service\DbService::class)->getAdapter());
