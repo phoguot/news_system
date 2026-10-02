@@ -1026,6 +1026,14 @@ document.querySelectorAll('select.media-select').forEach((sel) => {
         });
 
         function renumber() {
+            const setPosition = (cell, index) => {
+                const input = cell.querySelector('.sort-position-input');
+                if (input) {
+                    input.value = String(index + 1);
+                    return;
+                }
+                cell.textContent = String(index);
+            };
             if (tree) {
                 let parentIndex = 0;
                 const childIndexes = {};
@@ -1036,11 +1044,11 @@ document.querySelectorAll('select.media-select').forEach((sel) => {
                     }
                     const parentId = tr.getAttribute('data-parent') || '';
                     if (parentId === '') {
-                        cell.textContent = String(parentIndex++);
+                        setPosition(cell, parentIndex++);
                         return;
                     }
                     const index = childIndexes[parentId] || 0;
-                    cell.textContent = String(index);
+                    setPosition(cell, index);
                     childIndexes[parentId] = index + 1;
                 });
                 return;
@@ -1048,7 +1056,7 @@ document.querySelectorAll('select.media-select').forEach((sel) => {
             rowList().forEach((tr, index) => {
                 const cell = tr.querySelector('td.sort-cell');
                 if (cell) {
-                    cell.textContent = String(index);
+                    setPosition(cell, index);
                 }
             });
         }

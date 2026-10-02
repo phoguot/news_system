@@ -5,6 +5,7 @@
 $tree = (array) ($this->tree ?? []);
 $flag = isset($this->flag) && is_string($this->flag) ? $this->flag : null;
 $reorderCsrf = (string) ($this->reorderCsrfHash ?? '');
+$positionCsrf = (string) ($this->positionCsrfHash ?? '');
 $activeCsrf = (string) ($this->activeCsrfHash ?? '');
 $e = fn (mixed $value): string => $this->escapeHtml((string) $value);
 $url = fn (array $params = []): string => $this->url('admin/pricing', $params);
@@ -14,6 +15,8 @@ $flags = [
     'csrf' => ['alert-danger', 'Token bảo mật không hợp lệ.'],
     'notfound' => ['alert-danger', 'Không tìm thấy dịch vụ.'],
     'reordered' => ['alert-success', 'Đã cập nhật thứ tự nhóm và dịch vụ trong bảng giá.'],
+    'position-updated' => ['alert-success', 'Đã cập nhật vị trí hiển thị trong bảng giá.'],
+    'position-invalid' => ['alert-danger', 'Vị trí hiển thị phải là một số lớn hơn 0.'],
     'active-updated' => ['alert-success', 'Đã cập nhật trạng thái hiển thị trong bảng giá.'],
 ];
 
@@ -26,6 +29,23 @@ $activeSelect = static function (int $serviceId, int $current) use ($url, $e, $a
         . '<select class="form-select status-select" name="isActive" onchange="this.form.submit()">'
         . '<option value="1"' . $yes . '>Có</option><option value="0"' . $no . '>Tắt</option>'
         . '</select></form>';
+};
+
+$positionForm = static function (
+    int $serviceId,
+    int $current,
+    int $maximum
+) use (
+    $url,
+    $e,
+    $positionCsrf
+): string {
+    return '<form class="inline-position-form" method="post" action="'
+        . $e($url(['action' => 'position', 'id' => $serviceId])) . '">'
+        . '<input type="hidden" name="csrf" value="' . $e($positionCsrf) . '">'
+        . '<input class="form-input sort-position-input" name="position" type="number" min="1" max="'
+        . $maximum . '" value="' . $current . '" aria-label="Vị trí hiển thị">'
+        . '<button class="btn sm btn-ghost sort-position-save" type="submit">Lưu</button></form>';
 };
 
 $html = '<div class="page-header"><div><h1>Bảng giá</h1>'
@@ -46,7 +66,8 @@ foreach ($tree as $group) {
         . '<td class="drag-col"><span class="drag-handle" title="Kéo cả nhóm">⠿</span></td>'
         . '<td><strong>' . $e($parent->name) . '</strong><br><span class="slug-text">Nhóm dịch vụ cha</span></td>'
         . '<td class="muted">—</td><td>' . $activeSelect($parent->id, $groupActive) . '</td>'
-        . '<td class="sort-cell">' . $groupIndex . '</td><td class="muted">Di chuyển cả khối</td></tr>';
+        . '<td class="sort-cell">' . $positionForm($parent->id, $groupIndex + 1, count($tree)) . '</td>'
+        . '<td class="muted">Di chuyển cả khối</td></tr>';
     $childIndex = 0;
     foreach ($group['children'] as $childRow) {
         $child = $childRow['service'];
@@ -61,9 +82,13 @@ foreach ($tree as $group) {
             . '<td><span class="tree-indent">↳</span> <strong>' . $e($child->name) . '</strong>'
             . '<br><span class="slug-text tree-child-slug">' . $e($child->slug) . '</span></td>'
             . '<td>' . $price . '</td><td>' . $activeSelect($child->id, $active) . '</td>'
-            . '<td class="sort-cell">' . $childIndex . '</td>'
+            . '<td class="sort-cell">' . $positionForm(
+                $child->id,
+                $childIndex + 1,
+                count($group['children'])
+            ) . '</td>'
             . '<td><a class="btn sm btn-ghost" href="'
-            . $e($url(['action' => 'edit', 'id' => $child->id])) . '">Sửa giá</a></td></tr>';
+            . $e($url(['action' => 'edit', 'id' => $child->id])) . '">Sửa</a></td></tr>';
         $childIndex++;
     }
     $groupIndex++;

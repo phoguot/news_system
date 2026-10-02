@@ -7,6 +7,7 @@ namespace Admin\Service;
 use Admin\Exception\NotFoundException;
 use Admin\Exception\ValidationException;
 use Admin\Filter\Active\ActiveStatusFilter;
+use Admin\Filter\Pricing\PricingPositionFilter;
 use Admin\Filter\Pricing\PricingSaveFilter;
 use Admin\Filter\Reorder\ReorderFilter;
 use Application\Constant\CacheConst;
@@ -151,6 +152,11 @@ class PricingService extends AppServiceFactory
         return (new ReorderFilter())->csrfHash();
     }
 
+    public function positionFormCsrfHash(): string
+    {
+        return (new PricingPositionFilter())->csrfHash();
+    }
+
     public function activeFormCsrfHash(): string
     {
         return (new ActiveStatusFilter())->csrfHash();
@@ -225,6 +231,94 @@ class PricingService extends AppServiceFactory
         });
         $this->invalidatePublicCaches();
         return ['flag' => 'reordered', 'applied' => count($operations)];
+    }
+
+    /** @param array<array-key, mixed> $raw */
+    public function positionForm(array $raw): string
+    {
+        $filter = new PricingPositionFilter();
+        $filter->setData($raw);
+        if (! $filter->isValid()) {
+            return isset($filter->fieldErrors()['csrf']) ? 'csrf' : 'position-invalid';
+        }
+
+        $serviceId = $filter->idValue();
+        $position = $filter->positionValue();
+        $tree = $this->tree();
+
+        $parents = [];
+        foreach ($tree as $group) {
+            $parents[] = $group['service'];
+        }
+        foreach ($parents as $parent) {
+            if ($parent->id !== $serviceId) {
+                continue;
+            }
+            $ordered = $this->moveToPosition($parents, $serviceId, $position);
+            $this->db()->transactional(function () use ($ordered): void {
+                foreach ($ordered as $index => $service) {
+                    $this->saveGroupConfig($service, $index, null);
+                }
+            });
+            $this->invalidatePublicCaches();
+            return 'position-updated';
+        }
+
+        foreach ($tree as $group) {
+            $children = [];
+            foreach ($group['children'] as $childRow) {
+                $children[] = $childRow['service'];
+            }
+            if (! $this->containsService($children, $serviceId)) {
+                continue;
+            }
+            $parent = $group['service'];
+            $ordered = $this->moveToPosition($children, $serviceId, $position);
+            $this->db()->transactional(function () use ($ordered, $parent): void {
+                foreach ($ordered as $index => $service) {
+                    $this->saveItemConfig($service, $parent, $index, null);
+                }
+            });
+            $this->invalidatePublicCaches();
+            return 'position-updated';
+        }
+
+        return 'notfound';
+    }
+
+    /**
+     * @param list<ServiceModel> $services
+     * @return list<ServiceModel>
+     */
+    private function moveToPosition(array $services, int $serviceId, int $position): array
+    {
+        $target = null;
+        $remaining = [];
+        foreach ($services as $service) {
+            if ($service->id === $serviceId) {
+                $target = $service;
+            } else {
+                $remaining[] = $service;
+            }
+        }
+        if ($target === null) {
+            return $services;
+        }
+
+        $index = max(0, min(count($remaining), $position - 1));
+        array_splice($remaining, $index, 0, [$target]);
+        return $remaining;
+    }
+
+    /** @param list<ServiceModel> $services */
+    private function containsService(array $services, int $serviceId): bool
+    {
+        foreach ($services as $service) {
+            if ($service->id === $serviceId) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private function saveGroupConfig(ServiceModel $service, ?int $sortOrder, ?int $active): void

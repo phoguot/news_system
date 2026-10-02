@@ -37,6 +37,7 @@ class PricingController extends AbstractActionController
             'tree'                => $this->pricingService->tree(),
             'flag'                => $this->queryFlag(),
             'reorderCsrfHash'     => $this->pricingService->reorderCsrfHash(),
+            'positionCsrfHash'    => $this->pricingService->positionFormCsrfHash(),
             'activeCsrfHash'      => $this->pricingService->activeFormCsrfHash(),
         ]);
     }
@@ -183,6 +184,34 @@ class PricingController extends AbstractActionController
             'admin/pricing',
             [],
             ['query' => ['flag' => $result['flag'], 'applied' => $result['applied']]]
+        );
+    }
+
+    /**
+     * POST /admin/pricing/position/:id — đổi vị trí không phụ thuộc kéo-thả/JS.
+     *
+     * @return Response
+     * @psalm-suppress PossiblyUnusedMethod router dispatch gọi action động, không có lời gọi tĩnh.
+     */
+    public function positionAction()
+    {
+        $request = $this->getRequest();
+        if (! $request instanceof HttpRequest || ! $request->isPost()) {
+            return $this->redirect()->toRoute('admin/pricing');
+        }
+
+        /** @var ParametersInterface $post */
+        $post = $request->getPost();
+        $raw = $post->toArray();
+        $id = $this->intParam('id');
+        if ($id !== null) {
+            $raw['id'] = (string) $id;
+        }
+
+        return $this->redirect()->toRoute(
+            'admin/pricing',
+            [],
+            ['query' => ['flag' => $this->pricingService->positionForm($raw)]]
         );
     }
 

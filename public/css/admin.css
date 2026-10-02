@@ -1724,6 +1724,17 @@ tbody.js-sortable tr[data-id]:not(.dragging):hover .drag-handle { color: var(--t
 .pricing-admin-tree .pricing-admin-group strong { color: var(--primary); font-size: 14px; }
 .pricing-admin-tree .tree-indent { color: var(--primary); font-weight: 800; margin-left: 12px; }
 .pricing-admin-tree .tree-child-slug { margin-left: 34px; }
+.inline-position-form {
+  display: inline-flex; align-items: center; gap: 6px; margin: 0; white-space: nowrap;
+}
+.inline-position-form .sort-position-input {
+  width: 58px; min-width: 58px; height: 34px; padding: 5px 7px; text-align: center;
+}
+.inline-position-form .sort-position-save { min-height: 34px; padding: 5px 9px; }
+@media (max-width: 640px) {
+  .inline-position-form { align-items: stretch; }
+  .inline-position-form .sort-position-input { width: 52px; min-width: 52px; }
+}
 .inline-status-form {
   display: inline-flex;
   margin: 0;
